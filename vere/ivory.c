@@ -2,7 +2,7 @@
 
 /* generated from ivory.pill with md5 ed6ccaf0217c42734445244b2f19199d.
 ** arvo commit: 5ff2c4c283d441b0099a7ef0c53d209d88fd4366.
-** toolchain: 
+** toolchain:
 **       .ivory/pill +ivory
 **       xxd -i play/$ship/urb/.put/ivory.pill >ivory.c
 */
