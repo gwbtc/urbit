@@ -1,9 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Root } from '/components/root';
-import { api } from '/api';
-import { store } from '/store';
-import { subscription } from "/subscription";
+import { Root } from './js/components/root';
+import { subscription } from "./js/subscription";
 
 api.setAuthTokens({
   ship: window.ship

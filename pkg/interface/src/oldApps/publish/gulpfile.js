@@ -10,7 +10,6 @@ var del = require('del');
 var json = require('rollup-plugin-json');
 var rollupReplace = require("@rollup/plugin-replace");
 
-
 var resolve = require('rollup-plugin-node-resolve');
 var commonjs = require('rollup-plugin-commonjs');
 var rootImport = require('rollup-plugin-root-import');
