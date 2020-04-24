@@ -2,6 +2,10 @@ import * as React from 'react'
 import { BrowserRouter as Router, Route, Switch, Link, useParams, useRouteMatch } from "react-router-dom";
 import { Col, Text } from "@tlon/indigo-react";
 
+import { api } from '/api';
+import { subscription } from '/subscription';
+import { store } from '/store';
+
 export default class Chat extends React.Component {
   constructor(props) {
     super(props);
