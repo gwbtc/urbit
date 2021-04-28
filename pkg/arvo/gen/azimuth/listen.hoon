@@ -1,4 +1,5 @@
-::  Add a source for azimuth-tracker
+::  Add a source for azimuth
+::
 =>  |%
     +$  src
       $%  [%ship =ship ~]
@@ -12,4 +13,4 @@
     %ship  [%& ship.src]
     %app   [%| term.src]
   ==
-[%azimuth-tracker-poke %listen whos source]
+[%azimuth-poke %listen whos source]

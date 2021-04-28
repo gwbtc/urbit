@@ -1,9 +1,9 @@
 /-  eth-watcher
 /+  ethereum, azimuth, naive, default-agent, verb, dbug
-/*  snap  %eth-logs  /app/naive/logs/eth-logs
+/*  snap  %eth-logs  /app/azimuth/logs/eth-logs
 ::
 =/  last-snap  ::  maybe just use the last one?
-  %+  roll  `(list event-log:rpc:ethereum)`snap
+  %+  roll  `(list event-log:rpc:ethereum)`~  ::snap
   |=  [log=event-log:rpc:ethereum last=@ud]
   ?~  mined.log
     last
@@ -35,6 +35,7 @@
 ++  verifier
   ^-  ^verifier:naive
   |=  [dat=@ v=@ r=@ s=@]
+  ?:  (gth v 3)  ~  ::  TODO: move to jet
   =/  result
     %-  mule
     |.
@@ -74,9 +75,12 @@
         [%log event-log]
       ?~  input.u.mined.i.logs
         [%bat *@]
-      ?.  =(0x2688.7f26 (end [3 4] (swp 5 u.input.u.mined.i.logs)))
+      =/  len  (met 3 u.input.u.mined.i.logs)
+      =/  fun
+        (rsh [3 (sub len 4)] u.input.u.mined.i.logs)
+      ?.  =(0x2688.7f26 fun)
         [%bat *@]
-      [%bat (rsh [3 4] u.input.u.mined.i.logs)]
+      [%bat (end [3 (sub len 4)] u.input.u.mined.i.logs)]
     =/  res  (mule |.((%*(. naive lac |) verifier nas input)))
     ?-  -.res
       %&  p.res
@@ -87,11 +91,6 @@
     (turn raw-effects |=(=diff:naive [id diff]))
   =^  effects-2  nas  $(logs t.logs)
   [(welp effects-1 effects-2) nas]
-::
-++  run-batch
-  |=  [nas=^state:naive batch=@]
-  ^+  *naive
-  (%*(. naive lac |) verifier nas %bat batch)
 ::
 ++  to-udiffs
   |=  effects=(list tagged-diff)
@@ -109,7 +108,7 @@
 ++  jael-update
   |=  =udiffs:point
   ^-  (list card:agent:gall)
-  ?:  &  ~
+  ?:  &  ~  ::  XX
   :-  [%give %fact ~[/] %azimuth-udiffs !>(udiffs)]
   |-  ^-  (list card:agent:gall)
   ?~  udiffs
@@ -211,7 +210,7 @@
     =.  logs.state  logs
     $(mark %noun, vase !>(%rerun))
   ::
-  ?.  ?=(%azimuth-tracker-poke mark)
+  ?.  ?=(%azimuth-poke mark)
     (on-poke:def mark vase)
   =+  !<(poke=poke-data vase)
   ?-    -.poke
