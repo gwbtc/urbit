@@ -55,11 +55,52 @@
   ::
   --
 ++  dejs
+  =,  dejs:format
   |%
   ++  trace
+    =<  trace
     |%
-    
+    ++  trace
+      %-  ot
+      :~  from+(cu hex-to-num so)
+          action+json
+          'blockHash'^(cu hex-to-num so)
+          'blockNumber'^ni
+          result+json
+          subtraces+ni
+          'traceAddress'^(ar ni)
+          'transactionHash'^(cu hex-to-num so)
+          'transactionPosition'^ni
+          type+so
+      ==
+    --
+  ++  of-key
+    |*  [key=cord wer=(pole [cord fist])]
+    |=  jom=json
+    ?>  ?=([%o *] jom)
+    =/  val  (so (~(got by p.jom) key))
+    ((of-key-raw val wer) jom)
+  ::
+  ++  of-key-raw
+    |*  [val=cord wer=(pole [cord fist])]
+    |=  jom=json
+    ?>  ?=([%o *] jom)
+    ?-    wer                                         :: mint-vain on empty
+      :: [[key=@t wit=*] t=*]
+      [[key=@t *] t=*]
+    =>  .(wer [[* wit] *]=wer)
+    ~|  finding-key+val
+    ?:  =(key.wer val)
+      ~|(key+key.wer (wit.wer jom))
+    ?~  t.wer  ~|(bad-key+key.wer !!):: ++  of-key
+    ((of-key-raw val t.wer) jom)
     ==
+  ::
+  ++  si                                              ::  string as integer
+    |=  jon=json
+    ?>  ?=([%s *] jon)
+    (rash p.jon dem)
+  ::
   --
 ++  debug
   |%
