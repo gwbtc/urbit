@@ -434,6 +434,120 @@
       =+  (decode-one fro ~[i.tys])  ::  [nin=@ud dat=*]
       $(res ^+(res [dat res]), fro nin, len (dec len))
     --
+  ::
+  ++  decipher-data-results
+  ::  rex:  string of hex bytes with leading 0x.
+  |=  [rex=@t tys=(list etyp)]
+  =-  (decipher-data - tys)
+  %^  rut  9
+    (rsh [3 2] rex)
+  (curr rash hex)
+  ::
+  ++  decipher-data
+    |=  [wos=(list @) tys=(list etyp)]
+    ^-  (list data)
+    =/  wos=(list @)  wos  ::  get rid of tmi
+    =|  win=@ud
+    =<  (decipher-from 0 tys)
+    |%
+    ++  decipher-from
+      |=  [win=@ud tys=(list etyp)]
+      ?~  tys  !!
+      =-  ?~  t.tys  [dat ~]
+          [dat $(win nin, tys t.tys)]
+      (decipher-one win ~[i.tys])
+    ::
+    ++  decipher-one
+      ::NOTE  we take (list etyp) even though we only operate on
+      ::      a single etyp as a workaround for urbit/arvo#673
+      |=  [win=@ud tys=(list etyp)]
+      ^-  [nin=@ud dat=data]
+      =-  [nin dat]=-  ::NOTE  ^= regular form broken
+      ?~  tys  !!
+      =*  typ  i.tys
+      =+  wor=(snag win wos)
+      ?+  typ
+        ~|  [%unsupported-type typ]
+        !!
+      ::
+          ?(%address %bool %uint)  ::  %int %real %ureal
+        :-  +(win)
+        ?-  typ
+          %address  [%address `@ux`wor]
+          %uint     [%uint `@ud`wor]
+          %bool     [%bool =(1 wor)]
+        ==
+      ::
+          %string
+        =+  $(tys ~[%bytes])
+        ?>  ?=([%bytes *] dat)
+        [nin [%string (trip (swp 3 q.p.dat))]]
+      ::
+          %bytes
+        :-  +(win)
+        ::  find the word index of the actual data.
+        =/  lic=@ud  (div wor 32)
+        ::  learn the bytelength of the data.
+        =/  len=@ud  (snag lic wos)
+        [%bytes (decipher-bytes-n +(lic) len)]
+      ::
+          [%bytes-n *]
+        :-  (add win +((div (dec n.typ) 32)))
+        [%bytes-n (decipher-bytes-n win n.typ)]
+      ::
+          [%array *]
+        :-  +(win)
+        :-  %array
+        ::  find the word index of the actual data.
+        =.  win  (div wor 32)
+        ::  read the elements from their location.
+        %-  tail
+        %^  decipher-array-n  ~[t.typ]  +(win)
+        (snag win wos)
+      ::
+          [%array-n *]
+        =>  (decipher-array-n ~[t.typ] win n.typ)
+        [- %array-n +]
+          [%tuple *]
+        =>  (decipher-tuple t.typ win)
+        [- %tuple +]
+      ==
+    ::
+    ++  decipher-bytes-n
+      |=  [fro=@ud bys=@ud]
+      ^-  octs
+      ::  parse {bys} bytes from {fro}.
+      :-  bys
+      %+  rsh
+        :-  3
+        =+  (mod bys 32)
+        ?:(=(0 -) - (sub 32 -))
+      %+  rep  8
+      %-  flop
+      =-  (swag [fro -] wos)
+      +((div (dec bys) 32))
+    ::
+    ++  decipher-array-n
+      ::NOTE  we take (list etyp) even though we only operate on
+      ::      a single etyp as a workaround for urbit/arvo#673
+      ::NOTE  careful! produces lists without type info
+      =|  res=(list data)
+      |=  [tys=(list etyp) fro=@ud len=@ud]
+      ^-  [@ud (list data)]
+      ?~  tys  !!
+      ?:  =(len 0)  [fro (flop res)]
+      =+  (decipher-one fro ~[i.tys])  ::  [nin=@ud dat=*]
+      $(res ^+(res [dat res]), fro nin, len (dec len))
+    ::
+    ++  decipher-tuple
+      =|  res=(list data)
+      |=  [tys=(list etyp) fro=@ud]
+      ^-  [@ud (list data)]
+      ?~  tys  [fro (flop `(list data)`res)]
+      =+  (decipher-one fro ~[i.tys])  ::  [nin=@ud dat=*]
+      $(res ^+(res [dat res]), fro nin, tys t.tys)
+    --
+  ::
   --
 ::
 ::  communicating with rpc nodes
@@ -838,6 +952,21 @@
   ^-  tape
   %-  prefix-hex
   (render-hex-bytes 20 `@`a)
+::
+++  address-to-checksum
+  |=  =address
+  ^-  tape
+  =/  hexed  (render-hex-bytes 20 `@`address)
+  =/  hash  (keccak-256:keccak:crypto (as-octs:mimes:html (crip hexed)))
+  =|  ret=tape
+  =/  pos  63
+  |-
+  ?~  hexed  (prefix-hex (flop ret))
+  =/  char  i.hexed
+  ?:  (lth char 58)  $(pos (dec pos), ret [char ret], hexed t.hexed)
+  =/  nib  (cut 2 [pos 1] hash)
+  ?:  (lth 7 nib)  $(pos (dec pos), ret [(sub char 32) ret], hexed t.hexed)
+  $(pos (dec pos), ret [char ret], hexed t.hexed)
 ::
 ++  transaction-to-hex
   |=  h=@
