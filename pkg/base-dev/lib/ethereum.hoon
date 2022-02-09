@@ -998,5 +998,7 @@
 ::
 ++  hex-to-num
   |=  a=@t
-  (rash (rsh [3 2] a) hex)
+  =.  a  (rsh [3 2] a)
+  ?~  a  `@`0
+  (rash a hex)
 --
