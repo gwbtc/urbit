@@ -6,7 +6,7 @@
   ((ar:dejs:format trace:dejs) test-data)
 =/  reduced-trace  (reduce-traces parsed-data)
 :: ~&  parsed-data
-:: ~&  reduced-trace
+~&  reduced-trace
 :: ~&  parsed-data+(lent parsed-data)
 |%
 ++  test-foo

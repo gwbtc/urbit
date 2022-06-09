@@ -4,6 +4,7 @@
   |*  data-mold=mold
   =<  full-trace
   |%
+  +$  data  data-mold
   +$  full-trace
     $:  block-hash=@ux
         block-number=@ud
@@ -29,54 +30,54 @@
         gas-used=@ud
         output=data-mold
     ==
+  ++  rpc
+    =<  trace
+    |%
+      +$  trace  [=details =action]
+      ++  result
+          |%
+          +$  result
+          $%  [%create create]
+              [%call call]
+          ==
+          +$  create  [gas-used=@ud code=@ux address=@ux]
+          +$  call  [gas-used=@ud output=data-mold]
+          --
+      +$  type  ?(%create %call %suicide %reward)
+      +$  details
+          $:  subtraces=@ud
+              trace-address=(list @ud)
+              tx-pos=(unit @ud)
+              tx-hash=(unit @ux)
+              block-number=@ud
+              block-hash=@ux
+          ==
+      ::
+      +$  call-type  ?(%call %callcode %staticcall %delegatecall)
+      ++  action
+          =<  $%  call
+                  [%create create]
+                  [%suicide suicide]
+                  [%reward reward]
+              ==
+          |%
+          +$  call  [call-type from=@ux to=@ux value=@ud gas=@ud input=data-mold call:result]
+          +$  create  [from=@ux value=@ud gas=@ud init=@ux create:result]
+          +$  suicide  [address=@ux refund-address=@ux balance=@ud]
+          +$  reward  [author=@ux value=@ud type=?(%block %uncle %external %empty-step)]
+          --
+      ::
+      ++  action-ir
+          |%
+          +$  call  [type=call-type from=@ux to=@ux value=@ud gas=@ud input=data-mold]
+          +$  create  [from=@ux value=@ud gas=@ud init=@ux]
+          --
+    --
   --
 ::
 ++  rpc
   |%
-  ++  trace
-    =<  trace
-    |%
-    +$  trace  [=details =action]
-    ++  result
-        |%
-        +$  result
-        $%  [%create create]
-            [%call call]
-        ==
-        +$  create  [gas-used=@ud code=@ux address=@ux]
-        +$  call  [gas-used=@ud output=@ux]
-        --
-    +$  type  ?(%create %call %suicide %reward)
-    +$  details
-        $:  subtraces=@ud
-            trace-address=(list @ud)
-            tx-pos=(unit @ud)
-            tx-hash=(unit @ux)
-            block-number=@ud
-            block-hash=@ux
-        ==
-    ::
-    +$  call-type  ?(%call %callcode %staticcall %delegatecall)
-    ++  action
-        =<  $%  call
-                [%create create]
-                [%suicide suicide]
-                [%reward reward]
-            ==
-        |%
-        +$  call  [call-type from=@ux to=@ux value=@ud gas=@ud input=@ux call:result]
-        +$  create  [from=@ux value=@ud gas=@ud init=@ux create:result]
-        +$  suicide  [address=@ux refund-address=@ux balance=@ud]
-        +$  reward  [author=@ux value=@ud type=?(%block %uncle %external %empty-step)]
-        --
-    ::
-    ++  action-ir
-        |%
-        +$  call  [type=call-type from=@ux to=@ux value=@ud gas=@ud input=@ux]
-        +$  create  [from=@ux value=@ud gas=@ud init=@ux]
-        --
-    ::
-    --
+  ++  trace  rpc:raw-trace
   ++  debug
     |%
     ++  trace
