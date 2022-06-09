@@ -64,6 +64,7 @@
   ++  hook  (eth-hook config)
   +$  on-event-form  _*eval-form:eval:(strand ,vase)
   +$  on-block-form    eval-form:eval:(strand (quip diff-mold _^|(..on-init:agent:hook)))
+  
   --
 ::
 +$  state-0  [%0 base-state-0]
