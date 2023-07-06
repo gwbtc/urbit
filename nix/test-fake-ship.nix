@@ -1,11 +1,9 @@
-{ lib, stdenvNoCC, curl, python3, bootFakeShip }:
-
-{ arvo ? null, pill, ship ? "bus", doCheck ? true }:
+{ stdenvNoCC, curl, python3, pier, urbit }:
 
 stdenvNoCC.mkDerivation {
-  name = "test-${ship}";
+  name = "test-urbit";
 
-  src = bootFakeShip { inherit arvo pill ship; };
+  src = pier;
 
   phases = [ "unpackPhase" "buildPhase" "checkPhase" ];
 
@@ -19,7 +17,7 @@ stdenvNoCC.mkDerivation {
   buildPhase = ''
     set -x
 
-    ${arvo}/vere.jam -d ./pier 2> urbit-output
+    ${urbit}/bin/urbit -d ./pier 2> urbit-output
 
     # Sledge Hammer!
     # See: https://github.com/travis-ci/travis-ci/issues/4704#issuecomment-348435959
@@ -180,7 +178,7 @@ stdenvNoCC.mkDerivation {
     exit "$fail"
   '';
 
-  inherit doCheck;
+  doCheck = true;
 
   # Fix 'bind: operation not permitted' when nix.useSandbox = true on darwin.
   # See https://github.com/NixOS/nix/blob/5f6840fbb49ae5b534423bd8a4360646ee93dbaf/src/libstore/build.cc#L2961
