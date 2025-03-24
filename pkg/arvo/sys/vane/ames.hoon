@@ -179,7 +179,7 @@
     :: +get-forward-lanes: get all lanes to send to when forwarding to peer
     ::
     ++  get-forward-lanes
-      |=  [our=@p peer=peer-state peers=(map ship ship-state)]
+      |=  [our=@p her=@p peer=peer-state peers=(map ship ship-state)]
       ^-  (list lane)
       =;  zar=(trap (list lane))
         ?~  route.peer  $:zar
@@ -187,14 +187,45 @@
         ?:(direct.rot [lane.rot ~] [lane.rot $:zar])
       ::
       |.  ^-  (list lane)
-      ?:  ?=(%czar (clan:title sponsor.peer))
+      ?:  =(her sponsor.peer)
         ?:  =(our sponsor.peer)
           ~
         [%& sponsor.peer]~
       =/  next  (~(get by peers) sponsor.peer)
       ?.  ?=([~ %known *] next)
         ~
-      $(peer +.u.next)
+      $(peer +.u.next, her sponsor.peer)
+      ::|^  ^-  (list lane)
+      ::?:(?=(%pawn her) com rot)
+      ::::
+      ::++  rot
+      ::  ?.  ?=([~ %known *] peer)  ~
+      ::  ?~  route.peer  zar
+      ::  =*  rot  u.route.peer
+      ::  ?:(direct.rot [lane.rot ~] [lane.rot $:zar])
+      ::::
+      ::++  zar
+      ::  ?:  ?=(%czar (clan:title sponsor.peer))
+      ::    ?:  =(our sponsor.peer)
+      ::      ~
+      ::    [%& sponsor.peer]~
+      ::  =/  next  (~(get by peers) sponsor.peer)
+      ::  ?.  ?=([~ %known *] next)
+      ::    ~
+      ::  zar(peer +.u.next, her sponsor.peer)
+      ::::
+      ::++  com
+      ::  ~|  %get-forward-lanes-gw
+      ::  ?:  =(our sponsor.peer)  ~
+      ::  ?:  direct.route.peer  [lane.rot ~]
+      ::  ?:  ?=(%king (clan:title sponsor.peer))  rot
+      ::  ?>  ?=(%pawn (clan:title sponsor.peer))
+      ::  =/  next  (~(get by peers) sponsor.peer)
+      ::  ?.  ?=([~ %known *] next)  ~
+      ::  ?>  ?=([~ %& *] route.next)
+      ::  ?>  =(sponsor.peer sponsor.next)
+      ::  ~[lane.route.peer &+sponsor.peer]
+      ::--
     ::
     ++  chain
       =<  mop
@@ -462,9 +493,9 @@
       ?>  .=       rcvr.open-packet  our
       ?>  .=  sndr-life.open-packet  1
       ?>  .=  rcvr-life.open-packet  our-life
-      ::  only a star can sponsor a comet
+      ::  only a star or comet can sponsor a comet
       ::
-      ?>  =(%king (clan:title (^sein:title sndr.shot)))
+      ?>  ?=(?(%king %pawn) (clan:title (^^sein:title rof /ames our now sndr.shot)))
       =/  crub  (com:nu:crub:crypto public-key.open-packet)
       ::  comet public-key must hash to its @p address
       ::
@@ -1570,13 +1601,13 @@
     +|  %helpers
     ::
     ++  get-forward-lanes-mesa
-      |=  [our=@p fren=fren-state chums=(map ship chum-state)]
+      |=  [our=@p her=@p fren=fren-state chums=(map ship chum-state)]
       ^-  (list lane:pact)
       =;  zar=(trap (list lane:pact))
         ?~  lane.fren  $:zar
         [+.u.lane.fren $:zar]
       |.  ^-  (list lane:pact)
-      ?:  ?=(%czar (clan:title sponsor.fren))
+      ?:  =(her sponsor.fren)
         ?:  =(our sponsor.fren)
           ~
         [`@ux`sponsor.fren]~
@@ -3793,6 +3824,10 @@
           ::
           =?  peers.ames-state  ?=(~ ship-state)
             (~(put by peers.ames-state) sndr.shot %alien *alien-agenda)
+          =/  lyf
+            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
+          ?:  ?=([~ ~ [* ^] lyf)
+            (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
           ::  upgrade comet to %known via on-publ-full
           ::
           =.  event-core
@@ -3803,7 +3838,7 @@
               :*  ^=     rift  0
                   ^=     life  sndr-life.open-packet
                   ^=     keys  keys
-                  ^=  sponsor  `(^sein:title sndr.shot)
+                  ^=  sponsor  `(^^sein:title rof /ames our now sndr.shot)
               ==
             =+  sy-core=~(. sy:(mesa now^eny^rof) duct)
             =^  moves  ames-state
@@ -3820,7 +3855,7 @@
           =.  event-core
             %-  emit
             :*  unix-duct  %give  %nail  sndr.shot
-                (get-forward-lanes our peer-state peers.ames-state)
+                (get-forward-lanes our sndr.shot peer-state peers.ames-state)
             ==
           ::
           event-core
@@ -3897,7 +3932,7 @@
           =?  event-core  !=(old-route route.peer-state)
             %-  emit
             :*  unix-duct  %give  %nail  sndr.shot
-                (get-forward-lanes our peer-state peers.ames-state)
+                (get-forward-lanes our sndr.shot peer-state peers.ames-state)
             ==
           ::  perform peer-specific handling of packet
           ::
@@ -4237,7 +4272,7 @@
             =.  core
               %-  emit:core
               :*  unix-duct.ames-state  %give  %nail  ship
-                  (get-forward-lanes our peer peers.ames-state)
+                  (get-forward-lanes our ship peer peers.ames-state)
               ==
             abet:(abed-peer:pe:core ship peer)
           ::
@@ -4263,7 +4298,9 @@
             =/  ship-state  (~(get by peers.ames-state) u.ship)
             ?:  ?=([~ %known *] ship-state)
               event-core
-            (request-attestation u.ship)
+            ?:  ?=(%pawn (clan:title u.ship))
+              event-core
+            (fetch-comet-pki u.ship)
           ::
           ?:  ?=([%dead-flow ~] wire)
             =?  event-core  ?=(^ unix-duct)
@@ -4569,7 +4606,7 @@
                   ship-state=(unit ship-state)
                   mutate=$-(alien-agenda alien-agenda)
               ==
-          ^+  event-core
+          ^+  [*? event-core]
           ::  create a default $alien-agenda on first contact
           ::
           =+  ^-  [already-pending=? todos=alien-agenda]
@@ -4584,19 +4621,24 @@
             event-core
           ::
           ?:  =(%pawn (clan:title ship))
-            (request-attestation ship)
+            (fetch-comet-pki ship)
           ::  NB: we specifically look for this wire in +public-keys-give in
           ::  Jael.  if you change it here, you must change it there.
           ::
           (emit duct %pass /public-keys %j %public-keys [n=ship ~ ~])
-        ::  +request-attestation: helper to request attestation from comet
+        ::  +fetch-comet-pki: helper to request attestation from comet
         ::
         ::    Also sets a timer to resend the request every 30s.
         ::
-        ++  request-attestation
+        ++  fetch-comet-pki
           |=  =ship
           ^+  event-core
           =+  (ev-trace msg.veb ship |.("requesting attestion"))
+          =/  pon
+            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
+          ?:  ?=([~ ~ [* ^]] pon)
+            =.  event-core  (emil moves)
+            (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
           =.  event-core
             =/  =blob  (sendkeys-packet ship)
             (send-blob for=| ship blob (~(get by peers.ames-state) ship))
@@ -4623,8 +4665,8 @@
               ?.  ?|  ?=([~ %known *] chum-state)
                       ?=([~ %known *] ship-state)
                   ==
-                ?:  ?=(%pawn (clan:title ship))
-                  (try-next-sponsor (^sein:title ship))
+                ::?:  ?=(%pawn (clan:title ship))
+                ::  (try-next-sponsor (^sein:title ship))
                 ::  by default, %aliens are saved in peer.ames-state
                 ::  XX use chums.ames-state as default
                 ::
@@ -4660,6 +4702,7 @@
               ?:  ?|  =(our ship)
                       ?&  !=(final-ship ship)
                           !=(%czar (clan:title ship))
+                          !=(sponsor ship) :: for sponsoring comets 
                       ==
                   ==
                 (try-next-sponsor sponsor)
@@ -4914,7 +4957,7 @@
             =?  peer-core   !=(old-route route.peer-state)
               %-  pe-emit
               :*  unix-duct  %give  %nail  her
-                  (get-forward-lanes our peer-state peers.ames-state)
+                  (get-forward-lanes our her peer-state peers.ames-state)
               ==
             ::  resend comet attestation packet if first message times out
             ::
@@ -6977,7 +7020,7 @@
               =?  peer-core   !=(old-route route.peer-state)
                 %-  pe-emit
                 :*  unix-duct  %give  %nail  her
-                    (get-forward-lanes our peer-state peers.ames-state)
+                    (get-forward-lanes our her peer-state peers.ames-state)
                 ==
               =^  want=(unit want)  wan.keen
                 ?~  res=(pry:fi-mop wan.keen)  `wan.keen
@@ -7327,7 +7370,7 @@
                   ~
                 `(rear ;;((list ship) q.q.u.u.sax))
               ?:  ?=([~ %known *] peer)
-                (get-forward-lanes our +.u.peer peers.ames-state)
+                (get-forward-lanes our u.who +.u.peer peers.ames-state)
               ?.  ?=([~ %known *] chum)
                 ?~  gal
                   ~
@@ -7335,7 +7378,7 @@
                 ::
                 ?:(=(our u.gal) ~ [%& u.gal]~)
               %-  mesa-to-ames-lanes
-              (get-forward-lanes-mesa our +.u.chum chums.ames-state)
+              (get-forward-lanes-mesa our u.who +.u.chum chums.ames-state)
             ==
           ::
               [%bones her=@ ~]
@@ -7901,7 +7944,7 @@
               %-  ev-emit
               :*  unix-duct  %give  %nail  her
                   %-  mesa-to-ames-lanes
-                  (get-forward-lanes-mesa our per chums.ames-state)
+                  (get-forward-lanes-mesa our her per chums.ames-state)
               ==
             ::  update and print connection status
             ::
@@ -7975,7 +8018,7 @@
               %-  ev-emit
               :*  unix-duct  %give  %nail  her
                   %-  mesa-to-ames-lanes
-                  (get-forward-lanes-mesa our per chums.ames-state)
+                  (get-forward-lanes-mesa our her per chums.ames-state)
               ==
             ::  update and print connection status
             ::
@@ -9347,9 +9390,9 @@
               %-  sy-emit
               :*  unix-duct  %give  %nail  ship
                   ?.  ?=(%chum -.peer)
-                    (get-forward-lanes our +.u.peer peers.ames-state)
+                    (get-forward-lanes our ship +.u.peer peers.ames-state)
                   %-  mesa-to-ames-lanes
-                  (get-forward-lanes-mesa our +.u.peer chums.ames-state)
+                  (get-forward-lanes-mesa our ship +.u.peer chums.ames-state)
               ==
             ::  if one of our sponsors breached, give the updated list to vere
             ::
@@ -9456,9 +9499,9 @@
             %-  sy-emit
             :*  unix-duct  %give  %nail  ship
                 ?.  ?=(%chum -.peer)
-                  (get-forward-lanes our +.u.peer peers.ames-state)
+                  (get-forward-lanes our ship +.u.peer peers.ames-state)
                 %-  mesa-to-ames-lanes
-                (get-forward-lanes-mesa our +.u.peer chums.ames-state)
+                (get-forward-lanes-mesa our ship +.u.peer chums.ames-state)
             ==
           ::  +on-publ-full: handle new pki data for peer(s)
           ::
@@ -9650,9 +9693,9 @@
               %-  sy-emit
               :*  unix-duct  %give  %nail  ship
                   ?.  ?=(%chum -.peer)
-                    (get-forward-lanes our +.peer peers.ames-state)
+                    (get-forward-lanes our ship +.peer peers.ames-state)
                   %-  mesa-to-ames-lanes
-                  (get-forward-lanes-mesa our +.peer chums.ames-state)
+                  (get-forward-lanes-mesa our ship +.peer chums.ames-state)
               ==
             ::
             ::  automatically set galaxy route, since unix handles lookup
@@ -9735,7 +9778,7 @@
               ?:  ?=(%pawn (clan:title ship))
                 ::  XX resend attestation request?
                 ::
-                =/  spon=@p  (^sein:title ship)
+                =/  spon=@p  (^^sein:title rof /ames our now ship)
                 ?:  =(our spon)  moves  ::  XX  don't send to ourselves
                 moves:(~(al-read-proof al ~[/ames]) ship `@ux`spon)
               ~&  retrieving-keys-again/ship
@@ -10149,7 +10192,7 @@
             al-core
           ::
           ?:  =(%pawn (clan:title ship))
-            =/  spon=@p  (^sein:title ship)
+            =/  spon=@p  (^^sein:title rof /ames our now ship)
             ?:  =(our spon)  al-core  ::  XX  don't send to ourselves
             (al-read-proof ship `@ux`spon)
           ::  NB: we specifically look for this wire in +public-keys-give in
@@ -10172,7 +10215,7 @@
           ?>  &(=(rcvr our) =(rcvr-life life.ames-state))
           ::  only a star can sponsor a comet
           ::
-          ?>  =(%king (clan:title (^sein:title comet)))
+          $
           ::  comet public-key must hash to its @p address
           ::
           ?>  =(comet fig:ex:crub)
@@ -10195,13 +10238,17 @@
             %^  ~(sy-publ sy hen)  /comet  %full
             %+  ~(put by *(map ship point:jael))  comet
             =|  =point:jael
-            point(rift 0, life 1, keys keys, sponsor `(^sein:title comet))
+            point(rift 0, life 1, keys keys, sponsor `(^^sein:title rof /ames our now ship))
           ::
           (al-emil moves)
         ::
         ++  al-read-proof
           |=  [comet=ship =lane:pact]
           ^+  al-core
+          =/  lyf
+            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
+          ?:  ?=([~ ~ [* ^] lyf)
+            (al-emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
           =/  =space  [%publ life=1]
           =/  =path
             %+  make-space-path  space
@@ -10942,13 +10989,13 @@
               !>  ^-  [sponsor=@p (list lane:pact)]
               :-  u.gal
               ?:  ?=([~ %known *] chum)
-                (get-forward-lanes-mesa our +.u.chum chums.ames-state)
+                (get-forward-lanes-mesa our u.who +.u.chum chums.ames-state)
               ?.  ?=([~ %known *] peer)
                 %-  %+  %*(ev-tace ev-core:ev her u.who)  odd.veb.bug.ames-state
                     |.("alien peek for lanes")
                 ::
                 ?:(=(our u.gal) ~ [`@ux`u.gal]~)
-              %+  turn  (get-forward-lanes our +.u.peer peers.ames-state)
+              %+  turn  (get-forward-lanes our u.who +.u.peer peers.ames-state)
               |=  lane=(each @p address)
               ?-    -.lane
                   %&  `@ux`p.lane

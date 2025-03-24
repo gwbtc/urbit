@@ -1170,6 +1170,45 @@
     ?~  pos  ``[%noun !>(~)]
     ``[%noun !>((some rift.u.pos))]
   ::
+      %point
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex
+      =/  cub  (pit:nu:crub:crypto 512 u.who)
+      :-  ~  :-  ~  :-  %noun
+      !>  ^-  point
+      :*  ^=  rift  0
+          ^=  life  1
+          ^=  keys  [1^pub:ex:cub ~ ~] 
+          ^=  sponsor
+            (~(sein of [now eny] lex) u.who)
+      ==
+    =/  pub  (~(get by pos.zim.pki.lex) u.who)
+    ?~  pub  ~
+    ``[%noun !>(u.pub)]
+  ::
+      %poynt                                             ::  unitized %point
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex
+      =/  cub  (pit:nu:crub:crypto 512 u.who)
+      :-  ~  :-  ~  :-  %noun
+      !>  %-  some  ^-  point
+      :*  ^=  rift  0
+          ^=  life  1
+          ^=  keys  [1^pub:ex:cub ~ ~] 
+          ^=  sponsor
+            (~(sein of [now eny] lex) u.who)
+      ==
+    =/  pub  (~(get by pos.zim.pki.lex) u.who)
+    ``[%noun !>(pub)]
+  ::
       %vein
     ?.  ?=([@ ~] tyl)  [~ ~]
     ?.  &(?=(%& -.why) =(p.why our))
