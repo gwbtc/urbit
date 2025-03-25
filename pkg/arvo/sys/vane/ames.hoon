@@ -187,45 +187,24 @@
         ?:(direct.rot [lane.rot ~] [lane.rot $:zar])
       ::
       |.  ^-  (list lane)
+      =<  ?~(- ~ [i.- ~])
+      =|  lans=(list lane)
+      =|  hops=@ud
+      =|  hers=(set @p)
+      |-  ^-  (list lane)
       ?:  =(her sponsor.peer)
         ?:  =(our sponsor.peer)
-          ~
-        [%& sponsor.peer]~
+          lans
+        [[%& sponsor.peer] lans]
       =/  next  (~(get by peers) sponsor.peer)
       ?.  ?=([~ %known *] next)
-        ~
-      $(peer +.u.next, her sponsor.peer)
-      ::|^  ^-  (list lane)
-      ::?:(?=(%pawn her) com rot)
-      ::::
-      ::++  rot
-      ::  ?.  ?=([~ %known *] peer)  ~
-      ::  ?~  route.peer  zar
-      ::  =*  rot  u.route.peer
-      ::  ?:(direct.rot [lane.rot ~] [lane.rot $:zar])
-      ::::
-      ::++  zar
-      ::  ?:  ?=(%czar (clan:title sponsor.peer))
-      ::    ?:  =(our sponsor.peer)
-      ::      ~
-      ::    [%& sponsor.peer]~
-      ::  =/  next  (~(get by peers) sponsor.peer)
-      ::  ?.  ?=([~ %known *] next)
-      ::    ~
-      ::  zar(peer +.u.next, her sponsor.peer)
-      ::::
-      ::++  com
-      ::  ~|  %get-forward-lanes-gw
-      ::  ?:  =(our sponsor.peer)  ~
-      ::  ?:  direct.route.peer  [lane.rot ~]
-      ::  ?:  ?=(%king (clan:title sponsor.peer))  rot
-      ::  ?>  ?=(%pawn (clan:title sponsor.peer))
-      ::  =/  next  (~(get by peers) sponsor.peer)
-      ::  ?.  ?=([~ %known *] next)  ~
-      ::  ?>  ?=([~ %& *] route.next)
-      ::  ?>  =(sponsor.peer sponsor.next)
-      ::  ~[lane.route.peer &+sponsor.peer]
-      ::--
+        lans
+      %_  $
+        her   sponsor.fren
+        fren  +.u.next
+        hops  +(hops)
+        hers  (~(put in hers) her)
+      ==
     ::
     ++  chain
       =<  mop
@@ -1607,14 +1586,27 @@
         ?~  lane.fren  $:zar
         [+.u.lane.fren $:zar]
       |.  ^-  (list lane:pact)
+      =<  ?~(- ~ [i.- ~])
+      =|  lans=(list lane:pact)
+      =|  hops=@ud
+      =|  hers=(set @p)
+      |-  ^-  (list lane:pact)
       ?:  =(her sponsor.fren)
-        ?:  =(our sponsor.fren)
-          ~
-        [`@ux`sponsor.fren]~
+        ?:  ?|  =(our sponsor.fren)
+                (lte 3 hops)
+                (~(has in hers) sponsor.fren)
+            ==
+          lans
+        [`@ux`sponsor.fren lans]
       =/  next  (~(get by chums) sponsor.fren)
       ?.  ?=([~ %known *] next)
-        ~
-      $(fren +.u.next)
+        lans
+      %_  $
+        her   sponsor.fren
+        fren  +.u.next
+        hops  +(hops)
+        hers  (~(put in hers) her)
+      ==
     ::
     ++  key-chain     ((on ,@ ,[key=@ =path]) lte)
     ++  parse-packet  |=(a=@ -:($:de:pact a))

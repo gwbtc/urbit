@@ -220,9 +220,17 @@
   ::                                                    ::  ++saxo:of
   ++  saxo                                              ::  sponsorship chain
     |=  who=ship
-    ^-  (list ship)
+    =|  hop=@ud
+    =|  hers=(set ship)
+    |-  ^-  (list ship)
     =/  dad  (sein who)
-    [who ?:(=(who dad) ~ $(who dad))]
+    :-  who
+    ?:  ?|  (lte 3 hop)
+            =(who dad)
+            (~(has in hers) dad)
+        ==
+      ~
+    $(who dad, hop +(hop), (~(put in hers) dad))
   ::                                                    ::  ++call:of
   ++  call                                              ::  invoke
     |=  $:  ::  hen: event cause
@@ -1244,16 +1252,15 @@
       !>  [1 pub:ex:cub ~]
     ::
     =/  rac  (clan:title u.who)
-    ?:  ?=(%pawn rac)
+    ?:  &(?=(%pawn rac) !(~(has by pos.zim.pki.lex) u.who))
       ?.  =(u.who p.why)
         [~ ~]
-      ?.  =(1 u.lyf)
+      ?~  sec=(~(got by jaw.own.pki.lex) u.lyf)
         [~ ~]
-      =/  sec  (~(got by jaw.own.pki.lex) u.lyf)
       =/  cub  (nol:nu:crub:crypto sec)
-      =/  sig  (sign:as:cub (shaf %self (sham [u.who 1 pub:ex:cub])))
+      =/  sig  (sign:as:cub (shaf %self (sham [u.who u.lyf pub:ex:cub])))
       :^  ~  ~  %noun
-      !>  [1 pub:ex:cub `sig]
+      !>  [u.lyf pub:ex:cub `sig]
     ::
     =/  pub  (~(get by pos.zim.pki.lex) u.who)
     ?~  pub
