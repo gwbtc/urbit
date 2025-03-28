@@ -4079,6 +4079,7 @@
     +$  diff
       $%  [%rift from=rift to=rift]
           [%keys from=key-update to=key-update]
+          [%fief fief=(unit fief)]
           [%spon from=(unit @p) to=(unit @p)]
       ==
     ::
@@ -4088,6 +4089,7 @@
     +$  udiff
       $:  =id:block
       $%  [%rift =rift boot=?]
+          [%fief fief=(unit fief)]
           [%keys key-update boot=?]
           [%spon sponsor=(unit @p)]
           [%disavow ~]
@@ -4099,6 +4101,7 @@
       ?-    +<.a-udiff
           %disavow  ~|(%udiff-to-diff-disavow !!)
           %spon     `[%spon sponsor.a-point sponsor.a-udiff]
+          %fieff     ~|(%todo-implement !!)
           %rift
         ?.  (gth rift.a-udiff rift.a-point)
           ~

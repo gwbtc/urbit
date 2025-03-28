@@ -55,7 +55,6 @@
             nel=(set duct)                              ::  trackers of all
             dns=dnses                                   ::  on-chain dns state
             pos=(map ship point)                        ::  on-chain ship state
-            fef=(map ship fief)
         ==                                              ::
   ==                                                    ::
 +$  message-all
