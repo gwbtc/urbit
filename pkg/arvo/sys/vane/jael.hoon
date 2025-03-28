@@ -53,11 +53,9 @@
         $:  yen=(jug duct ship)                         ::  trackers
             ney=(jug ship duct)                         ::  reverse trackers
             nel=(set duct)                              ::  trackers of all
-            fen=(jug duct ship)
-            nef=(jug ship duct)
             dns=dnses                                   ::  on-chain dns state
             pos=(map ship point)                        ::  on-chain ship state
-            fef=(list fief)
+            fef=(map ship fief)
         ==                                              ::
   ==                                                    ::
 +$  message-all

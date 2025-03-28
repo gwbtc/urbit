@@ -1176,6 +1176,7 @@
         keens=(map path keen-state)
         =chain
         tip=(jug =user=path [duct =ames=path])
+        fief=(unit fief)
     ==
   +$  keen-state
     $+  keen-state
@@ -1658,6 +1659,7 @@
         pit=(map path request-state)           :: active +peek namespace paths
         =client=chain                          :: stores keys for %shut requests
         tip=(jug =user=path [duct =ames=path]) :: reverse .pit lookup map
+        fief=(unit fief)
     ==
   ::
   ::  interest gifts per path in the pith
@@ -3975,7 +3977,7 @@
   ::                                                    ::::
 ++  jael  ^?
   |%
-  +$  public-keys-result
+  +$  points-result
     $%  [%full points=(map ship point)]
         [%diff who=ship =diff:point]
         [%breach who=ship]
@@ -3985,9 +3987,8 @@
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
-        [%public-keys =public-keys-result]            ::  ethereum changes
+        [%points =points-result]                      ::  PKI changes
         [%turf turf=(list turf)]                      ::  domains
-        [%fief fiefs=(map ship (unit fief))]
     ==                                                ::
   ::  +feed: potential boot parameters
   ::
@@ -4008,7 +4009,7 @@
         [%moon =ship =udiff:point]                    ::  register moon keys
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
-        [%public-keys ships=(set ship)]               ::  sub to publics
+        [%points ships=(set ship)]                    ::  sub to publics
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key
         [%ruin ships=(set ship)]                      ::  pretend breach
@@ -4017,7 +4018,6 @@
         $>(%vega vane-task)                           ::  report upgrade
         $>(%plea vane-task)                           ::  ames request
         [%step ~]                                     ::  reset web login code
-        [%fief ships=(set ship)]
     ==                                                ::
   ::
   +$  dawn-event
@@ -4068,6 +4068,7 @@
           =life
           keys=(map life [crypto-suite=@ud =pass])
           sponsor=(unit @p)
+          fef=(unit fief)
       ==
     ::
     +$  key-update  [=life crypto-suite=@ud =pass]
