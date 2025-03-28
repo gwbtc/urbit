@@ -522,6 +522,10 @@
 +$  tint  $@  ?(%r %g %b %c %m %y %k %w %~)             ::  text color
           [r=@uxD g=@uxD b=@uxD]                        ::  24bit true color
 +$  turf  (list @t)                                     ::  domain, tld first
++$  fief  $%  [%tf turf]
+              [%if p=@ifF q=@udE]
+              [%is p=@isH q=@udE]
+          ==
 ::                                                      ::::
 ::::                    ++ethereum-types                  ::  eth surs for jael
   ::                                                    ::::
@@ -936,6 +940,7 @@
     ::
         [%turf turfs=(list turf)]
         [%saxo sponsors=(list ship)]
+        [%fief fiefs=(map ship (unit fief))]
     ::
         [%push p=(list lane:pact) q=@]   :: send a request/response packet
         [%sage =sage:mess]               :: give deserialized/open payload
@@ -3982,6 +3987,7 @@
         [%private-keys =life vein=(map life ring)]    ::  private keys
         [%public-keys =public-keys-result]            ::  ethereum changes
         [%turf turf=(list turf)]                      ::  domains
+        [%fief fiefs=(map ship (unit fief))]
     ==                                                ::
   ::  +feed: potential boot parameters
   ::
@@ -4011,6 +4017,7 @@
         $>(%vega vane-task)                           ::  report upgrade
         $>(%plea vane-task)                           ::  ames request
         [%step ~]                                     ::  reset web login code
+        [%fief ships=(set ship)]
     ==                                                ::
   ::
   +$  dawn-event

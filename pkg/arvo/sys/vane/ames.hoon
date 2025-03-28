@@ -130,7 +130,7 @@
       $%  [%ames $>(?(%tune %sage) gift)]
           [%behn $>(%wake gift:behn)]
           [%gall $>(?(%flub %unto) gift:gall)]
-          [%jael $>(?(%private-keys %public-keys %turf) gift:jael)]
+          [%jael $>(?(%private-keys %public-keys %turf %fief) gift:jael)]
           $:  @tas
               $>(?(%noon %boon %done) gift)
       ==  ==
@@ -7649,6 +7649,10 @@
               ::
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
+              ::
+                  [%jael %fief *]
+                sy-abet:(~(sy-emit sy hen) unix-duct %give %fief +>.sign)
+              ::
               ::  vane gifts
               ::
                   ?([%gall %flub ~] [@ %done *] [@ %boon *] [@ %noon *])
@@ -9195,6 +9199,21 @@
             =<  q.q  %-  need  %-  need
             (rof [~ ~] /ames %j `beam`[[our %turf %da now] /])
           ::
+          =/  fiefs
+            =;  fiefs
+              %-  (gas by *(map ship (unit fief)))
+              %+  murn  ~(tap by fiefs)
+              |=  [=ship =fief]
+              ^-  (unit (unit [ship fief]))
+              ?.  ?|  (~(has by peer-state.ames-state) ship)
+                      (~(has by chum-state.ames-state) ship)
+                  ==
+                ~
+              ``[ship fief]
+            ;;  (map ship fief)
+            =<  q.q  %-  need  %-  need
+            (rof [~ ~] /ames %j `beam`[[our %fief %da now] /])
+          ::
           =?  sy-core  ?=(~ +.chum.dead.ames-state)
             (sy-emit ~[/ames] %pass /mesa/retry %b %wait `@da`(add now ~m2))
           =?  chum.dead.ames-state  ?=(~ +.chum.dead.ames-state)
@@ -9219,6 +9238,7 @@
             ::
               ^-  (list move)
               :~  [hen %give %turf turfs]
+                  [hen %give %fief fiefs]
                   [hen %give %saxo sy-get-sponsors]
                   (poke-ping-app hen our %kick fail=%.n)
               ==
@@ -9230,6 +9250,8 @@
           ^+  sy-core
           %-  sy-emil
           :~  [hen %pass /turf %j %turf ~]
+              :: todo: only pass /fiefs if we're a groundwire comet
+              [hen %pass /fiefs %j %fief [n=our ~ ~]]
               [hen %pass /private-keys %j %private-keys ~]
               [hen %pass /public-keys %j %public-keys [n=our ~ ~]]
           ==
@@ -9270,6 +9292,9 @@
             ?+  iota  ~&(unexpected-ask-wire/iota sy-core)
                 [%turf *]
               (sy-emit hen %pass /turf %j %turf ~)
+            ::
+                [%fief *]
+              (sy-emit hen %pass /fief %j %fief [ship.iota ~ ~])
             ::
                 [%public-keys [%p ship=@] *]
               %^  sy-emit  hen  %pass
@@ -11695,7 +11720,7 @@
       ::
       ~>  %slog.0^leaf/"mesa: taking weird {<[[- +<]:sign]>} for {(spud wire)}"
       take:me-core
-    ::  If the unix-duct is not set, we defer applying %public-keys and %turf
+    ::  If the unix-duct is not set, we defer applying %public-keys, %turf, and %fief
     ::  gifts (which can trigger other gifts to be sent to unix) by setting up
     ::  a timer that will request them again
     ::
@@ -11708,7 +11733,16 @@
     ?:  ?=(%turf -.wire)
       ~>  %slog.0^leaf/"ames: unix-duct missing; delay %turf"
       [%mesa %ask wire]~
-    ?>  ?=([%jael %public-keys *] sign)
+    ?:  ?=(%fief -.wire)
+      ~>  %slog.0^leaf/"ames: unix-duct missing; delay %fief"
+      =/  fief-gift=gift:jael  +>.sign
+      =/  ships=(set ship)  ~(key by fief-gift)
+      %-  ~(rep in ships)
+      |=  [=ship wires=(list ^wire)]
+      ~>  %slog.0^leaf/"ames: unix-duct missing; delay {<i.wire>} for {<ship>}"
+      :_  wires
+      [%mesa %ask /fief/[(scot %p ship)]]
+    ?>  ?=([%jael %public-keys %fief *] sign)
     =/  gift=public-keys-result:jael  +>.sign
     ?.  ?=(%full -.gift)
       ~&(unexpected-ask-gift/-.gift ~)
