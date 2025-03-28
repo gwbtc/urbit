@@ -11560,6 +11560,7 @@
             %.  [dud lane hop.pact %poke +>.pact]
             hear-poke:ev-pact:(ev-foco:ev-core her-pok fren)
           =?  chums.ames-state  ?=(~ +.chum-state)
+            :: XX: zif what?
             ::  first time: upgrade to %alien and +peek attestation proof
             ::
             (~(put by chums.ames-state) her-pok alien/*ovni-state)
