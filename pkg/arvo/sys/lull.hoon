@@ -4079,7 +4079,7 @@
     +$  diff
       $%  [%rift from=rift to=rift]
           [%keys from=key-update to=key-update]
-          [%fief fief=(unit fief)]
+          [%fief from=(unit fief) to=(unit fief)]
           [%spon from=(unit @p) to=(unit @p)]
       ==
     ::
