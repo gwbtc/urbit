@@ -4101,7 +4101,7 @@
       ?-    +<.a-udiff
           %disavow  ~|(%udiff-to-diff-disavow !!)
           %spon     `[%spon sponsor.a-point sponsor.a-udiff]
-          %fieff     ~|(%todo-implement !!)
+          %fief     ~|(%todo-implement !!)
           %rift
         ?.  (gth rift.a-udiff rift.a-point)
           ~

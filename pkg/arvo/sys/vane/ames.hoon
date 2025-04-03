@@ -11058,6 +11058,7 @@
         [unix-duct %give %push lanes blob=p:(fax:plot (en:^pact pact))]
       ::
       ++  make-lanes
+        :: XX zif should change this for gw
         |=  [her=ship lan=(unit [hop=@ =lane:pact]) =qos]
         ^-  (list lane:pact:ames)
         ?:  =(%czar (clan:title her))
