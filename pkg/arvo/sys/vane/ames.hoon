@@ -9349,7 +9349,12 @@
             ?.  ?=([?(%ship %chum) ~ %known *] peer)
               %.  sy-core
               (slog leaf+"ames: missing peer {<ship>} on new fief, skip" ~)
-            =.  
+            =.  fef.+.u.peer  fef
+            =?  chums.ames-state  ?=(%chum -.peer)
+              (~(put by chums.ames-state) ship u.peer)
+            =?  peers.ames-state  ?=(%ship -.peer)
+              (~(put by peers.ames-state) ship u.peer)
+            (sy-emit unix-duct %give %fief ship)
           ::
           ::  +on-points-breach: handle continuity breach of .ship; wipe its state
           ::
