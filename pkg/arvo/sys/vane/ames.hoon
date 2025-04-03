@@ -3820,7 +3820,7 @@
             (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
           ?:  ?=([~ ~ [* ^] lyf)
             (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
-          ::  upgrade comet to %known via on-publ-full
+          ::  upgrade comet to %known via on-points-full
           ::
           =.  event-core
             =/  crypto-suite=@ud  1
@@ -3834,7 +3834,7 @@
               ==
             =+  sy-core=~(. sy:(mesa now^eny^rof) duct)
             =^  moves  ames-state
-              sy-abet:(sy-publ:sy-core / [%full (my [sndr.shot point]~)])
+              sy-abet:(sy-points:sy-core / [%full (my [sndr.shot point]~)])
             (emil moves)
           ::  manually add the lane to the peer state
           ::
@@ -3843,7 +3843,7 @@
           =.  peers.ames-state
             (~(put by peers.ames-state) sndr.shot %known peer-state)
           ::
-          ::  XX remove; sy-publ already emits the %nail
+          ::  XX remove; sy-points already emits the %nail
           =.  event-core
             %-  emit
             :*  unix-duct  %give  %nail  sndr.shot
@@ -7644,14 +7644,14 @@
                   [%jael %private-keys *]
                 sy-abet:(~(sy-priv sy hen) [life vein]:sign)
               ::
-                  [%jael %public-keys *]
-                sy-abet:(~(sy-publ sy hen) wire +>.sign)
+                  [%jael %points *]
+                sy-abet:(~(sy-points sy hen) wire +>.sign)
               ::
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
               ::
-                  [%jael %fief *]
-                sy-abet:(~(sy-emit sy hen) unix-duct %give %fief +>.sign)
+                ::   [%jael %points *]
+                :: sy-abet:(~(sy-emit sy hen) unix-duct %give %fief +>.sign)
               ::
               ::  vane gifts
               ::
@@ -7661,7 +7661,7 @@
               ::  remote responses: acks/poke/cork/naxplanation payloads
               ::    reentrant from %ames (from either message or packet layer)
               ::
-                [%ames %sage *]
+                  [%ames %sage *]
                 =<  ev-abet
                 =/  response-pith  `(pole iota)`(mesa-pave:ev-core wire)
                 %.  [wire +.sign]
@@ -9199,6 +9199,7 @@
             =<  q.q  %-  need  %-  need
             (rof [~ ~] /ames %j `beam`[[our %turf %da now] /])
           ::
+          :: GWTODO
           =/  fiefs
             =;  fiefs
               %-  (gas by *(map ship (unit fief)))
@@ -9250,10 +9251,8 @@
           ^+  sy-core
           %-  sy-emil
           :~  [hen %pass /turf %j %turf ~]
-              :: todo: only pass /fiefs if we're a groundwire comet
-              [hen %pass /fiefs %j %fief [n=our ~ ~]]
               [hen %pass /private-keys %j %private-keys ~]
-              [hen %pass /public-keys %j %public-keys [n=our ~ ~]]
+              [hen %pass /point %j %point [n=our ~ ~]]
           ==
         ::
         ::  +on-cong: adjust congestion control parameters
@@ -9293,12 +9292,9 @@
                 [%turf *]
               (sy-emit hen %pass /turf %j %turf ~)
             ::
-                [%fief *]
-              (sy-emit hen %pass /fief %j %fief [ship.iota ~ ~])
-            ::
-                [%public-keys [%p ship=@] *]
+                [%point [%p ship=@] *]
               %^  sy-emit  hen  %pass
-              [/public-keys %j %public-keys [ship.iota ~ ~]]
+              [/point %j %point [ship.iota ~ ~]]
             ==
           ?.  ?=([%mesa %retry ~] wire)
             ~&  >>>  %evil-behn-timer^wire
@@ -9320,33 +9316,53 @@
           :_  prod-moves
           [~[/ames] %pass /mesa/retry %b %wait `@da`(add now ~m2)]
         ::
-        ++  sy-publ
-          |=  [=wire =public-keys-result:jael]
+        ++  sy-points
+          |=  [=wire =points-result:jael]
           |^  ^+  sy-core
           ::
-          ?-    public-keys-result
+          ?-    points-result
               [%diff @ %rift *]
-            (on-publ-rift [who to.diff]:public-keys-result)
+            (on-points-rift [who to.diff]:points-result)
           ::
               [%diff @ %keys *]
-            (on-publ-rekey [who to.diff]:public-keys-result)
+            (on-points-rekey [who to.diff]:points-result)
           ::
               [%diff @ %spon *]
-            (on-publ-sponsor [who to.diff]:public-keys-result)
+            (on-points-sponsor [who to.diff]:points-result)
+          ::
+              [%diff @ %fief *]
+            (on-points-fief [who to.diff]:points-result)
           ::
               [%full *]
-            (on-publ-full points.public-keys-result)
+            (on-points-full points.points-result)
           ::
               [%breach *]
-            (on-publ-breach who.public-keys-result)
+            (on-points-breach who.points-result)
           ==
-          ::  +on-publ-breach: handle continuity breach of .ship; wipe its state
+          ::
+          ++  on-points-fief
+            |=  [=ship fef=(unit fief)]
+            ^+  sy-core
+            ?:  =(our ship)
+              sy-core
+            =/  peer  (sy-find-peer ship)
+            ?.  ?=([?(%ship %chum) ~ %known *] peer)
+              %.  sy-core
+              (slog leaf+"ames: missing peer {<ship>} on new fief, skip" ~)
+            =.  fef.+.u.peer  fef
+            =?  chums.ames-state  ?=(%chum -.peer)
+              (~(put by chums.ames-state) ship u.peer)
+            =?  peers.ames-state  ?=(%ship -.peer)
+              (~(put by peers.ames-state) ship u.peer)
+            (sy-emit unix-duct %give %fief ship)
+          ::
+          ::  +on-points-breach: handle continuity breach of .ship; wipe its state
           ::
           ::   Abandon all pretense of continuity and delete all messaging state
           ::   associated with .ship, including sent and unsent messages.
           ::   Also cancel all timers related to .ship.
           ::
-          ++  on-publ-breach
+          ++  on-points-breach
             |=  =ship
             ^+  sy-core
             ?:  =(our ship)
@@ -9418,11 +9434,11 @@
               (sy-emit unix-duct %give %saxo ~(tap in sponsors))
             ::
             sy-core
-          ::  +on-publ-rekey: handle new key for peer
+          ::  +on-points-rekey: handle new key for peer
           ::
           ::    TODO: assert .crypto-suite compatibility
           ::
-          ++  on-publ-rekey
+          ++  on-points-rekey
             |=  $:  =ship
                     =life
                     crypto-suite=@ud
@@ -9438,7 +9454,7 @@
               =.  keys.point     (my [life crypto-suite public-key]~)
               =.  sponsor.point  `(^^sein:title rof /ames our now ship)
               ::
-              (on-publ-full (my [ship point]~))
+              (on-points-full (my [ship point]~))
             ::
             =/  old-key       symmetric-key.+.u.peer
             =/  =private-key  sec:ex:crypto-core
@@ -9490,11 +9506,11 @@
             =?  peers.ames-state  ?=(%ship -.peer)
               (~(put by peers.ames-state) ship u.peer)
             sy-core
-          ::  +on-publ-sponsor: handle new or lost sponsor for peer
+          ::  +on-points-sponsor: handle new or lost sponsor for peer
           ::
           ::    TODO: really handle sponsor loss
           ::
-          ++  on-publ-sponsor
+          ++  on-points-sponsor
             |=  [=ship sponsor=(unit ship)]
             ^+  sy-core
             ::
@@ -9520,9 +9536,9 @@
                 %-  mesa-to-ames-lanes
                 (get-forward-lanes-mesa our ship +.u.peer chums.ames-state)
             ==
-          ::  +on-publ-full: handle new pki data for peer(s)
+          ::  +on-points-full: handle new pki data for peer(s)
           ::
-          ++  on-publ-full
+          ++  on-points-full
             |=  points=(map ship point:jael)
             ^+  sy-core
             ::
@@ -9644,9 +9660,9 @@
               (sy-emil moves)
             ::
             --
-          ::  on-publ-rift: XX
+          ::  on-points-rift: XX
           ::
-          ++  on-publ-rift
+          ++  on-points-rift
             |=  [=ship =rift]
             ^+  sy-core
             =?  rift.ames-state  =(our ship)
@@ -9655,7 +9671,7 @@
             ?~  ?=([?(%ship %chum) ~] peer)
               ::  print error here? %rift was probably called before %keys
               ::
-              ~>  %slog.1^leaf/"ames: missing peer-state on-publ-rift"
+              ~>  %slog.1^leaf/"ames: missing peer-state on-points-rift"
               sy-core
             ?.  ?=([?(%ship %chum) ~ %known *] peer)
               ::  ignore aliens
@@ -10252,7 +10268,7 @@
               |.("todos: {<pokes=pokes>} {<peeks=peeks>} {<chums=chums>}")
           =^  moves  ames-state
             =<  sy-abet
-            %^  ~(sy-publ sy hen)  /comet  %full
+            %^  ~(sy-points sy hen)  /comet  %full
             %+  ~(put by *(map ship point:jael))  comet
             =|  =point:jael
             point(rift 0, life 1, keys keys, sponsor `(^^sein:title rof /ames our now ship))
@@ -10319,7 +10335,7 @@
           =.  al-core
             (al-register-comet her.name open-packet signature signed)
           =.  ames-state
-            ::  discard moves; %nail gift is included in +sy-publ
+            ::  discard moves; %nail gift is included in +sy-points
             ::
             =/  =^lane
               ?@  lane  [%.y `@p`lane]
@@ -11721,7 +11737,7 @@
       ::
       ~>  %slog.0^leaf/"mesa: taking weird {<[[- +<]:sign]>} for {(spud wire)}"
       take:me-core
-    ::  If the unix-duct is not set, we defer applying %public-keys, %turf, and %fief
+    ::  If the unix-duct is not set, we defer applying %point and %turf
     ::  gifts (which can trigger other gifts to be sent to unix) by setting up
     ::  a timer that will request them again
     ::
@@ -11734,16 +11750,7 @@
     ?:  ?=(%turf -.wire)
       ~>  %slog.0^leaf/"ames: unix-duct missing; delay %turf"
       [%mesa %ask wire]~
-    ?:  ?=(%fief -.wire)
-      ~>  %slog.0^leaf/"ames: unix-duct missing; delay %fief"
-      =/  fief-gift=gift:jael  +>.sign
-      =/  ships=(set ship)  ~(key by fief-gift)
-      %-  ~(rep in ships)
-      |=  [=ship wires=(list ^wire)]
-      ~>  %slog.0^leaf/"ames: unix-duct missing; delay {<i.wire>} for {<ship>}"
-      :_  wires
-      [%mesa %ask /fief/[(scot %p ship)]]
-    ?>  ?=([%jael %public-keys %fief *] sign)
+    ?>  ?=([%jael %point *] sign)
     =/  gift=public-keys-result:jael  +>.sign
     ?.  ?=(%full -.gift)
       ~&(unexpected-ask-gift/-.gift ~)
