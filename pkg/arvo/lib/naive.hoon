@@ -157,7 +157,7 @@
   ==
 ::
 +$  turf  (list @t)                                     ::  domain, tld first
-+$  fief  $%  [%turf p=turf q=@udE]
++$  fief  $%  [%turf p=(list turf) q=@udE]
               [%if p=@ifF q=@udE]
               [%is p=@isH q=@udE]
           ==
