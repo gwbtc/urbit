@@ -1,3 +1,4 @@
+!:
 ::  /sys/zuse
 ::  %zuse: arvo library
 ::

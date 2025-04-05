@@ -130,7 +130,7 @@
       $%  [%ames $>(?(%tune %sage) gift)]
           [%behn $>(%wake gift:behn)]
           [%gall $>(?(%flub %unto) gift:gall)]
-          [%jael $>(?(%private-keys %public-keys %turf %fief) gift:jael)]
+          [%jael $>(?(%private-keys %public-keys %turf %fiefs) gift:jael)]
           $:  @tas
               $>(?(%noon %boon %done) gift)
       ==  ==
@@ -159,6 +159,7 @@
           $:  %j
               $>  $?  %private-keys
                       %public-keys
+                      %fiefs
                       %turf
                       %ruin
                   ==
@@ -187,24 +188,14 @@
         ?:(direct.rot [lane.rot ~] [lane.rot $:zar])
       ::
       |.  ^-  (list lane)
-      =<  ?~(- ~ [i.- ~])
-      =|  lans=(list lane)
-      =|  hops=@ud
-      =|  hers=(set @p)
-      |-  ^-  (list lane)
       ?:  =(her sponsor.peer)
         ?:  =(our sponsor.peer)
-          lans
-        [[%& sponsor.peer] lans]
+          ~
+        [%& sponsor.peer]~
       =/  next  (~(get by peers) sponsor.peer)
       ?.  ?=([~ %known *] next)
-        lans
-      %_  $
-        her   sponsor.fren
-        fren  +.u.next
-        hops  +(hops)
-        hers  (~(put in hers) her)
-      ==
+        ~
+      $(peer +.u.next, her sponsor.peer)
     ::
     ++  chain
       =<  mop
@@ -460,7 +451,7 @@
     ::
     ++  sift-open-packet
       ~/  %sift-open-packet
-      |=  [=shot our=ship our-life=@]
+      |=  [[rof=roof our=ship now=@da] =shot our=ship our-life=@]
       ^-  open-packet
       ::  deserialize and type-check packet contents
       ::
@@ -1586,27 +1577,14 @@
         ?~  lane.fren  $:zar
         [+.u.lane.fren $:zar]
       |.  ^-  (list lane:pact)
-      =<  ?~(- ~ [i.- ~])
-      =|  lans=(list lane:pact)
-      =|  hops=@ud
-      =|  hers=(set @p)
-      |-  ^-  (list lane:pact)
       ?:  =(her sponsor.fren)
-        ?:  ?|  =(our sponsor.fren)
-                (lte 3 hops)
-                (~(has in hers) sponsor.fren)
-            ==
-          lans
-        [`@ux`sponsor.fren lans]
+        ?:  =(our sponsor.fren)
+          ~
+        [`@ux`sponsor.fren]~
       =/  next  (~(get by chums) sponsor.fren)
       ?.  ?=([~ %known *] next)
-        lans
-      %_  $
-        her   sponsor.fren
-        fren  +.u.next
-        hops  +(hops)
-        hers  (~(put in hers) her)
-      ==
+        ~
+      $(fren +.u.next, her sponsor.fren)
     ::
     ++  key-chain     ((on ,@ ,[key=@ =path]) lte)
     ++  parse-packet  |=(a=@ -:($:de:pact a))
@@ -3811,15 +3789,15 @@
           ?:  ?=([~ %known *] ship-state)
             event-core
           ::
-          =/  =open-packet  (sift-open-packet shot our life.ames-state)
+          =/  =open-packet  (sift-open-packet [rof our now] shot our life.ames-state)
           ::  add comet as an %alien if we haven't already
           ::
           =?  peers.ames-state  ?=(~ ship-state)
             (~(put by peers.ames-state) sndr.shot %alien *alien-agenda)
           =/  lyf
-            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
-          ?:  ?=([~ ~ [* ^] lyf)
-            (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
+            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
+          ?:  ?=([~ ~ [* ^]] lyf)
+            (emit [[//keys]~ %pass /public-keys %j %public-keys sndr.shot ~ ~])
           ::  upgrade comet to %known via on-points-full
           ::
           =.  event-core
@@ -3831,6 +3809,7 @@
                   ^=     life  sndr-life.open-packet
                   ^=     keys  keys
                   ^=  sponsor  `(^^sein:title rof /ames our now sndr.shot)
+                  ~
               ==
             =+  sy-core=~(. sy:(mesa now^eny^rof) duct)
             =^  moves  ames-state
@@ -4598,7 +4577,7 @@
                   ship-state=(unit ship-state)
                   mutate=$-(alien-agenda alien-agenda)
               ==
-          ^+  [*? event-core]
+          ^+  event-core
           ::  create a default $alien-agenda on first contact
           ::
           =+  ^-  [already-pending=? todos=alien-agenda]
@@ -4627,7 +4606,7 @@
           ^+  event-core
           =+  (ev-trace msg.veb ship |.("requesting attestion"))
           =/  pon
-            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
+            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p ship)])
           ?:  ?=([~ ~ [* ^]] pon)
             =.  event-core  (emil moves)
             (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
@@ -7644,14 +7623,14 @@
                   [%jael %private-keys *]
                 sy-abet:(~(sy-priv sy hen) [life vein]:sign)
               ::
-                  [%jael %points *]
+                  [%jael %public-keys *]
                 sy-abet:(~(sy-points sy hen) wire +>.sign)
               ::
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
               ::
-                ::   [%jael %points *]
-                :: sy-abet:(~(sy-emit sy hen) unix-duct %give %fief +>.sign)
+                  [%jael %fiefs *]
+                sy-abet:(~(sy-emit sy hen) unix-duct %give %fiefs +>.sign)
               ::
               ::  vane gifts
               ::
@@ -9199,18 +9178,8 @@
             =<  q.q  %-  need  %-  need
             (rof [~ ~] /ames %j `beam`[[our %turf %da now] /])
           ::
-          :: GWTODO
-          =/  fiefs
-            =;  fiefs
-              %-  (gas by *(map ship (unit fief)))
-              %+  murn  ~(tap by fiefs)
-              |=  [=ship =fief]
-              ^-  (unit (unit [ship fief]))
-              ?.  ?|  (~(has by peer-state.ames-state) ship)
-                      (~(has by chum-state.ames-state) ship)
-                  ==
-                ~
-              ``[ship fief]
+          =/  fiefs=(map ship (unit fief))
+            =-  (~(run by -) some)
             ;;  (map ship fief)
             =<  q.q  %-  need  %-  need
             (rof [~ ~] /ames %j `beam`[[our %fief %da now] /])
@@ -9239,7 +9208,7 @@
             ::
               ^-  (list move)
               :~  [hen %give %turf turfs]
-                  [hen %give %fief fiefs]
+                  [hen %give %fiefs fiefs]
                   [hen %give %saxo sy-get-sponsors]
                   (poke-ping-app hen our %kick fail=%.n)
               ==
@@ -9252,7 +9221,8 @@
           %-  sy-emil
           :~  [hen %pass /turf %j %turf ~]
               [hen %pass /private-keys %j %private-keys ~]
-              [hen %pass /point %j %point [n=our ~ ~]]
+              [hen %pass /point %j %public-keys [n=our ~ ~]]
+              [hen %pass /fiefs %j %fiefs ~] 
           ==
         ::
         ::  +on-cong: adjust congestion control parameters
@@ -9292,9 +9262,12 @@
                 [%turf *]
               (sy-emit hen %pass /turf %j %turf ~)
             ::
-                [%point [%p ship=@] *]
+                [%fiefs *]
+              (sy-emit hen %pass /fiefs %j %fiefs ~)
+            ::
+                [%public-keys [%p ship=@] *]
               %^  sy-emit  hen  %pass
-              [/point %j %point [ship.iota ~ ~]]
+              [/point %j %public-keys [ship.iota ~ ~]]
             ==
           ?.  ?=([%mesa %retry ~] wire)
             ~&  >>>  %evil-behn-timer^wire
@@ -9317,44 +9290,27 @@
           [~[/ames] %pass /mesa/retry %b %wait `@da`(add now ~m2)]
         ::
         ++  sy-points
-          |=  [=wire =points-result:jael]
+          |=  [=wire =public-keys-result:jael]
           |^  ^+  sy-core
           ::
-          ?-    points-result
+          ?-    public-keys-result
               [%diff @ %rift *]
-            (on-points-rift [who to.diff]:points-result)
+            (on-points-rift [who to.diff]:public-keys-result)
           ::
               [%diff @ %keys *]
-            (on-points-rekey [who to.diff]:points-result)
+            (on-points-rekey [who to.diff]:public-keys-result)
           ::
               [%diff @ %spon *]
-            (on-points-sponsor [who to.diff]:points-result)
+            (on-points-sponsor [who to.diff]:public-keys-result)
           ::
-              [%diff @ %fief *]
-            (on-points-fief [who to.diff]:points-result)
+              [%diff @ %fief *]  sy-core
           ::
               [%full *]
-            (on-points-full points.points-result)
+            (on-points-full points.public-keys-result)
           ::
               [%breach *]
-            (on-points-breach who.points-result)
+            (on-points-breach who.public-keys-result)
           ==
-          ::
-          ++  on-points-fief
-            |=  [=ship fef=(unit fief)]
-            ^+  sy-core
-            ?:  =(our ship)
-              sy-core
-            =/  peer  (sy-find-peer ship)
-            ?.  ?=([?(%ship %chum) ~ %known *] peer)
-              %.  sy-core
-              (slog leaf+"ames: missing peer {<ship>} on new fief, skip" ~)
-            =.  fef.+.u.peer  fef
-            =?  chums.ames-state  ?=(%chum -.peer)
-              (~(put by chums.ames-state) ship u.peer)
-            =?  peers.ames-state  ?=(%ship -.peer)
-              (~(put by peers.ames-state) ship u.peer)
-            (sy-emit unix-duct %give %fief ship)
           ::
           ::  +on-points-breach: handle continuity breach of .ship; wipe its state
           ::
@@ -10246,9 +10202,7 @@
           ::  assert the contents of the proof match ours
           ::
           ?>  &(=(rcvr our) =(rcvr-life life.ames-state))
-          ::  only a star can sponsor a comet
           ::
-          $
           ::  comet public-key must hash to its @p address
           ::
           ?>  =(comet fig:ex:crub)
@@ -10271,7 +10225,7 @@
             %^  ~(sy-points sy hen)  /comet  %full
             %+  ~(put by *(map ship point:jael))  comet
             =|  =point:jael
-            point(rift 0, life 1, keys keys, sponsor `(^^sein:title rof /ames our now ship))
+            point(rift 0, life 1, keys keys, sponsor `(^^sein:title rof /ames our now comet))
           ::
           (al-emil moves)
         ::
@@ -10279,9 +10233,9 @@
           |=  [comet=ship =lane:pact]
           ^+  al-core
           =/  lyf
-            (rof [~ ~] pov %j `beam`[[our %lyfe %da now] /(scot %p ship)])
-          ?:  ?=([~ ~ [* ^] lyf)
-            (al-emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
+            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p comet)])
+          ?:  ?=([~ ~ [* ^]] lyf)
+            (al-emit [[//keys]~ %pass /public-keys %j %public-keys comet ~ ~])
           =/  =space  [%publ life=1]
           =/  =path
             %+  make-space-path  space
@@ -11080,6 +11034,8 @@
         ?:  =(%czar (clan:title her))
           [lane:(need lan)]~
         =/  sponsor=(unit @ux)  (get-sponsor her)
+        ?:  =([~ her] sponsor)
+          [lane:(need lan)]~
         =/  spon-lane=(unit lane:pact)
           ?.  ?&  ?=(^ lan)
                   =(0 hop.u.lan)
@@ -11721,8 +11677,8 @@
   ?^  dud
     ~|(%ames-take-dud (mean tang.u.dud))
   ::
-  ?:  ?=([?(%turf %mesa %private-keys %public-keys) *] wire)
-    ?.  ?&  ?=(?(%turf %public-keys) -.wire)
+  ?:  ?=([?(%turf %mesa %private-keys %public-keys %fiefs) *] wire)
+    ?.  ?&  ?=(?(%turf %public-keys %fiefs) -.wire)
             ?=(~ unix-duct)
         ==
       ?~  flow-wire=(ev-parse-flow-wire:ev:me-core wire)
@@ -11737,7 +11693,7 @@
       ::
       ~>  %slog.0^leaf/"mesa: taking weird {<[[- +<]:sign]>} for {(spud wire)}"
       take:me-core
-    ::  If the unix-duct is not set, we defer applying %point and %turf
+    ::  If the unix-duct is not set, we defer applying %public-keys and %turf
     ::  gifts (which can trigger other gifts to be sent to unix) by setting up
     ::  a timer that will request them again
     ::
@@ -11750,7 +11706,10 @@
     ?:  ?=(%turf -.wire)
       ~>  %slog.0^leaf/"ames: unix-duct missing; delay %turf"
       [%mesa %ask wire]~
-    ?>  ?=([%jael %point *] sign)
+    ?:  ?=(%fiefs -.wire)
+      ~>  %slog.0^leaf/"ames: unix-duct missing; delay %fiefs"
+      [%mesa %ask wire]~
+    ?>  ?=([%jael %public-keys *] sign)
     =/  gift=public-keys-result:jael  +>.sign
     ?.  ?=(%full -.gift)
       ~&(unexpected-ask-gift/-.gift ~)

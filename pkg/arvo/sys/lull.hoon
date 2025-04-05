@@ -522,7 +522,7 @@
 +$  tint  $@  ?(%r %g %b %c %m %y %k %w %~)             ::  text color
           [r=@uxD g=@uxD b=@uxD]                        ::  24bit true color
 +$  turf  (list @t)                                     ::  domain, tld first
-+$  fief  $%  [%tf turf]
++$  fief  $%  [%turf p=turf q=@udE]
               [%if p=@ifF q=@udE]
               [%is p=@isH q=@udE]
           ==
@@ -565,6 +565,7 @@
             continuity-number=@ud
             sponsor=[has=? who=@p]
             escape=(unit @p)
+            fief=(unit fief)
         ==
       ::
         ::  spawning
@@ -596,6 +597,7 @@
         [%voting-proxy new=address]                 ::  ChangedVotingProxy
         [%spawn-proxy new=address]                  ::  ChangedSpawnProxy
         [%transfer-proxy new=address]               ::  ChangedTransferProxy
+        [%fief fief=(unit fief)]
     ==
   --
 ::  +vane-task: general tasks shared across vanes
@@ -940,7 +942,7 @@
     ::
         [%turf turfs=(list turf)]
         [%saxo sponsors=(list ship)]
-        [%fief fiefs=(map ship (unit fief))]
+        [%fiefs fiefs=(map ship (unit fief))]
     ::
         [%push p=(list lane:pact) q=@]   :: send a request/response packet
         [%sage =sage:mess]               :: give deserialized/open payload
@@ -1176,7 +1178,6 @@
         keens=(map path keen-state)
         =chain
         tip=(jug =user=path [duct =ames=path])
-        fief=(unit fief)
     ==
   +$  keen-state
     $+  keen-state
@@ -1659,7 +1660,6 @@
         pit=(map path request-state)           :: active +peek namespace paths
         =client=chain                          :: stores keys for %shut requests
         tip=(jug =user=path [duct =ames=path]) :: reverse .pit lookup map
-        fief=(unit fief)
     ==
   ::
   ::  interest gifts per path in the pith
@@ -3977,17 +3977,20 @@
   ::                                                    ::::
 ++  jael  ^?
   |%
-  +$  points-result
+  +$  public-keys-result
     $%  [%full points=(map ship point)]
         [%diff who=ship =diff:point]
         [%breach who=ship]
     ==
+  ::
+  +$  fiefs-result  (map ship (unit fief))
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
-        [%points =points-result]                      ::  PKI changes
+        [%public-keys =public-keys-result]                      ::  PKI changes
+        [%fiefs =fiefs-result]                      ::  PKI changes
         [%turf turf=(list turf)]                      ::  domains
     ==                                                ::
   ::  +feed: potential boot parameters
@@ -4009,7 +4012,8 @@
         [%moon =ship =udiff:point]                    ::  register moon keys
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
-        [%points ships=(set ship)]                    ::  sub to publics
+        [%public-keys ships=(set ship)]                    ::  sub to publics
+        [%fiefs ships=(set ship)]                    ::  sub to publics
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key
         [%ruin ships=(set ship)]                      ::  pretend breach
@@ -4068,7 +4072,7 @@
           =life
           keys=(map life [crypto-suite=@ud =pass])
           sponsor=(unit @p)
-          fef=(unit fief)
+          fief=(unit fief)
       ==
     ::
     +$  key-update  [=life crypto-suite=@ud =pass]
@@ -4101,7 +4105,7 @@
       ?-    +<.a-udiff
           %disavow  ~|(%udiff-to-diff-disavow !!)
           %spon     `[%spon sponsor.a-point sponsor.a-udiff]
-          %fief     ~|(%todo-implement !!)
+          %fief     `[%fief fief.a-point fief.a-udiff]
           %rift
         ?.  (gth rift.a-udiff rift.a-point)
           ~
@@ -4127,6 +4131,7 @@
       |=  =diff
       ^-  ^diff
       ?-  -.diff
+        %fief  [%fief to from]:diff
         %rift  [%rift to from]:diff
         %keys  [%keys to from]:diff
         %spon  [%spon to from]:diff
@@ -4144,6 +4149,10 @@
       |:  [*=diff a-point=a]
       ^-  point
       ?-    -.diff
+          %fief
+        ?>  =(fief.a-point from.diff)
+        a-point(fief to.diff)
+      ::
           %rift
         ?>  =(rift.a-point from.diff)
         a-point(rift to.diff)

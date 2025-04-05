@@ -151,7 +151,7 @@
           %-  some
           :+  own
             ?:  =(0 life)  ~
-            `[life pass rift sponsor ~]  ::NOTE  escape unknown ::TODO could be!
+            `[life pass rift sponsor ~ ~]  ::NOTE  escape unknown ::TODO could be!
           ?.  (gth who 0xffff)  ~
           `[spawn ~]  ::NOTE  spawned unknown
       ^-  $=  res
