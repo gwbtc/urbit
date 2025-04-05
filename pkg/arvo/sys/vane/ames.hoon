@@ -3798,7 +3798,7 @@
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
           ?:  ?=([~ ~ [* ^]] lyf)
             (emit [[//keys]~ %pass /public-keys %j %public-keys sndr.shot ~ ~])
-          ::  upgrade comet to %known via on-points-full
+          ::  upgrade comet to %known via on-publ-full
           ::
           =.  event-core
             =/  crypto-suite=@ud  1
@@ -3813,7 +3813,7 @@
               ==
             =+  sy-core=~(. sy:(mesa now^eny^rof) duct)
             =^  moves  ames-state
-              sy-abet:(sy-points:sy-core / [%full (my [sndr.shot point]~)])
+              sy-abet:(sy-publ:sy-core / [%full (my [sndr.shot point]~)])
             (emil moves)
           ::  manually add the lane to the peer state
           ::
@@ -3822,7 +3822,7 @@
           =.  peers.ames-state
             (~(put by peers.ames-state) sndr.shot %known peer-state)
           ::
-          ::  XX remove; sy-points already emits the %nail
+          ::  XX remove; sy-publ already emits the %nail
           =.  event-core
             %-  emit
             :*  unix-duct  %give  %nail  sndr.shot
@@ -7677,7 +7677,7 @@
                 sy-abet:(~(sy-priv sy hen) [life vein]:sign)
               ::
                   [%jael %public-keys *]
-                sy-abet:(~(sy-points sy hen) wire +>.sign)
+                sy-abet:(~(sy-publ sy hen) wire +>.sign)
               ::
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
@@ -9294,7 +9294,7 @@
           %-  sy-emil
           :~  [hen %pass /turf %j %turf ~]
               [hen %pass /private-keys %j %private-keys ~]
-              [hen %pass /point %j %public-keys [n=our ~ ~]]
+              [hen %pass /public-keys %j %public-keys [n=our ~ ~]]
               [hen %pass /fiefs %j %fiefs ~] 
           ==
         ::
@@ -9340,7 +9340,7 @@
             ::
                 [%public-keys [%p ship=@] *]
               %^  sy-emit  hen  %pass
-              [/point %j %public-keys [ship.iota ~ ~]]
+              [/public-keys %j %public-keys [ship.iota ~ ~]]
             ==
           ?:  ?=([%recork ~] wire)
             ::  XX don't reset the timer; this is done in on-take-wake:ames
@@ -9368,36 +9368,36 @@
           ::
           [~[/ames] %pass /mesa/retry %b %wait `@da`(add now ~m2)]
         ::
-        ++  sy-points
+        ++  sy-publ
           |=  [=wire =public-keys-result:jael]
           |^  ^+  sy-core
           ::
           ?-    public-keys-result
               [%diff @ %rift *]
-            (on-points-rift [who to.diff]:public-keys-result)
+            (on-publ-rift [who to.diff]:public-keys-result)
           ::
               [%diff @ %keys *]
-            (on-points-rekey [who to.diff]:public-keys-result)
+            (on-publ-rekey [who to.diff]:public-keys-result)
           ::
               [%diff @ %spon *]
-            (on-points-sponsor [who to.diff]:public-keys-result)
+            (on-publ-sponsor [who to.diff]:public-keys-result)
           ::
               [%diff @ %fief *]  sy-core
           ::
               [%full *]
-            (on-points-full points.public-keys-result)
+            (on-publ-full points.public-keys-result)
           ::
               [%breach *]
-            (on-points-breach who.public-keys-result)
+            (on-publ-breach who.public-keys-result)
           ==
           ::
-          ::  +on-points-breach: handle continuity breach of .ship; wipe its state
+          ::  +on-publ-breach: handle continuity breach of .ship; wipe its state
           ::
           ::   Abandon all pretense of continuity and delete all messaging state
           ::   associated with .ship, including sent and unsent messages.
           ::   Also cancel all timers related to .ship.
           ::
-          ++  on-points-breach
+          ++  on-publ-breach
             |=  =ship
             ^+  sy-core
             ?:  =(our ship)
@@ -9469,11 +9469,11 @@
               (sy-emit unix-duct %give %saxo ~(tap in sponsors))
             ::
             sy-core
-          ::  +on-points-rekey: handle new key for peer
+          ::  +on-publ-rekey: handle new key for peer
           ::
           ::    TODO: assert .crypto-suite compatibility
           ::
-          ++  on-points-rekey
+          ++  on-publ-rekey
             |=  $:  =ship
                     =life
                     crypto-suite=@ud
@@ -9489,7 +9489,7 @@
               =.  keys.point     (my [life crypto-suite public-key]~)
               =.  sponsor.point  `(^^sein:title rof /ames our now ship)
               ::
-              (on-points-full (my [ship point]~))
+              (on-publ-full (my [ship point]~))
             ::
             =/  old-key       symmetric-key.+.u.peer
             =/  =private-key  sec:ex:crypto-core
@@ -9541,11 +9541,11 @@
             =?  peers.ames-state  ?=(%ship -.peer)
               (~(put by peers.ames-state) ship u.peer)
             sy-core
-          ::  +on-points-sponsor: handle new or lost sponsor for peer
+          ::  +on-publ-sponsor: handle new or lost sponsor for peer
           ::
           ::    TODO: really handle sponsor loss
           ::
-          ++  on-points-sponsor
+          ++  on-publ-sponsor
             |=  [=ship sponsor=(unit ship)]
             ^+  sy-core
             ::
@@ -9571,9 +9571,9 @@
                 %-  mesa-to-ames-lanes
                 (get-forward-lanes-mesa our ship +.u.peer chums.ames-state)
             ==
-          ::  +on-points-full: handle new pki data for peer(s)
+          ::  +on-publ-full: handle new pki data for peer(s)
           ::
-          ++  on-points-full
+          ++  on-publ-full
             |=  points=(map ship point:jael)
             ^+  sy-core
             ::
@@ -9695,9 +9695,9 @@
               (sy-emil moves)
             ::
             --
-          ::  on-points-rift: XX
+          ::  on-publ-rift: XX
           ::
-          ++  on-points-rift
+          ++  on-publ-rift
             |=  [=ship =rift]
             ^+  sy-core
             =?  rift.ames-state  =(our ship)
@@ -9706,7 +9706,7 @@
             ?~  ?=([?(%ship %chum) ~] peer)
               ::  print error here? %rift was probably called before %keys
               ::
-              ~>  %slog.1^leaf/"ames: missing peer-state on-points-rift"
+              ~>  %slog.1^leaf/"ames: missing peer-state on-publ-rift"
               sy-core
             ?.  ?=([?(%ship %chum) ~ %known *] peer)
               ::  ignore aliens
@@ -10353,7 +10353,7 @@
               |.("todos: {<pokes=pokes>} {<peeks=peeks>} {<chums=chums>}")
           =^  moves  ames-state
             =<  sy-abet
-            %^  ~(sy-points sy hen)  /comet  %full
+            %^  ~(sy-publ sy hen)  /comet  %full
             %+  ~(put by *(map ship point:jael))  comet
             =|  =point:jael
             point(rift 0, life 1, keys keys, sponsor `(^^sein:title rof /ames our now comet))
@@ -10420,7 +10420,7 @@
           =.  al-core
             (al-register-comet her.name open-packet signature signed)
           =.  ames-state
-            ::  discard moves; %nail gift is included in +sy-points
+            ::  discard moves; %nail gift is included in +sy-publ
             ::
             =/  =^lane
               ?@  lane  [%.y `@p`lane]
