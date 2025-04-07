@@ -8,7 +8,7 @@
 =/  url=tape
   ?~  lur=!<((unit tape) arg)
     ::"https://bootstrap.urbit.org/mainnet.azimuth-snapshot"
-    "https://gw.commercium.network.org/gw.azimuth-snapshot"
+    "https://gw.commercium.network/gw.azimuth-snapshot"
   u.lur
 ;<  =cord  bind:m  (fetch-cord:strandio url)
 =+  ;;(snap=snap-state (cue cord))

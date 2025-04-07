@@ -130,7 +130,7 @@
       $%  [%ames $>(?(%tune %sage) gift)]
           [%behn $>(%wake gift:behn)]
           [%gall $>(?(%flub %unto) gift:gall)]
-          [%jael $>(?(%private-keys %public-keys %turf %fiefs) gift:jael)]
+          [%jael $>(?(%private-keys %public-keys %turf %fief) gift:jael)]
           $:  @tas
               $>(?(%noon %boon %done) gift)
       ==  ==
@@ -159,7 +159,7 @@
           $:  %j
               $>  $?  %private-keys
                       %public-keys
-                      %fiefs
+                      %fief
                       %turf
                       %ruin
                   ==
@@ -582,6 +582,7 @@
               =her=rift
               =her=public-key
               her-sponsor=ship
+              fief=(unit fief)
       ==  ==
     ::  $open-packet: unencrypted packet payload, for comet self-attestation
     ::
@@ -692,7 +693,7 @@
     ==
   ::
   +$  peer-state-21
-    $:  azimuth-state
+    $:  azimuth-state-6
         route=(unit [direct=? =lane])
         =qos
         =ossuary
@@ -717,8 +718,8 @@
     ==
     ::
     +$  dead-timer       [=duct =wire date=@da]
-    +$  azimuth-state    [=symmetric-key =life =rift =public-key sponsor=ship]
-    +$  azimuth-state-6  [=symmetric-key =life =public-key sponsor=ship]
+    +$  azimuth-state-6  [=symmetric-key =life =rift =public-key sponsor=ship]
+    +$  azimuth-state-5  [=symmetric-key =life =public-key sponsor=ship]
     +$  ames-state-4     ames-state-5
     +$  ames-state-5
       $+  ames-state-5
@@ -738,7 +739,7 @@
     ::
     +$  peer-state-5
       $+  peer-state-5
-      $:  azimuth-state-6
+      $:  azimuth-state-5
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -771,7 +772,7 @@
     ::
     +$  peer-state-6
       $+  peer-state-6
-      $:  azimuth-state
+      $:  azimuth-state-6
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -830,7 +831,7 @@
     ::
     +$  peer-state-7
       $+  peer-state-7
-      $:  azimuth-state
+      $:  azimuth-state-6
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -881,7 +882,7 @@
     ::
     +$  peer-state-12
       $+  peer-state-12
-      $:  azimuth-state
+      $:  azimuth-state-6
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -1304,7 +1305,7 @@
     ::
     +$  peer-state-16
       $+  peer-state-16
-      $:  azimuth-state
+      $:  azimuth-state-6
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -1799,9 +1800,50 @@
       ==
     ::
     +|  %state-migrations
+    +$  axle-25
+      $:  peers=(map ship ship-state-24)
+          =unix=duct  ::  [//ames/0v0 ~]
+          =life
+          =rift
+          =bug
+          snub=[form=?(%allow %deny) ships=(set ship)]
+          cong=[msg=_5 mem=_100.000]
+          $=  dead                            ::  dead-flow consolidation timers
+          $:  flow=[%flow (unit dead-timer)]  ::  ... for |ames
+              chum=[%chum (unit dead-timer)]  ::  ... for |mesa
+              cork=[%cork (unit dead-timer)]  ::  ... for %nacked corks
+              rots=[%rots (unit dead-timer)]  ::  ... fir expiring direct routes
+          ==
+          ::
+          =server=chain                       ::  for serving %shut requests
+          priv=private-key
+          chums=(map ship chum-state-25)         ::  XX migrated peers
+          core=_`?(%ames %mesa)`%ames         ::  XX use migrated core by default
+          ::  TODOs
+          :: XX tmp=(map @ux page)            :: temporary hash-addressed bindings
+      ==
+    ::
+    +$  chum-state-25
+      $+  chum-state
+      $%  [%known fren-state-25]
+          [%alien ovni-state]
+      ==
+    ::
+    +$  fren-state-25
+      $:  azimuth-state-6
+          lane=(unit [hop=@ =lane:pact])  :: XX (list)
+          =qos
+          corked=(set side)  ::  can be +peeked in the namespace
+                             ::  XX how many flows to keep here?
+          =ossuary      ::  XX redefine ossuary in terms of bone^side
+          flows=(map side flow-state)
+          pit=(map path request-state)           :: active +peek namespace paths
+          =client=chain                          :: stores keys for %shut requests
+          tip=(jug =user=path [duct =ames=path]) :: reverse .pit lookup map
+      ==
     ::
     +$  axle-24
-      $:  peers=(map ship ship-state)
+      $:  peers=(map ship ship-state-24)
           =unix=duct  ::  [//ames/0v0 ~]
           =life
           =rift
@@ -1821,6 +1863,28 @@
           core=?(%ames %mesa)
       ==
     ::
+    +$  ship-state-24
+      $+  ship-state
+      $%  [%alien alien-agenda]
+          [%known peer-state-24]
+      ==
+    ::
+    +$  peer-state-24
+      $+  peer-state
+      $:  azimuth-state-6
+          route=(unit [direct=? =lane])  ::  XX (list)
+          =qos
+          =ossuary
+          snd=(map bone message-pump-state)
+          rcv=(map bone message-sink-state)
+          nax=(set [=bone =message-num])
+          closing=(set bone)
+          corked=(set bone)
+          keens=(map path keen-state)
+          =chain
+          tip=(jug =user=path [duct =ames=path])
+      ==
+    ::
     +$  chum-state-24
       $+  chum-state-24
       $%  [%alien ovni-state]
@@ -1828,7 +1892,7 @@
       ==
     ::
     +$  fren-state-24
-      $:  azimuth-state
+      $:  azimuth-state-6
           lane=(unit lane:pact)
           =qos
           corked=(set side)
@@ -1874,7 +1938,7 @@
       ==
     ::
     +$  fren-state-23
-      $:  azimuth-state
+      $:  azimuth-state-6
           lane=(unit lane:pact)
           =qos
           corked=(set side)
@@ -2056,7 +2120,7 @@
       ==
     ::
     ++  regression-test
-      |=  [mesa=chum-state back=chum-state]
+      |=  [[rof=roof our=ship now=@da] mesa=chum-state back=chum-state]
       ^-  ?
       ?>  =(-.mesa -.back)     :: both %known or %alien
       ?:  ?=(%alien -.mesa)
@@ -2123,9 +2187,9 @@
     +|  %routes
     ::
     ++  is-peer-dead
-      |=  [now=@da her=ship =qos]
+      |=  [[rof=roof our=@p now=@da] her=ship =qos]
       ^-  ?
-      ?&  !=(%czar (clan:title her))
+      ?&  !=(her (^^sein:title rof /ames our now her))
           ?|  ?=(%dead -.qos)
             ::  if we have contacted .her more than ~s30, consider peer dead
             ::
@@ -2191,7 +2255,8 @@
             [%22 ames-state-22]
             [%23 axle-23]
             [%24 axle-24]
-            [%25 axle]
+            [%25 axle-25]
+            [%26 axle]
         ==
     ::
     ::
@@ -2266,7 +2331,7 @@
       ~>  %slog.0^leaf/"ames: metamorphosis on %take"
       [:(weld molt-moves queu-moves take-moves) adult-gate]
     ::
-    ++  stay  [%25 larva/ames-state]
+    ++  stay  [%26 larva/ames-state]
     ++  scry  scry:adult-core
     ++  load
       |=  $=  old
@@ -2412,6 +2477,10 @@
                   state=axle-24
               ==
               $:  %25                            :: add hop to |mesa lanes
+                  ?(%adult %larva)               ::
+                  state=axle-25
+              ==
+              $:  %26                            :: add fief to peer and chum state
                   ?(%adult %larva)               ::
                   state=axle
           ==  ==
@@ -2682,6 +2751,11 @@
         larval-gate
       ::
           [%25 *]
+        =.  cached-state  `[%25 state.old]
+        ~>  %slog.1^leaf/"ames: larva %25 reload"
+        larval-gate
+      ::
+          [%26 *]
         ?-  +<.old
           %larva  larval-gate
           %adult  (load:adult-core state.old)
@@ -2760,7 +2834,7 @@
       |^  ^+  [moz larval-core]
       ?~  cached-state  [~ larval-core]
       =*  old  u.cached-state
-      ?:  ?=(%25 -.old)
+      ?:  ?=(%26 -.old)
         ::  no state migrations left; update state, clear cache, and exit
         ::
         [(flop moz) larval-core(ames-state.adult-gate +.old, cached-state ~)]
@@ -2837,8 +2911,17 @@
         ==
       ?:  ?=(%23 -.old)
         $(cached-state `24+(state-23-to-24 +.old))
-      ?>  ?=(%24 -.old)
-      $(cached-state `25+(state-24-to-25 +.old))
+      ?:  ?=(%24 -.old)
+        $(cached-state `25+(state-24-to-25 +.old))
+      ?>  ?=(%25 -.old)
+      %_    $
+          cached-state  `26+(state-25-to-26 +.old)
+          moz
+        :*  [[/ames]~ %pass /fief %j %fief ~]
+            [[/ames]~ %pass /turf %j %turf ~]
+            moz
+        ==
+      ==
       ::
       ++  our-beam  `beam`[[our %rift %da now] /(scot %p our)]
       ++  state-4-to-5
@@ -3184,7 +3267,7 @@
             peers
           %-  ~(run by peers.old)
           |=  s=ship-state-21
-          ^-  ship-state
+          ^-  ship-state-24
           ?:  ?=(%alien -.s)
             %=    s
                 keens
@@ -3271,7 +3354,7 @@
             %-  ~(rep by pit.c)
             |=  [[=ames=path req=request-state-23] tip=(jug path [duct path])]
             =|  tmp-per=fren-state
-            =.  tmp-per  tmp-per(- +<.c, client-chain client-chain.c)
+            =.  tmp-per  tmp-per(- (azimuth-state-6-to-26 +<.c), client-chain client-chain.c)
             =+  ev-core=ev:(mesa:adult-core now eny rof)
             =.  chums.ames-state.ev-core
               (~(put by chums.ames-state) her known/tmp-per)
@@ -3285,16 +3368,41 @@
       ::
       ++  state-24-to-25
         |=  old=axle-24
-        ^-  axle
+        ^-  axle-25
         ~>  %slog.0^leaf/"ames: migrating from state %24 to %25"
         %=    old
             chums
           %-  ~(run by chums.old)
           |=  c=chum-state-24
-          ^-  chum-state
+          ^-  chum-state-25
           ?:  ?=(%alien -.c)  c
           ?~  lane.c          c
           c(lane `[hop=1 u.lane.c])  ::  XX bigger hop?
+        ==
+      ::
+      ++  azimuth-state-6-to-26
+        |=  azimuth-state-6
+        ^-  azimuth-state
+        [symmetric-key life rift public-key sponsor ~]
+      ::
+      ++  state-25-to-26
+        |=  old=axle-25
+        ^-  axle
+        ~>  %slog.0^leaf/"ames: migrating from state %25 to %26"
+        %=    old
+            peers
+          %-  ~(run by peers.old)
+          |=  p=ship-state-24
+          ^-  ship-state
+          ?.  ?=(%known -.p)  p
+          p(+< (azimuth-state-6-to-26 +<.p))
+        ::
+            chums
+          %-  ~(run by chums.old)
+          |=  c=chum-state-25
+          ^-  chum-state
+          ?.  ?=(%known -.c)  c
+          c(+< (azimuth-state-6-to-26 +<.c))
         ==
       ::
       --
@@ -3461,10 +3569,7 @@
             *peer-state
           +.u.ship-state
         ::
-        ++  get-sponsors
-          ;;  (list ship)
-          =<  q.q  %-  need  %-  need
-          (rof [~ ~] /ames %j `beam`[[our %saxo %da now] /(scot %p our)])
+        ++  get-sponsors  (^^saxo:title rof /ames our now our)
         ::
         +|  %routes
         ::
@@ -3473,7 +3578,7 @@
           ^-  ?
           ?&  ?=(^ route.peer-state)
               direct.u.route.peer-state  ::  XX what about indirect routes?
-              !=(%czar (clan:title peer))
+              !=(peer (^^sein:title rof /ames our now peer))
               ::  if we haven't tried to contact the peer, there hasn't been any
               ::  /pump or /fine timers that could have turned the peer to %dead
               ::  and we haven't received any packets from the peer, check if
@@ -3750,7 +3855,7 @@
           ::  set .origin.shot if it doesn't have one, re-encode, and send
           ::
           =?    origin.shot
-              &(?=(~ origin.shot) !=(%czar (clan:title sndr.shot)))
+              &(?=(~ origin.shot) !=(sndr.shot (^^sein:title rof /ames our now sndr.shot)))
             ?:  ?=(%& -.lane)
               ~
             ?.  (lte (met 3 p.lane) 6)
@@ -3872,7 +3977,7 @@
           =/  old-route  route.peer-state
           ::  non-galaxy: update route with heard lane or forwarded lane
           ::
-          =?  route.peer-state  !=(%czar (clan:title her.channel))
+          =?  route.peer-state  !=(her.channel (^^sein:title rof /ames our now her.channel))
             ::  if new packet is direct, use that.  otherwise, if the new and
             ::  old lanes are indirect, use the new one.  if the new lane is
             ::  indirect but the old lane is direct, then if the lanes are
@@ -4609,9 +4714,9 @@
           |=  =ship
           ^+  event-core
           =+  (ev-trace msg.veb ship |.("requesting attestion"))
-          =/  pon
+          =/  lyf
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p ship)])
-          ?:  ?=([~ ~ [* ^]] pon)
+          ?:  ?=([~ ~ [* ^]] lyf)
             =.  event-core  (emil moves)
             (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
           =.  event-core
@@ -4676,7 +4781,7 @@
               ::
               ?:  ?|  =(our ship)
                       ?&  !=(final-ship ship)
-                          !=(%czar (clan:title ship))
+                          !=(ship (^^sein:title rof /ames our now ship))
                           !=(sponsor ship) :: for sponsoring comets 
                       ==
                   ==
@@ -4754,8 +4859,8 @@
           ++  abed-peer
             |=  [=ship peer=^peer-state]
             %_  peer-core
-              peer-state  peer
-                channel   [[our ship] now channel-state -.peer]
+                peer-state  peer
+                channel     [[our ship] now channel-state -.peer]
             ==
           ::
           ++  abort  event-core  :: keeps moves, discards state changes
@@ -7373,7 +7478,7 @@
               ::  so long as neither the peer nor the peer's sponsoring galaxy
               ::  is us, and the peer has been reached recently:
               ::
-              ::    - no route to the peer/peer has not been contacted recently:
+              ::    - no route to the peer/u.whor has not been contacted recently:
               ::      send to the peer's sponsoring galaxy
               ::    - direct route to the peer: use that
               ::    - indirect route to the peer: send to both that route and
@@ -7383,21 +7488,12 @@
               !>  ^-  (list lane)
               ?:  =(our u.who)
                 ~
-              =/  sax
-                %+  rof  [~ ~]
-                [/ames %j `beam`[[our %saxo %da now] /(scot %p u.who)]]
-              =/  gal=(unit @p)
-                ?.  ?=([~ ~ *] sax)
-                  ~
-                `(rear ;;((list ship) q.q.u.u.sax))
+              =/  gal  (rear (^^saxo:title rof /ames our now u.who))
               ?:  ?=([~ %known *] peer)
                 (get-forward-lanes our u.who +.u.peer peers.ames-state)
               ?.  ?=([~ %known *] chum)
-                ?~  gal
-                  ~
                 ::  if the peer is %alien or missing, send to the sponsor galaxy
-                ::
-                ?:(=(our u.gal) ~ [%& u.gal]~)
+                ?:(=(our gal) ~ [%& gal]~)
               %-  mesa-to-ames-lanes
               (get-forward-lanes-mesa our u.who +.u.chum chums.ames-state)
             ==
@@ -7477,14 +7573,7 @@
             ``noun+!>(protocol-version)
           ::
               [%boot req=*]
-            =/  who
-              =/  ship  our
-              |-
-              ^-  @p
-              =/  next  (^^sein:title rof /ames our now ship)
-              ?:  ?=(%czar (clan:title next))
-                next
-              $(ship next)
+            =/  who  (rear (^^saxo:title rof /ames our now our))
             ?.  ?=([ship=@t bon=*] req.tyl)
               =/  per  (~(get by peers.ames-state) who)
               =/  chu  (~(get by chums.ames-state) who)
@@ -7682,8 +7771,8 @@
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
               ::
-                  [%jael %fiefs *]
-                sy-abet:(~(sy-emit sy hen) unix-duct %give %fiefs +>.sign)
+                  [%jael %fief *]
+                sy-abet:(~(sy-emit sy hen) unix-duct %give %fief +>.sign)
               ::
               ::  vane gifts
               ::
@@ -8509,7 +8598,7 @@
         ++  ev-update-lane
           |=  [=lane:pact hop=@ud next=(list lane:pact)]
           ^+  per
-          ?:  =(%czar (clan:title her))
+          ?:  =(her (^^sein:title rof /ames our now her))
             =?  per  ?=(~ lane.per)
               ::  XX shouldn't happen
               ~&  >>>  %missing-galaxy-lane
@@ -9281,7 +9370,7 @@
             ::
               ^-  (list move)
               :~  [hen %give %turf turfs]
-                  [hen %give %fiefs fiefs]
+                  [hen %give %fief fiefs]
                   [hen %give %saxo sy-get-sponsors]
                   (poke-ping-app hen our %kick fail=%.n)
               ==
@@ -9295,7 +9384,7 @@
           :~  [hen %pass /turf %j %turf ~]
               [hen %pass /private-keys %j %private-keys ~]
               [hen %pass /public-keys %j %public-keys [n=our ~ ~]]
-              [hen %pass /fiefs %j %fiefs ~] 
+              [hen %pass /fief %j %fief ~] 
           ==
         ::
         ::  +on-cong: adjust congestion control parameters
@@ -9335,8 +9424,8 @@
                 [%turf *]
               (sy-emit hen %pass /turf %j %turf ~)
             ::
-                [%fiefs *]
-              (sy-emit hen %pass /fiefs %j %fiefs ~)
+                [%fief *]
+              (sy-emit hen %pass /fief %j %fief ~)
             ::
                 [%public-keys [%p ship=@] *]
               %^  sy-emit  hen  %pass
@@ -9430,14 +9519,14 @@
               =.  +>.u.peer  +:*fren-state
               ::  XX  reinitialize galaxy route if applicable
               ::
-              =?  lane.+.u.peer  =(%czar (clan:title ship))
+              =?  lane.+.u.peer  =(ship (^^sein:title rof /ames our now ship))
                 (some [hop=0 `@ux`ship])
               (~(put by chums.ames-state) ship u.peer)
             =?  peers.ames-state  ?=(%ship -.peer)
               =.  +>.u.peer  +:*peer-state
               ::  XX  reinitialize galaxy route if applicable
               ::
-              =?  route.+.u.peer  =(%czar (clan:title ship))
+              =?  route.+.u.peer  =(ship (^^sein:title rof /ames our now ship))
                 `[direct=%.y %& ship]
               (~(put by peers.ames-state) ship u.peer)
             ::  cancel all timers related to .ship
@@ -9757,7 +9846,7 @@
                 u.sponsor.point
               (^^sein:title rof /ames our now ship)
             ::
-            =?  sy-core  ?=(%czar (clan:title ship))
+            =?  sy-core  =(ship (^^sein:title rof /ames our now ship))
               %-  sy-emit
               :*  unix-duct  %give  %nail  ship
                   ?.  ?=(%chum -.peer)
@@ -9769,13 +9858,13 @@
             ::  automatically set galaxy route, since unix handles lookup
             ::
             ?:  ?=(%chum -.peer)
-              =?  lane.peer  ?=(%czar (clan:title ship))
+              =?  lane.peer  =(ship (^^sein:title rof /ames our now ship))
                 (some [hop=0 `@ux`ship])
               =.  chums.ames-state
                 (~(put by chums.ames-state) ship known/+.peer)
               [%chum known/+.peer]^sy-core
             ::
-            =?  route.peer  ?=(%czar (clan:title ship))
+            =?  route.peer  =(ship (^^sein:title rof /ames our now ship))
               `[direct=%.y lane=[%& ship]]
             =.  peers.ames-state
               (~(put by peers.ames-state) ship known/+.peer)
@@ -9860,7 +9949,7 @@
               |=  [[=path req=request-state] core=_core]
               ::  update and print connection status
               ::
-              =?  core  (is-peer-dead:core now [her qos.per]:core)
+              =?  core  (is-peer-dead:core [rof our now] [her qos.per]:core)
                 (ev-update-qos:core qos.per.core(- %dead))
               ::  if =(~ pay.req); %naxplanation, %cork or external (i.e. not
               ::  coming from %ames) $peek request
@@ -9914,7 +10003,7 @@
           ?:  =(~ unix-duct)
             %-  (slog leaf+"ames: unix-duct pending; no-op" ~)
             sy-core
-          ?:  =(%czar (clan:title ship))
+          ?:  =(ship (^^sein:title rof /ames our now ship))
             sy-core
           =/  peer  (sy-find-peer ship)
           ?.  ?=([?(%ship %chum) ~ %known *] peer)
@@ -9944,7 +10033,7 @@
           ?:  =(~ unix-duct)
             %-  (slog leaf+"ames: unix-duct pending; no-op" ~)
             sy-core
-          ?:  =(%czar (clan:title ship))
+          ?:  =(ship (^^sein:title rof /ames our now ship))
             %-  %+  slog
                 leaf+"ames: bad idea to %tame galaxy {(scow %p ship)}, ignoring"
             ~
@@ -10247,10 +10336,7 @@
         ::
         +|  %internals
         ::
-        ++  sy-get-sponsors
-          ;;  (list ship)
-          =<  q.q  %-  need  %-  need
-          (rof [~ ~] /ames %j `beam`[[our %saxo %da now] /(scot %p our)])
+        ++  sy-get-sponsors  (^^saxo:title rof /ames our now our)
         ::
         ++  sy-find-peer
           |=  =ship
@@ -10416,6 +10502,10 @@
                   p.p.aut.data
                 (en-beam [[her.name %$ ud+1] pat.name])
               (root:lss tob.data^dat.data)
+          =/  lyf
+            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
+          ?:  ?=([~ ~ [* ^]] lyf)
+            (al-emit [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~])
           ::
           =.  al-core
             (al-register-comet her.name open-packet signature signed)
@@ -11125,24 +11215,17 @@
               ::
               ?:  =(our u.who)
                 ~
-              =/  sax
-                (rof [~ ~] /ames j/`beam`[[our %saxo %da now] /(scot %p u.who)])
-              =/  gal=(unit @p)
-                ?.  ?=([~ ~ *] sax)
-                  ~
-                `(rear ;;((list ship) q.q.u.u.sax))
-              ?~  gal
-                ~
+              =/  gal  (rear (^^saxo:title rof /ames our now u.who))
               :^  ~  ~  %noun
               !>  ^-  [sponsor=@p (list lane:pact)]
-              :-  u.gal
+              :-  gal
               ?:  ?=([~ %known *] chum)
                 (get-forward-lanes-mesa our u.who +.u.chum chums.ames-state)
               ?.  ?=([~ %known *] peer)
                 %-  %+  %*(ev-tace ev-core:ev her u.who)  odd.veb.bug.ames-state
                     |.("alien peek for lanes")
                 ::
-                ?:(=(our u.gal) ~ [`@ux`u.gal]~)
+                ?:(=(our gal) ~ [`@ux`gal]~)
               %+  turn  (get-forward-lanes our u.who +.u.peer peers.ames-state)
               |=  lane=(each @p address)
               ?-    -.lane
@@ -11192,10 +11275,8 @@
         :: XX zif should change this for gw
         |=  [her=ship lan=(unit [hop=@ =lane:pact]) =qos]
         ^-  (list lane:pact:ames)
-        ?:  =(%czar (clan:title her))
-          [lane:(need lan)]~
-        =/  sponsor=(unit @ux)  (get-sponsor her)
-        ?:  =([~ her] sponsor)
+        ?~  sponsor=(get-sponsor her)  [lane:(need lan)]~
+        ?:  =(her u.sponsor)
           [lane:(need lan)]~
         =/  spon-lane=(unit lane:pact)
           ?.  ?&  ?=(^ lan)
@@ -11206,7 +11287,7 @@
             sponsor
           ::  if the last heard lane is direct, check .qos timestamp
           ::
-          ?.((is-peer-dead now her qos) ~ sponsor)
+          ?.((is-peer-dead [rof our now] her qos) ~ sponsor)
         ?~  lan
           (drop sponsor)
         :-  lane.u.lan
@@ -11215,11 +11296,7 @@
       ++  get-sponsor
         |=  =ship
         ^-  (unit @ux)
-        =/  sax
-          (rof [~ ~] /sax %j `beam`[[our %saxo %da now] /(scot %p ship)])
-        ?.  ?=([~ ~ *] sax)
-          ~  :: XX log
-        =/  gal  (rear ;;((list ^ship) q.q.u.u.sax))  :: XX only galaxy
+        =/  gal  (rear (^^saxo:title rof /ames our now ship))
         ?:  =(our gal)
           ~  :: XX log
         [~ `@ux`gal]
@@ -11302,7 +11379,8 @@
           ames-state:on-migrate:(abed-peer:pe:event-core her peer)
         ::  XX  compare pre/post migrated states
         ::
-        %+  ^regression-test
+        %^  ^regression-test
+            [rof our now]
           (~(got by chums.ames-state) her)
         (~(got by chums.ahoy-state) her)
       ::
@@ -11845,8 +11923,8 @@
     =^  mesa-moves  vane-gate
       (take:me-core(ames-state ames-state.vane-gate) sample)
     [(weld ames-moves mesa-moves) vane-gate]
-  ?:  ?=([?(%turf %mesa %private-keys %public-keys %fiefs) *] wire)
-    ?.  ?&  ?=(?(%turf %public-keys %fiefs) -.wire)
+  ?:  ?=([?(%turf %mesa %private-keys %public-keys %fief) *] wire)
+    ?.  ?&  ?=(?(%turf %public-keys %fief) -.wire)
             ?=(~ unix-duct)
         ==
       ?~  flow-wire=(ev-parse-flow-wire:ev:me-core wire)
@@ -11874,8 +11952,8 @@
     ?:  ?=(%turf -.wire)
       ~>  %slog.0^leaf/"ames: unix-duct missing; delay %turf"
       [%mesa %ask wire]~
-    ?:  ?=(%fiefs -.wire)
-      ~>  %slog.0^leaf/"ames: unix-duct missing; delay %fiefs"
+    ?:  ?=(%fief -.wire)
+      ~>  %slog.0^leaf/"ames: unix-duct missing; delay %fief"
       [%mesa %ask wire]~
     ?>  ?=([%jael %public-keys *] sign)
     =/  gift=public-keys-result:jael  +>.sign
@@ -11898,6 +11976,7 @@
     ?:  ?|  ?=([%jael %private-keys *] sign)
             ?=([%jael %public-keys *] sign)
             ?=([%jael %turf *] sign)
+            ?=([%jael %fief *] sign)
         ==
       ::  key/turf %jael gifts are captured in the |sy:mesa core
       ::
@@ -11906,7 +11985,7 @@
   take:me-core
 ::  +stay: extract state before reload
 ::
-++  stay  [%25 adult/ames-state]
+++  stay  [%26 adult/ames-state]
 ::  +load: load in old state after reload
 ::
 ++  load

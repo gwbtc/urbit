@@ -546,7 +546,7 @@
 ++  azimuth-types
   =,  ethereum-types
   |%
-  ++  point
+  +$  point
     $:  ::  ownership
         ::
         $=  own
@@ -573,9 +573,44 @@
         $=  kid
         %-  unit
         $:  spawn-proxy=address
-            spawned=(set @p)  ::TODO  sparse range, pile, see old jael ++py
+            spawned=(set @p)  ::todo  sparse range, pile, see old jael ++py
         ==
     ==
+  ::
+  +$  point-0
+    $:  ::  ownership
+        ::
+        $=  own
+        $:  owner=address
+            management-proxy=address
+            voting-proxy=address
+            transfer-proxy=address
+        ==
+      ::
+        ::  networking
+        ::
+        $=  net
+        %-  unit
+        $:  =life
+            =pass
+            continuity-number=@ud
+            sponsor=[has=? who=@p]
+            escape=(unit @p)
+        ==
+      ::
+        ::  spawning
+        ::
+        $=  kid
+        %-  unit
+        $:  spawn-proxy=address
+            spawned=(set @p)  ::todo  sparse range, pile, see old jael ++py
+        ==
+    ==
+  ++  point-0-to-1
+    |=  point-0
+    ^-  point
+    ?~  net  +<
+    +<(u.net [life pass continuity-number sponsor escape ~]:u.net)
   ::
   +$  dnses  [pri=@t sec=@t ter=@t]
   ::
@@ -942,7 +977,7 @@
     ::
         [%turf turfs=(list turf)]
         [%saxo sponsors=(list ship)]
-        [%fiefs fiefs=(map ship (unit fief))]
+        [%fief fiefs=(map ship (unit fief))]
     ::
         [%push p=(list lane:pact) q=@]   :: send a request/response packet
         [%sage =sage:mess]               :: give deserialized/open payload
@@ -1161,12 +1196,7 @@
   ::
   +$  peer-state
     $+  peer-state
-    $:  $:  =symmetric-key
-            =life
-            =rift
-            =public-key
-            sponsor=ship
-        ==
+    $:  azimuth-state
         route=(unit [direct=? =lane])  ::  XX (list)
         =qos
         =ossuary
@@ -1179,6 +1209,7 @@
         =chain
         tip=(jug =user=path [duct =ames=path])
     ==
+  ::
   +$  keen-state
     $+  keen-state
     $:  wan=((mop @ud want) lte)  ::  request packets, sent
@@ -1190,11 +1221,13 @@
         listeners=(jug duct ints)
         metrics=pump-metrics
     ==
+  ::
   +$  want
     $:  fra=@ud
         =hoot
         packet-state
     ==
+  ::
   +$  have
     $:  fra=@ud
         meow
@@ -1635,7 +1668,14 @@
   ::
   +$  dire           ?(%bak %for)
   +$  side           [=bone =dire]
-  +$  azimuth-state  [=symmetric-key =life =rift =public-key sponsor=ship]
+  +$  azimuth-state
+    $:  =symmetric-key
+        =life
+        =rift
+        =public-key
+        sponsor=ship
+        fief=(unit fief)
+    ==
   +$  chum-state
     $+  chum-state
     $%  [%known fren-state]
@@ -3997,7 +4037,7 @@
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
         [%public-keys =public-keys-result]                      ::  PKI changes
-        [%fiefs =fiefs-result]                      ::  PKI changes
+        [%fief =fiefs-result]                      ::  PKI changes
         [%turf turf=(list turf)]                      ::  domains
     ==                                                ::
   ::  +feed: potential boot parameters
@@ -4020,7 +4060,7 @@
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
         [%public-keys ships=(set ship)]                    ::  sub to publics
-        [%fiefs ships=(set ship)]                    ::  sub to publics
+        [%fief ships=(set ship)]                    ::  sub to publics
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key
         [%ruin ships=(set ship)]                      ::  pretend breach
@@ -4031,14 +4071,67 @@
         [%step ~]                                     ::  reset web login code
     ==                                                ::
   ::
-  +$  dawn-event
-    $:  =feed
-        spon=(list [=ship point:azimuth-types])
-        czar=(map ship [=rift =life =pass])
-        turf=(list turf)
-        bloq=@ud
-        node=(unit purl:eyre)
-    ==
+  ++  dawn-event
+    =<  dawn-event
+    |%
+    +$  dawn-event  $^(dawn-0 dawn-1)
+    +$  dawn-0
+      $:  =feed
+          spon=(list [=ship point-0:azimuth-types])
+          czar=(map ship [=rift =life =pass])
+          turf=(list turf)
+          bloq=@ud
+          node=(unit purl:eyre)
+      ==
+    ::
+    +$  dawn-1
+      $:  %1
+          =feed
+          spon=(list [=ship point])
+          lams=(map ship point)
+          turf=(list turf)
+          bloq=@ud
+          node=(unit purl:eyre)
+      ==
+    ::
+    ++  to-latest
+      |=  tac=dawn-event
+      ^-  dawn-1
+      ?^  -.tac  (dawn-0-to-1 tac)
+      tac
+    ::
+    ++  dawn-0-to-1
+      |=  tac=dawn-0
+      =/  spon-points=(list [ship point])
+        %+  turn  spon.tac
+        |=  [=ship az-point=point-0:azimuth-types]
+        ~|  [%sponsor-point az-point]
+        ?>  ?=(^ net.az-point)
+        :*  ship
+            continuity-number.u.net.az-point
+            life.u.net.az-point
+            (malt [life.u.net.az-point 1 pass.u.net.az-point] ~)
+            ?.  has.sponsor.u.net.az-point
+              ~
+            `who.sponsor.u.net.az-point
+            ~
+        ==
+      ::
+      =/  lam-points=(map =ship =point)
+        %-  ~(urn by czar.tac)
+        |=  [=ship =a=rift =a=life =a=pass]
+        ^-  point
+        [a-rift a-life (malt [a-life 1 a-pass] ~) `ship ~]
+      ::
+      :*  %1
+          feed.tac
+          spon-points
+          lam-points
+          turf.tac
+          bloq.tac
+          node.tac
+      ==
+    --
   ::
   ++  block
     =<  block

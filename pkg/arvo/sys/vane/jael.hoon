@@ -50,7 +50,8 @@
             jaw=(map life ring)                         ::  private keys
         ==                                              ::
       $=  zim                                           ::  public
-        $:  fen=(jug duct ship)                         ::  trackers
+        $:  tel=(set duct)
+            fen=(jug duct ship)                         ::  trackers
             nef=(jug ship duct)                         ::  reverse trackers
             fel=(set duct)                              ::  trackers of all fiefs
             fes=(map ship fief)
@@ -66,11 +67,47 @@
 +$  message                                             ::  message to her jael
   $%  [%nuke whos=(set ship)]                           ::  cancel trackers
       [%public-keys whos=(set ship)]                    ::  view ethereum events
-      [%fiefs whos=(set ship)]
+      [%fief whos=(set ship)]
   ==                                                    ::
-+$  message-result
-  $%  [%public-keys-result =public-keys-result]         ::  public keys boon
++$  point-1
+  $:  =rift
+      =life
+      keys=(map life [crypto-suite=@ud =pass])
+      sponsor=(unit @p)
   ==
+::
+++  message-result
+  =<  message-result
+  |%
+  ++  message-result
+    |=  a=*
+    ^-  message-result-1
+    ?:  ?=([~ %2] -.a)  (message-result-1 a)
+    =/  b  (message-result-0 a)
+    ?.  ?=(%full +<.b)  [~+%2 b]
+    :^  [~ %2]  %public-keys-result  %full
+    %-  ~(run by points.public-keys-result.b)
+    |=  point-1
+    ^-  point
+    [rift life keys sponsor ~]
+  ::
+  +$  message-result-1
+    $:  [~ %2]
+      $%  [%public-keys-result =public-keys-result]         ::  public keys boon
+      ==
+    ==
+  ::
+  +$  message-result-0
+    $%  [%public-keys-result public-keys-result=public-keys-result-0]         ::  public keys boon
+    ==
+  ::
+  +$  public-keys-result-0
+    $%  [%full points=(map ship point-1)]
+        [%diff who=ship diff=$<(%fief diff:point)]
+        [%breach who=ship]
+    ==
+  ::
+  --
 +$  card                                                ::  i/o action
   (wind note gift)                                      ::
 ::                                                      ::
@@ -251,6 +288,7 @@
         %dawn
       ::  single-homed
       ::
+      =>  .(+.tac (to-latest:dawn-event +.tac))
       ?>  ?=([%2 ~] -.feed.tac)
       ~|  [our who.feed.tac]
       ?>  =(our who.feed.tac)
@@ -278,28 +316,7 @@
       =.  tuf.own.pki  turf.tac
       ::  our initial galaxy table as a +map from +life to +public
       ::
-      =/  spon-points=(list [ship point])
-        %+  turn  spon.tac
-        |=  [=ship az-point=point:azimuth-types]
-        ~|  [%sponsor-point az-point]
-        ?>  ?=(^ net.az-point)
-        :*  ship
-            continuity-number.u.net.az-point
-            life.u.net.az-point
-            (malt [life.u.net.az-point 1 pass.u.net.az-point] ~)
-            ?.  has.sponsor.u.net.az-point
-              ~
-            `who.sponsor.u.net.az-point
-            fief.u.net.az-point
-
-        ==
-      =/  points=(map =ship =point)
-        %-  ~(urn by czar.tac)
-        |=  [=ship =a=rift =a=life =a=pass]
-        ^-  point
-        [a-rift a-life (malt [a-life 1 a-pass] ~) `ship ~]
-      =.  points
-        (~(gas by points) spon-points)
+      =/  points  (~(gas by lams.tac) spon.tac)
       =.  +>.$
         %-  curd  =<  abet
         (public-keys:~(feel su hen now pki etn) [pos fes]:zim.pki %full points)
@@ -409,6 +426,8 @@
         (~(del ju $(ships t.ships)) hen i.ships)
       =?  fel.zim.pki  ?=(~ whos.tac)
         (~(del in fel.zim.pki) hen)
+      =?  tel.zim.pki  ?=(~ whos.tac)
+        (~(del in tel.zim.pki) hen)
       ?^  whos.tac
         +>.$
       %_  +>.$
@@ -455,9 +474,9 @@
       %-  curd  =<  abet
       (~(public-keys ~(feed su hen now pki etn) hen) ships.tac)
     ::  watch fiefs
-    ::    [%fiefs ships=(set ship)]
+    ::    [%fief ships=(set ship)]
     ::
-        %fiefs
+        %fief
       %-  curd  =<  abet
       (~(fiefs ~(feed su hen now pki etn) hen) ships.tac)
 
@@ -479,6 +498,7 @@
       ::
       ~|  [fak.own.pki tuf.own.pki]
       ?<  =(fak.own.pki ?=(^ tuf.own.pki))
+      =.  tel.zim.pki  (~(put in tel.zim.pki) hen)
       +>.$(moz [[hen %give %turf tuf.own.pki] moz])
     ::
     ::  learn of kernel upgrade
@@ -510,9 +530,9 @@
       ?-    -.message
       ::
       ::  cancel trackers
-      ::    [%fiefs whos=(set ship)]
+      ::    [%fief whos=(set ship)]
       ::
-          %fiefs
+          %fief
         =.  moz  [[hen %give %done ~] moz]
         $(tac message)
       ::
@@ -558,7 +578,7 @@
       +>.$
     ::
         [%ames %boon *]
-      =+  ;;  [%public-keys-result =public-keys-result]  payload.hin
+      =+  ;;  message-result  payload.hin
       %-  curd  =<  abet
       (public-keys:~(feel su hen now pki etn) [pos fes]:zim.pki public-keys-result)
     ::
@@ -707,17 +727,17 @@
     ^+  this-su
     =/  yaz  %+  skid  ~(tap in yen)
       |=  d=duct
-      &(?=([[%ames @ @ *] *] d) !=(%fiefs i.t.i.d))
+      &(?=([[%ames @ @ *] *] d) !=(%fief i.t.i.d))
     =/  yez  (weld p.yaz (sort q.yaz duct-sorter))
     |-  ^+  this-su
     ?~  yez  this-su
     =*  d  i.yez
     =.  this-su
-      ?.  &(?=([[%ames @ @ *] *] d) !=(%fiefs i.t.i.d))
+      ?.  &(?=([[%ames @ @ *] *] d) !=(%fief i.t.i.d))
         %-  emit
-        [d %give %fiefs fiefs-result]
+        [d %give %fief fiefs-result]
       %-  emit
-      [d %give %boon %fiefs-result fiefs-result]
+      [d %give %boon %fief-result fiefs-result]
     $(yez t.yez)
   ::  We want to notify Ames, then Clay, then Gall.  This happens to
   ::  be alphabetical, but this is mostly a coincidence. We also have
@@ -1169,13 +1189,6 @@
                   pos=(map ship point-1)
         ==    ==
       ::
-      +$  point-1
-        $:  =rift
-            =life
-            keys=(map life [crypto-suite=@ud =pass])
-            sponsor=(unit @p)
-        ==
-      ::
       +$  state-2
         $:  %2
             pki=state-pki-2
@@ -1204,16 +1217,18 @@
   |=  old=any-state
   ^+  ..^$
   =?  old  ?=(%1 -.old)
+    ^-  state-2
     %=  old
       -        %2
       own.pki  own.pki.old(+>+ +>.+>+.own.pki.old)
     ==
   =?  old  ?=(%2 -.old)
+    ^-  state-3
     %=    old
         -  %3
         zim.pki  ^+  zim.pki.lex
       %=    zim.pki.lex
-          +>+>
+          +>+>+
         %=    zim.pki.old
               pos
             %-  ~(run by pos.zim.pki.old)
@@ -1238,14 +1253,24 @@
   ::
   ::  XX review for security, stability, cases other than now
   ::
-  ?.  &(=(lot [%$ %da now]) =([~ ~] lyc))  ~
+  ?.  =(lot [%$ %da now])  ~
   ::
   ?:  &(?=(%x ren) =(tyl //whey))
+    ?.  =([~ ~] lyc)  ~
     =/  maz=(list mass)
       :~  pki+&+pki.lex
           etn+&+etn.lex
       ==
     ``mass+!>(maz)
+  ?.  ?|  =([~ ~] lyc)
+          ?=  $?  %lyfe  %life  %rift  %ryft
+                  %deed  %sein  %saxo  %turf
+                  %fief  %pont  %pynt  %sponsors
+                  %lamp
+              ==
+          syd
+      ==
+    ~
   ::
   ?.  =(%$ ren)  [~ ~]
   ?+    syd
@@ -1334,6 +1359,27 @@
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ?~  pos  ``[%noun !>(~)]
     ``[%noun !>((some rift.u.pos))]
+  ::
+      %pont
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex  [~ ~]
+    =/  pos  (~(get by pos.zim.pki.lex) u.who)
+    ?~  pos  ~
+    ``[%noun !>(u.pos)]
+  ::
+      %pynt                                             ::  unitized %pont
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex  [~ ~]
+    =/  pos  (~(get by pos.zim.pki.lex) u.who)
+    ``[%noun !>(pos)]
   ::
       %vein
     ?.  ?=([@ ~] tyl)  [~ ~]
@@ -1432,6 +1478,34 @@
     !>  ^-  (list ship)
     (~(saxo of [now eny] lex) u.who)
   ::
+      %sponsors
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    :^  ~  ~  %noun
+    !>  ^-  (list [=ship =point])
+    %+  turn  (~(saxo of [now eny] lex) u.who)
+    |=  =ship
+    [ship (~(got by pos.zim.pki.lex) ship)]
+  ::
+      %lamp
+    ?.  ?=(~ tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    :^  ~  ~  %noun
+    !>  ^-  (map ship point)
+    %-  ~(gas by *(map ship point))
+    %+  murn
+        ^-  (list @p)
+        %+  weld  `(list @p)`(gulf 0 255)
+        `(list @p)`~(tap in ~(key by fes.zim.pki.lex))
+    |=  =ship
+    ^-  (unit [@p point])
+    ?~  p=(~(get by pos.zim.pki.lex) ship)  ~
+    `[ship u.p]
+  ::
       %subscriptions
     ?.  ?=([@ ~] tyl)  [~ ~]
     ?.  =([%& our] why)
@@ -1459,6 +1533,11 @@
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ?~  pos  ``[%noun !>(~)]
     ``[%noun !>((~(get by keys.u.pos) u.lif))]
+  ::
+      %fief
+    ?.  ?=(~ tyl)  [~ ~]
+    :^  ~  ~  %noun  !>
+    fes.zim.pki.lex
   ==
 ::                                                      ::  ++stay
 ++  stay                                                ::  preserve

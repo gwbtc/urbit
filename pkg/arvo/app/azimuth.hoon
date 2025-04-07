@@ -472,6 +472,7 @@
   :*  [ship id %keys [life.keys.net suite.keys.net pass] %.y]
       [ship id %rift rift.net %.y]
       [ship id %spon ?:(has.sponsor.net `who.sponsor.net ~)]
+      [ship id %fief fief.net]
       udiffs
   ==
 ::
