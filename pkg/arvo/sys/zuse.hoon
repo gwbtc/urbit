@@ -1488,7 +1488,6 @@
   ::::                    ++crub:crypto                 ::  (2b4) suite B, Ed
     ::                                                  ::::
   ++  crub  !:
-    ^-  acru
     =|  [pub=[cry=@ sgn=@] sek=(unit [cry=@ sgn=@])]
     |%
     ::                                                  ::  ++as:crub:crypto
@@ -1618,7 +1617,7 @@
     ++  trub                                            ::  test crub
       |=  msg=@t
       ::
-      ::  make acru cores
+      ::  make crub cores
       ::
       =/  ali      (pit:nu:crub 512 (shaz 'Alice'))
       =/  ali-pub  (com:nu:crub pub:ex.ali)

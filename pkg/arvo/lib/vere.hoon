@@ -32,7 +32,7 @@
       $(tar t.tar, stars (~(put in stars) i.tar))
     ::
     |-  ^-  feed:jael
-    =/  cub=acru:ames  (pit:nu:crub:crypto 512 eny)
+    =/  cub  (pit:nu:crub:crypto 512 eny)
     =/  who=ship  `@`fig:ex:cub
     ::  disallow 64-bit or smaller addresses
     ::

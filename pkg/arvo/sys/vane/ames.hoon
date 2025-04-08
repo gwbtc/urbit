@@ -356,96 +356,18 @@
       =/  non  ~|(%fine-cue (cue dat))
       ~|  [%fine %response-not-cask]
       ;;((cask) non)
-    ::  +etch-hunk: helper core to serialize a $hunk
-    ::
-    ++  etch-hunk
-      |=  [=ship =life =acru]
-      |%
-      ::
-      +|  %helpers
-      ::  +show-meow: prepare $meow for printing
-      ::
-      ++  show-meow
-        |=  =meow
-        :*  sig=`@q`(mug sig.meow)
-            num=num.meow
-            dat=`@q`(mug dat.meow)
-        ==
-      ::
-      ++  make-meow
-        |=  [=path mes=@ num=@ud]
-        ^-  meow
-        =/  tot  (met 13 mes)
-        =/  dat  (cut 13 [(dec num) 1] mes)
-        =/  wid  (met 3 dat)
-        :*  sig=(sign-fra path num dat)           ::  fragment signature
-            num=tot                               ::  number of fragments
-            dat=dat                               ::  response data fragment
-        ==
-      ::
-      ++  etch-meow
-        |=  =meow
-        ^-  yowl
-        %+  can  3
-        :~  64^sig.meow
-            4^num.meow
-            (met 3 dat.meow)^dat.meow
-        ==
-      ::
-      +|  %keys
-      ::
-      ++  sign  sigh:as:acru
-      ++  sign-fra
-        |=  [=path fra=@ud dat=@ux]
-        ::~>  %bout.[1 %sign-fra]
-        (sign (jam path fra dat))
-      ::
-      ++  full
-        |=  [=path data=$@(~ (cask))]
-        =/  buf  (jam ship life path data)
-        ::=/  nam  (crip "sign-full {<(met 3 buf)>}")
-        ::~>  %bout.[1 nam]
-        (sign buf)
-      ::
-      +|  %serialization
-      ::
-      ++  etch-data
-        |=  [=path data=$@(~ (cask))]
-        =/  sig=@  (full path data)
-        ?~  data  sig
-        (mix sig (lsh 9 (jam data)))
-      ++  etch-open
-        |=  [=path =hunk data=$@(~ (cask))]
-        (etch path hunk (etch-data path data))
-      ::
-      ++  etch
-        |=  [=path =hunk mes=@]
-        ^-  (list yowl)
-        ::
-        =/  las  (met 13 mes)
-        =/  tip  (dec (add [lop len]:hunk))
-        =/  top  (min las tip)
-        =/  num  lop.hunk
-        ?>  (lte num top)
-        =|  res=(list yowl)
-        |-  ^+  res
-        ?:  =(num top)
-          =-  (flop - res)
-          (etch-meow (make-meow path mes num))
-        $(num +(num), res :_(res (etch-meow (make-meow path mes num))))
-      --
     ::  +etch-open-packet: convert $open-packet attestation to $shot
     ::
     ++  etch-open-packet
       ~/  %etch-open-packet
-      |=  [pac=open-packet =acru]
+      |=  [pac=open-packet content=@]
       ^-  shot
       :*  [sndr rcvr]:pac
           req=&  sam=&
           (mod sndr-life.pac 16)
           (mod rcvr-life.pac 16)
           origin=~
-          content=`@`(sign:as:acru (jam pac))
+          content
       ==
     ::  +sift-open-packet: decode comet attestation into an $open-packet
     ::
@@ -572,7 +494,7 @@
           ::  our data, common to all dyads
           ::
           $:  =our=life
-              crypto-core=acru
+              crypto-core=_crub:crypto
               =bug
           ==
           ::  her data, specific to this dyad
@@ -646,7 +568,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru:ames
+          crypto-core=acru-25
           =bug
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=_5 mem=_100.000]
@@ -665,7 +587,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru:ames
+          crypto-core=acru-25
           =bug
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=_5 mem=_100.000]
@@ -922,6 +844,31 @@
             ++  com  |~(a=pass ^?(..nu))
         --
       --
+  ++  acru-25  $_  ^?                                      ::  asym cryptosuite
+    |%                                                  ::  opaque object
+    ++  as  ^?                                          ::  asym ops
+      |%  ++  seal  |~([a=pass b=@] *@)                 ::  encrypt to a
+          ++  sign  |~(a=@ *@)                          ::  certify as us
+          ++  sigh  |~(a=@ *@)                          ::  certification only
+          ++  sure  |~(a=@ *(unit @))                   ::  authenticate from us
+          ++  safe  |~([a=@ b=@] *?)                    ::  authentication only
+          ++  tear  |~([a=pass b=@] *(unit @))          ::  accept from a
+      --  ::as                                          ::
+    ++  de  |~([a=@ b=@] *(unit @))                     ::  symmetric de, soft
+    ++  dy  |~([a=@ b=@] *@)                            ::  symmetric de, hard
+    ++  en  |~([a=@ b=@] *@)                            ::  symmetric en
+    ++  ex  ^?                                          ::  export
+      |%  ++  fig  *@uvH                                ::  fingerprint
+          ++  pac  *@uvG                                ::  default passcode
+          ++  pub  *pass                                ::  public key
+          ++  sec  *ring                                ::  private key
+      --  ::ex                                          ::
+    ++  nu  ^?                                          ::  reconstructors
+      |%  ++  pit  |~([a=@ b=@] ^?(..nu))               ::  from [width seed]
+          ++  nol  |~(a=ring ^?(..nu))                  ::  from ring
+          ++  com  |~(a=pass ^?(..nu))                  ::  from pass
+      --  ::nu                                          ::
+    --  ::acru                                          ::
     ::
     +$  ames-state-13
       $+  ames-state-13
@@ -929,7 +876,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru
+          crypto-core=acru-25
           bug=bug-19
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=@ud mem=@ud]
@@ -1229,7 +1176,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru
+          crypto-core=acru-25
           bug=bug-19
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=_5 mem=_100.000]
@@ -1283,7 +1230,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru
+          crypto-core=acru-25
           bug=bug-19
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=@ud mem=@ud]
@@ -1433,7 +1380,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru
+          crypto-core=acru-25
           bug=bug-19
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=@ud mem=@ud]
@@ -1499,7 +1446,7 @@
           =unix=duct
           =life
           =rift
-          crypto-core=acru
+          crypto-core=acru-25
           =bug
           snub=[form=?(%allow %deny) ships=(set ship)]
           cong=[msg=_5 mem=_100.000]
@@ -3053,7 +3000,7 @@
             unix-duct.old
             life.old
             rift
-            ?:(=(*ring pk) *acru (nol:nu:crub:crypto pk))
+            ?:(=(*ring pk) *acru-25 (nol:nu:crub:crypto pk))
             %=  bug.old
               veb  [&1 &2 &3 &4 &5 &6 &7 |7 %.n]:veb.bug.old
             ==
@@ -4823,7 +4770,7 @@
           ^-  blob
           %-  etch-shot
           %-  etch-open-packet
-          :_  crypto-core
+          =-  [- (sign:as:crypto-core (jam -))]
           :*  ^=  public-key  pub:ex:crypto-core
               ^=        sndr  our
               ^=   sndr-life  life.ames-state
@@ -7412,6 +7359,7 @@
           =/  kyr  ?@(vis.nom (rsh 3 vis.nom) car.vis.nom)
           (en-hunk (rof ~ /ames nom))
           ::
+          +|  %helpers
           ++  en-hunk
             |=  res=(unit (unit cage))
             ^+  res
@@ -7423,6 +7371,77 @@
               [~ ~]    ``noun+!>((etch-open:hu-co pax.tyl hunk ~))
               [~ ~ *]  ``noun+!>((etch-open:hu-co pax.tyl hunk [p q.q]:u.u.res))
             ==
+          ::  +show-meow: prepare $meow for printing
+          ::
+          ++  show-meow
+            |=  =meow
+            :*  sig=`@q`(mug sig.meow)
+                num=num.meow
+                dat=`@q`(mug dat.meow)
+            ==
+          ::
+          ++  make-meow
+            |=  [=path mes=@ num=@ud]
+            ^-  meow
+            =/  tot  (met 13 mes)
+            =/  dat  (cut 13 [(dec num) 1] mes)
+            =/  wid  (met 3 dat)
+            :*  sig=(sign-fra path num dat)           ::  fragment signature
+                num=tot                               ::  number of fragments
+                dat=dat                               ::  response data fragment
+            ==
+          ::
+          ++  etch-meow
+            |=  =meow
+            ^-  yowl
+            %+  can  3
+            :~  64^sig.meow
+                4^num.meow
+                (met 3 dat.meow)^dat.meow
+            ==
+          ::
+          +|  %keys
+          ::
+          ++  sign  sigh:as:crypto-core
+          ++  sign-fra
+            |=  [=path fra=@ud dat=@ux]
+            ::~>  %bout.[1 %sign-fra]
+            (sign (jam path fra dat))
+          ::
+          ++  full
+            |=  [=path data=$@(~ (cask))]
+            =/  buf  (jam our life.ames-state path data)
+            ::=/  nam  (crip "sign-full {<(met 3 buf)>}")
+            ::~>  %bout.[1 nam]
+            (sign buf)
+          ::
+          +|  %serialization
+          ::
+          ++  etch-data
+            |=  [=path data=$@(~ (cask))]
+            =/  sig=@  (full path data)
+            ?~  data  sig
+            (mix sig (lsh 9 (jam data)))
+          ++  etch-open
+            |=  [=path =hunk data=$@(~ (cask))]
+            (etch path hunk (etch-data path data))
+          ::
+          ++  etch
+            |=  [=path =hunk mes=@]
+            ^-  (list yowl)
+            ::
+            =/  las  (met 13 mes)
+            =/  tip  (dec (add [lop len]:hunk))
+            =/  top  (min las tip)
+            =/  num  lop.hunk
+            ?>  (lte num top)
+            =|  res=(list yowl)
+            |-  ^+  res
+            ?:  =(num top)
+              =-  (flop - res)
+              (etch-meow (make-meow path mes num))
+            $(num +(num), res :_(res (etch-meow (make-meow path mes num))))
+
           --
         ::  private endpoints
         ::
