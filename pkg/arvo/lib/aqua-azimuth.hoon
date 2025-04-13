@@ -200,7 +200,7 @@
 ::
 ++  get-keys
   |=  [who=@p lyfe=life]
-  %+  pit:nu:crub:crypto  32
+  %+  pit:nu:cryc:crypto  32
   (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
 ::
 ++  get-public

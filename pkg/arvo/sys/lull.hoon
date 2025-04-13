@@ -1077,8 +1077,9 @@
   +$  fragment-num   @udfragmentnum
   +$  message-blob   @udmessageblob
   +$  message-num    @udmessagenum
-  +$  public-key     @uwpublickey
-  +$  private-key    @uwprivatekey
+  +$  public-keys    [cry=@uxpoint sgn=@uxpoint]
+  +$  private-keys   [cry=@uxscalar sgn=@uxscalar]
+  +$  keypairs       [pub=public-keys sek=private-keys]
   +$  symmetric-key  @uwsymmetrickey
   ::
   ::  $hoot: request packet payload
@@ -1616,7 +1617,7 @@
         ==
         ::
         =server=chain                       ::  for serving %shut requests
-        priv=private-key
+        [saf=keypairs =ring =pass]
         chums=(map ship chum-state)         ::  XX migrated peers
         core=_`?(%ames %mesa)`%ames         ::  XX use migrated core by default
         ::  TODOs
@@ -1646,7 +1647,7 @@
     $:  =symmetric-key
         =life
         =rift
-        =public-key
+        [=public-keys =pass] 
         sponsor=ship
         fief=(unit fief)
     ==
@@ -4026,7 +4027,7 @@
   +$  task                                            ::  in request ->$
     $~  [%vega ~]                                     ::
     $%  [%dawn dawn-event]                            ::  boot from keys
-        [%fake =ship]                                 ::  fake boot
+        [%fake $@(=ship [~ seed=@uw])]                ::  fake boot
         [%listen whos=(set ship) =source]             ::  set ethereum source
         ::TODO  %next for generating/putting new private key
         [%meet =ship =life =pass]                     ::  met after breach
