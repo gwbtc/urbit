@@ -393,7 +393,6 @@
       ::  only a star or comet can sponsor a comet
       ::
       ?>  ?=(?(%king %pawn) (clan:title (^^sein:title rof /ames our now sndr.shot)))
-      =/  crub  (com:nu:crub:crypto public-key.open-packet)
       =/  cyc  (com:nu:cryc:crypto pass.open-packet)
       ::  comet public-key must hash to its @p address
       ::
@@ -639,8 +638,27 @@
     ==
     ::
     +$  dead-timer        [=duct =wire date=@da]
+    ++  azimuth-state-25-to-27
+      |=  azimuth-state-25
+      (azimuth-state-26-to-27 (azimuth-state-25-to-26 +<))
+    ::
+    ++  azimuth-state-26-to-27
+      |=  azimuth-state-26
+      ^-  azimuth-state
+      [symmetric-key life rift [public-keys pass] sponsor ~]
+    ::
+    ++  azimuth-state-25-to-26
+      |=  azimuth-state-25
+      ^-  azimuth-state-26
+      :*  symmetric-key
+          life  rift
+          [ded:ex:(com:nu:cryc:crypto pass) pass]
+          sponsor
+      ==
+    ::
+    +$  azimuth-state-26  [=symmetric-key =life =rift [=public-keys =pass] sponsor=ship]
     +$  azimuth-state-25  [=symmetric-key =life =rift =pass sponsor=ship]
-    +$  azimuth-state-5   [=symmetric-key =life =pass sponsor=ship]
+    +$  azimuth-state-6   [=symmetric-key =life =pass sponsor=ship]
     +$  ames-state-4     ames-state-5
     +$  ames-state-5
       $+  ames-state-5
@@ -660,7 +678,7 @@
     ::
     +$  peer-state-5
       $+  peer-state-5
-      $:  azimuth-state-5
+      $:  azimuth-state-6
           route=(unit [direct=? =lane])
           =qos
           =ossuary
@@ -845,31 +863,6 @@
             ++  com  |~(a=pass ^?(..nu))
         --
       --
-  ++  acru-25  $_  ^?                                      ::  asym cryptosuite
-    |%                                                  ::  opaque object
-    ++  as  ^?                                          ::  asym ops
-      |%  ++  seal  |~([a=pass b=@] *@)                 ::  encrypt to a
-          ++  sign  |~(a=@ *@)                          ::  certify as us
-          ++  sigh  |~(a=@ *@)                          ::  certification only
-          ++  sure  |~(a=@ *(unit @))                   ::  authenticate from us
-          ++  safe  |~([a=@ b=@] *?)                    ::  authentication only
-          ++  tear  |~([a=pass b=@] *(unit @))          ::  accept from a
-      --  ::as                                          ::
-    ++  de  |~([a=@ b=@] *(unit @))                     ::  symmetric de, soft
-    ++  dy  |~([a=@ b=@] *@)                            ::  symmetric de, hard
-    ++  en  |~([a=@ b=@] *@)                            ::  symmetric en
-    ++  ex  ^?                                          ::  export
-      |%  ++  fig  *@uvH                                ::  fingerprint
-          ++  pac  *@uvG                                ::  default passcode
-          ++  pub  *pass                                ::  public key
-          ++  sec  *ring                                ::  private key
-      --  ::ex                                          ::
-    ++  nu  ^?                                          ::  reconstructors
-      |%  ++  pit  |~([a=@ b=@] ^?(..nu))               ::  from [width seed]
-          ++  nol  |~(a=ring ^?(..nu))                  ::  from ring
-          ++  com  |~(a=pass ^?(..nu))                  ::  from pass
-      --  ::nu                                          ::
-    --  ::acru                                          ::
     ::
     +$  ames-state-13
       $+  ames-state-13
@@ -2840,6 +2833,11 @@
         larval-gate
       ::
           [%26 *]
+        =.  cached-state  `[%26 state.old]
+        ~>  %slog.1^leaf/"ames: larva %26 reload"
+        larval-gate
+      ::
+          [%27 *]
         ?-  +<.old
           %larva  larval-gate
           %adult  (load:adult-core state.old)
@@ -3440,7 +3438,7 @@
             %-  ~(rep by pit.c)
             |=  [[=ames=path req=request-state-23] tip=(jug path [duct path])]
             =|  tmp-per=fren-state
-            =.  tmp-per  tmp-per(- (azimuth-state-25-to-26 +<.c), client-chain client-chain.c)
+            =.  tmp-per  tmp-per(- (azimuth-state-25-to-27 +<.c), client-chain client-chain.c)
             =+  ev-core=ev:(mesa:adult-core now eny rof)
             =.  chums.ames-state.ev-core
               (~(put by chums.ames-state) her known/tmp-per)
@@ -3466,15 +3464,6 @@
           c(lane `[hop=1 u.lane.c])  ::  XX bigger hop?
         ==
       ::
-      ++  azimuth-state-25-to-26
-        |=  azimuth-state-25
-        ^-  azimuth-state-26
-        :*  symmetric-key
-            life  rift
-            [ded:ex:(com:nu:cryc:crypto pass) pass]
-            sponsor
-        ==
-      ::
       ++  state-25-to-26
         |=  old=axle-25
         ^-  axle-26
@@ -3498,11 +3487,6 @@
           ?.  ?=(%known -.c)  c
           c(+< (azimuth-state-25-to-26 +<.c))
         ==
-      ::
-      ++  azimuth-state-26-to-27
-        |=  azimuth-state-26
-        ^-  azimuth-state
-        [symmetric-key life rift [public-keys pass] sponsor ~]
       ::
       ++  state-26-to-27
         |=  old=axle-26
@@ -7580,7 +7564,7 @@
           ::
           ++  sign
             |=  msg=@
-            (sign-raw:ed:crypto msg [sgn.pub sgn.sek]:saf)
+            (sign-raw:ed:crypto msg [sgn.pub sgn.sek]:saf.ames-state)
           ::
           ++  sign-fra
             |=  [=path fra=@ud dat=@ux]

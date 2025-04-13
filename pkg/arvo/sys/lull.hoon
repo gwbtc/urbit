@@ -1647,7 +1647,7 @@
     $:  =symmetric-key
         =life
         =rift
-        [=public-keys =pass] 
+        [=public-keys =pass]
         sponsor=ship
         fief=(unit fief)
     ==
