@@ -4000,7 +4000,7 @@
             (~(put by peers.ames-state) sndr.shot %alien *alien-agenda)
           =/  lyf
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
-          ?:  ?=([~ ~ [* ^]] lyf)
+          ?:  ?=([~ ~ [* * ^]] lyf)
             (emit [[//keys]~ %pass /public-keys %j %public-keys sndr.shot ~ ~])
           ::  upgrade comet to %known via on-publ-full
           ::
@@ -4818,7 +4818,7 @@
           =+  (ev-trace msg.veb ship |.("requesting attestion"))
           =/  lyf
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p ship)])
-          ?:  ?=([~ ~ [* ^]] lyf)
+          ?:  ?=([~ ~ [* * ^]] lyf)
             =.  event-core  (emil moves)
             (emit [[//keys]~ %pass /public-keys %j %public-keys ship ~ ~])
           =.  event-core
@@ -10663,7 +10663,7 @@
           ^+  al-core
           =/  lyf
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p comet)])
-          ?:  ?=([~ ~ [* ^]] lyf)
+          ?:  ?=([~ ~ [* * ^]] lyf)
             (al-emit [[//keys]~ %pass /public-keys %j %public-keys comet ~ ~])
           =/  =space  [%publ life=1]
           =/  =path
@@ -10713,7 +10713,7 @@
           ::  XX: check hasn't breached, only subscribe then
           =/  lyf
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
-          ?:  ?=([~ ~ [* ^]] lyf)
+          ?:  ?=([~ ~ [* * ^]] lyf)
             (al-emit [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~])
           =.  al-core
             (al-register-comet her.name open-packet)
