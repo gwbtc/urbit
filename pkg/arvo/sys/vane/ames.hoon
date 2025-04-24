@@ -12169,7 +12169,7 @@
           =>  .(pat.pok.pact `(pole term)`pat.pok.pact, pat.ack.pact `(pole term)`pat.ack.pact)
           =/  chum-state  (pe-find-peer her-pok)
           ?:  ?=([%publ @ %a %x %'1' %$ mut=muth:poof-pith] pat.ack.pact)
-            ::?:  ?=([~ %known *] +.chum-state)  `ames-state
+            ?:  ?=([~ %known *] +.chum-state)  `ames-state
             ?>  ?=([%publ @ %a %x %'1' %$ puf=pok:poof-pith] pat.pok.pact)
             =/  puf
               =>  [puf.pat.pok.pact ..ride]
@@ -12185,16 +12185,15 @@
               ==
             ?>  ?&  =(our her.ack.pact)
                     =(our rcvr.puf)
+                    =(her.mut her.pok.pact)
+                    =(our-life.mut life.ames-state)
+                    =(our-life.mut life.puf)
+                    =(her-life.mut com-life.puf)
                 ==
             :: todo: also check ship part of names and lifes
             :: hack, cuz al-take-proof expects a page not a poke
             =^  moves  ames-state
               al-abet:(al-take-proof:al-core lane 0 [pok data ~]:pact)
-            ?>  ?&  =(her.mut her.pok.pact)
-                    =(our-life.mut life.ames-state)
-                    =(our-life.mut life.puf)
-                    =(her-life.mut com-life.puf)
-                ==
             :_  ames-state
             :_  moves
             :*  [/ames]~
