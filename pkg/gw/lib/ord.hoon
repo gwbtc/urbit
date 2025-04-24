@@ -1,10 +1,10 @@
-::/+  wiry
-::::!.
-::=>  wiry
+/+  wiry
+::!.
+=>  wiry
 ::/-  bc=bitcoin, bscr=btc-script, *mip, bio=btcio
-/+  *mip
-=*  sha  ..shax
-=,  crypto
+::/+  *mip
+::=*  sha  ..shax
+::=,  crypto
 =|  lac=_|
 |%
 ++  debug
@@ -353,25 +353,30 @@
       data=$@(~ octs)                   :: tag 0 content (all pushed data after push of 0 tag)
   ==
 +$  draft  (map @ud octs)
-+$  proxy      %own  ::?(%own %spawn %manage %vote %transfer)
-+$  raw-sotx     [raw=octs =sotx]
++$  raw-sotx     [raw=octs sot=sotx]
 ::+$  raw-sotx     [sig=@ raw=octs =sotx]
-+$  sotx         [from=[=ship =proxy] skim-sotx]
-+$  skim-sotx
-  $%  ::[%transfer-point =sont reset=?]
-      [%spawn =pass =sont]
-      [%keys =pass breach=?]
-      [%escape parent=ship]
-      [%cancel-escape parent=ship]
-      [%adopt =ship]
-      [%reject =ship]
-      [%detach =ship]
-      [%fief fief=(unit fief)]
-      ::[%set-management-proxy =sont]
-      ::[%set-spawn-proxy =sont]
-      ::[%set-transfer-proxy =sont]
-  ==
++$  sotx  [[=ship sig=(unit @)] skim-sotx]
+++  skim-sotx
+  =<  many
+  |%
+  +$  many
+    $%  single
+        [%batch bat=(list single)]
+    ==
+  +$  single
+    $%  [%spawn =pass =sont]
+        [%keys =pass breach=?]
+        [%escape parent=ship]
+        [%cancel-escape parent=ship]
+        [%adopt =ship]
+        [%reject =ship]
+        [%detach =ship]
+        [%fief fief=(unit fief)]
+        [%set-mang mang=(unit mang)]
+    ==
+  --
 ::
++$  mang  $%([%sont =sont] [%pass =pass])
 +$  point
   $:  ::  domain
       ::
@@ -380,12 +385,8 @@
       ::  ownership
       ::
       $=  own
-      $:  owner=sont
-          ::[=sont =nonce]
-          ::spawn-proxy=[=sont =nonce]
-          ::management-proxy=[=sont =nonce]
-          ::voting-proxy=[=sont =nonce]
-          ::transfer-proxy=[=sont =nonce]
+      $:  =sont
+          mang=(unit mang)
       ==
       ::
       ::  networking
@@ -418,7 +419,7 @@
               [%escape to=(unit @p)]
               [%owner =sont]
               ::[%spawn-proxy =sont]
-              ::[%management-proxy =sont]
+              [%mang mang=(unit mang)]
               ::[%voting-proxy =sont]
               ::[%transfer-proxy =sont]
               ::[%dominion =dominion]
@@ -457,22 +458,12 @@
   ++  parse-tx
     ^-  (unit [sotx pos=@ud])
     =^  pad               pos  (take 0 5)
-    =^  from-proxy=@      pos  (take 0 3)
-    ::?.  ?=(?(%0 %1 %2 %3 %4) from-proxy)  (debug %bad-proxy ~)
-    ?.  ?=(%0 from-proxy)  (debug %bad-proxy ~)
-    =/  =proxy
-      ?-  from-proxy
-        %0  %own
-        ::%1  %spawn
-        ::%2  %manage
-        ::%3  %vote
-        ::%4  %transfer
-      ==
+    =^  sig  pos  take-sig
     =^  from-ship=ship    pos  (take 0 128)
     =-  ?~  res
           ~
-        `[[[from-ship proxy] skim-sotx.u.res] pos.u.res]
-    ^-  res=(unit [=skim-sotx pos=@ud])
+        `[[[from-ship sig] skim-sotx.u.res] pos.u.res]
+    |-  ^-  res=(unit [=skim-sotx pos=@ud])
     =^  op   pos  (take 0 7)
     ?+    op  (debug %strange-opcode ~)
       ::  %0
@@ -497,9 +488,19 @@
         %5   =^(res pos take-ship `[[%adopt res] pos])
         %6   =^(res pos take-ship `[[%reject res] pos])
         %7   =^(res pos take-ship `[[%detach res] pos])
-        ::%8   =^(res pos take-sont `[[%set-management-proxy res] pos])
+        %8   =^(res pos take-mang ?~(res ~ `[[%set-mang u.res] pos]))
         ::%9   =^(res pos take-sont `[[%set-spawn-proxy res] pos])
-        ::%10  =^(res pos take-sont `[[%set-transfer-proxy res] pos])
+        %10
+      =^  len  pos  take-atom
+      =|  bat=(list single:skim-sotx)
+      |-  ^+  ^$
+      ?:  =(len 0)  ~^[%batch (flop bat)]^pos
+      =/  one  ,:^$
+      ?~  one  ~
+      ?:  ?=([%batch *] -.u.one)  ~
+      =^  one  pos  u.one
+      $(len (dec len), bat one^bat)
+    ::
         %11
       =^  pad=@   pos   (take 0)
       =^  typ     pos   (take 0 2)
@@ -543,6 +544,20 @@
       (mul step.bite (bex bloq.bite))
     [(cut 0 [pos step] batch) (add pos step)]
   ::
+  ++  take-mang
+    ^-  [(unit (unit mang)) @ud]
+    =^  typ  pos  (take 2)
+    ?+    typ  [~ pos]
+        %0  [[~ ~] pos]
+        %1
+      =^  sont  pos  take-sont
+      ?~  sont  [~ pos]
+      [``[%sont u.sont] pos]
+        %2
+      =^  pass  pos  (take 0 256)
+      [``[%pass pass] pos]
+    ==
+  ::
   ++  take-atom
     ^-  [@ @ud]
     =/  m  (rub pos batch)
@@ -564,6 +579,13 @@
     =^  pad=@       pos  (take 0)
     =^  other=ship  pos  (take 0 128)
     [other pos]
+  ::
+  ++  take-sig
+    ^-  [(unit @) @ud]
+    =^  typ  pos  (take 1)
+    ?:  =(typ 0)  [~ pos]
+    =^  sig  pos  (take 0 512)
+    [`sig pos]
   --
 ::
 ++  en
@@ -839,11 +861,36 @@
     ?~  c=(~(del bi u.b) pos off)  (~(del by a) txh)
     (~(put by a) txh c)
   --
-::
+::++  ming
+::  |%
+::  ++  add-ship
+::    |=  [mangs=mang-map =pass who=@p]
+::    ^+  mangs
+::    %+  ~(put by mangs)  pass
+::    =+((~(got by mangs) pass) [txh (~(put in whos) who)])
+::  ::
+::  ++  del-ship
+::    |=  [mangs=mang-map =pass who=@p]
+::    ^+  mangs
+::    =/  m  =+((~(got by mangs) pass) [txh (~(del in whos) who)])
+::    ?~  whos.m  (~(del by mangs) pass)
+::    (~(put by mangs) pass m)
+::  ::
+::  ++  init
+::    |=  [old=mang-map new=mang-map txh=pass who=@p]
+::    ^+  mangs
+::    %+  ~(put by mangs)  pass
+::    =+((~(got by mangs) pass) [txh (~(put in whos) who)])
+::  --
+::::
+::+$  mang-map  (map pass [=txh whos=(set @p)])
 +$  sont-map  (map txh (mip pos off [com=(unit @p) ins=(set insc)]))
 +$  insc-ids  (map insc [=sont =mail])
-+$  unv-ids  (map @p point)
-+$  state  [=sont-map =insc-ids =unv-ids]
++$  unv-ids   (map @p point)
++$  state     $:  =sont-map
+                  =insc-ids
+                  =unv-ids
+              ==
 ::
 ++  pointer-to-sont
   =|  pos=@ud
@@ -866,7 +913,7 @@
   |=  [state com=@p =sont]
   =*  state  +<-
   =/  point  (~(got by unv-ids) com)
-  state(unv-ids (~(put by unv-ids) com point(owner.own sont)))
+  state(unv-ids (~(put by unv-ids) com point(sont.own sont)))
 ::
 ++  update-ids
   |=  [state [com=(unit @p) oids=(set insc)] =sont]
@@ -880,6 +927,7 @@
       [%xfer from=sont to=sont]
       [%insc =insc sont=$@(~ sont) =mail]
   ==
+::
 ++  conol
   |=  a=pass
   ^-  @p
@@ -891,11 +939,6 @@
   =/  mit  (shax:sha (can 3 [32 sgn] [(met 3 dat) dat] ~))
   =/  tgn  (scap:ed sgn mit)
   (shaf:sha %cfig tgn)
-::++  n-map
-::  ^-  [c=(map @ *) j=(map * @)]
-::  =/  hax  (shan kern)
-::  :-  (~(put by *(map @ *)) hax kern)
-::  (~(put by *(map * @)) kern hax)
 ::
 ++  ord-core
   =|  state
@@ -943,136 +986,159 @@
       ?~  dscr=(de:script u.raw-script)  cor
       =/  unvs=(unit (list @))  (some (unv:de u.dscr))
       ?~  unvs  cor
-      =/  sotxs=(list sotx)
-        (turn `(list raw-sotx)`(zing (turn u.unvs parse-roll)) |=([* =sotx] sotx))
+      =/  sots=(list raw-sotx)  (zing (turn u.unvs parse-roll))
+      |-  ^+  cor
+      ?~  sots  cor
+      =*  raw  raw.i.sots
+      =*  sot  sot.i.sots
+      =*  our  ship.sot
+      =*  sig   sig.sot
+      =-  $.+(cor -, sots t.sots)
+      =/  sots=(list single:skim-sotx)
+        ?:(?=(%batch +<.sot) bat.sot ~[+.sot])
       |^  ^+  cor
-      ?~  sotxs  cor
-      =*  sotx  i.sotxs
-      ?-    +<.sotx
-          %fief
-        ?~  point=(get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        =.  fief.net.u.point  fief.sotx
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.point)
-            fx
-          :_  fx
-          [%point ship.from.sotx %fief fief.sotx]
-        ==
-      ::
-          %escape
-        ?~  point=(get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        =.  escape.net.u.point  `parent.sotx
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.point)
-            fx
-          :_  fx
-          [%point ship.from.sotx %escape `parent.sotx]
-        ==
-      ::
-          %cancel-escape
-        ?~  point=(get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        ?.  =([~ parent.sotx] escape.net.u.point)  $(sotxs t.sotxs)
-        =.  escape.net.u.point  ~
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.point)
-            fx
-          :_  fx
-          [%point ship.from.sotx %escape ~]
-        ==
-      ::
-          %detach
-        ?~  (get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        ?~  child=(~(get by unv-ids) ship.sotx)  $(sotxs t.sotxs)
-        ?.  =([& ship.from.sotx] sponsor.net.u.child)  $(sotxs t.sotxs)
-        =.  sponsor.net.u.child  |/ship.from.sotx
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.sotx u.child)
-            fx
-          :_  fx
-          [%point ship.sotx %sponsor ~]
-        ==
-      ::
-          %adopt
-        ?~  (get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        ?~  child=(~(get by unv-ids) ship.sotx)  $(sotxs t.sotxs)
-        ?.  =([~ ship.from.sotx] escape.net.u.child)  $(sotxs t.sotxs)
-        =.  escape.net.u.child  ~
-        =.  sponsor.net.u.child  &/ship.from.sotx
-        =.  sponsor.net.u.child  &/ship.from.sotx
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.child)
-            fx
-          :_  fx
-          [%point ship.sotx %sponsor `ship.from.sotx]
-        ==
-      ::
-          %reject
-        ?~  (get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        ?~  child=(~(get by unv-ids) ship.sotx)  $(sotxs t.sotxs)
-        ?.  =([~ ship.from.sotx] escape.net.u.child)  $(sotxs t.sotxs)
-        =.  escape.net.u.child  ~
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.child)
-            fx
-          :_  fx
-          [%point ship.sotx %escape ~]
-        ==
-      ::
-          %keys
-        ?~  point=(get-owned-point ship.from.sotx)  $(sotxs t.sotxs)
-        =.  net.u.point
-          net.u.point(pass pass.sotx, life +(life.net.u.point))
-        =?  rift.net.u.point  breach.sotx  +(rift.net.u.point)
-        %_    $
-            sotxs     t.sotxs
-            unv-ids   (~(put by unv-ids) ship.from.sotx u.point)
-            fx
-          :*  [%point ship.from.sotx %keys life.net.u.point pass.sotx]
-              ?.  breach.sotx  fx
-              [%point ship.from.sotx %rift rift.net.u.point]^fx
-          ==
-        ==
-      ::
-          %spawn
-        ?.  (spending-sont sont.sotx)  $(sotxs t.sotxs)
-        ?:  (~(has by unv-ids) ship.from.sotx)  $(sotxs t.sotxs)
-        ?.  =(ship.from.sotx (conol pass.sotx))  $(sotxs t.sotxs)
-        =/  sponsor  `@p`(end 4 ship.from.sotx)
-        =/  =point
-          :*  owner=sont.sotx
+      =^  point  cor  get-owned-point
+      |-  ^+  cor
+      ?~  sots  cor
+      =*  sot  i.sots
+      ?:  ?=(%spawn -.sot)
+        :: XX: more ordering constraints?
+        ?^  point  cor
+        ?.  (spending-sont sont.sot)  $(sots t.sots)
+        ?:  (~(has by unv-ids) our)  $(sots t.sots)
+        ?.  =(our (conol pass.sot))  $(sots t.sots)
+        =/  sponsor  `@p`(end 4 our)
+        =/  =^point
+          :*  own=[sont.sot ~]
               rift=0
               life=1
-              pass=pass.sotx
+              pass=pass.sot
               sponsor=[& sponsor]
               escape=~
               fief=~
           ==
-        =*  sont  sont.sotx
+        =*  sont  sont.sot
         %_    $
-            sotxs     t.sotxs
-            sont-map  (put-com:si sont-map txh.sont pos.sont off.sont ship.from.sotx)
-            unv-ids   (~(put by unv-ids) ship.from.sotx point)
+            point    `point
+            sots     t.sots
+            sont-map  (put-com:si sont-map txh.sont pos.sont off.sont our)
+            unv-ids   (~(put by unv-ids) our point)
             fx
-          :*  [%point ship.from.sotx %owner sont]
-              [%point ship.from.sotx %sponsor `sponsor]
-              [%point ship.from.sotx %keys 1 pass.sotx]
+          :*  [%point our %owner sont]
+              [%point our %sponsor `sponsor]
+              [%point our %keys 1 pass.sot]
               fx
           ==
         ==
+      ?~  point  cor
+      ?-    -.sot
+          %set-mang
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) our u.point)
+            fx
+          :_  fx
+          [%point our %mang mang.sot]
+        ==
+      ::
+          %fief
+        =.  fief.net.u.point  fief.sot
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) our u.point)
+            fx
+          :_  fx
+          [%point our %fief fief.sot]
+        ==
+      ::
+          %escape
+        =.  escape.net.u.point  `parent.sot
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) our u.point)
+            fx
+          :_  fx
+          [%point our %escape `parent.sot]
+        ==
+      ::
+          %cancel-escape
+        ?.  =([~ parent.sot] escape.net.u.point)  $(sots t.sots)
+        =.  escape.net.u.point  ~
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) our u.point)
+            fx
+          :_  fx
+          [%point our %escape ~]
+        ==
+      ::
+          %detach
+        ?~  child=(~(get by unv-ids) ship.sot)  $(sots t.sots)
+        ?.  =([& our] sponsor.net.u.child)  $(sots t.sots)
+        =.  sponsor.net.u.child  |/our
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) ship.sot u.child)
+            fx
+          :_  fx
+          [%point ship.sot %sponsor ~]
+        ==
+      ::
+          %adopt
+        ?~  child=(~(get by unv-ids) ship.sot)  $(sots t.sots)
+        ?.  =([~ our] escape.net.u.child)  $(sots t.sots)
+        =.  escape.net.u.child  ~
+        =.  sponsor.net.u.child  &/our
+        =.  sponsor.net.u.child  &/our
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) ship.sot u.child)
+            fx
+          :_  fx
+          [%point ship.sot %sponsor `our]
+        ==
+      ::
+          %reject
+        ?~  child=(~(get by unv-ids) ship.sot)  $(sots t.sots)
+        ?.  =([~ our] escape.net.u.child)  $(sots t.sots)
+        =.  escape.net.u.child  ~
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) ship.sot u.child)
+            fx
+          :_  fx
+          [%point ship.sot %escape ~]
+        ==
+      ::
+          %keys
+        =.  net.u.point
+          net.u.point(pass pass.sot, life +(life.net.u.point))
+        =?  rift.net.u.point  breach.sot  +(rift.net.u.point)
+        %_    $
+            sots     t.sots
+            unv-ids   (~(put by unv-ids) our u.point)
+            fx
+          :*  [%point our %keys life.net.u.point pass.sot]
+              ?.  breach.sot  fx
+              [%point our %rift rift.net.u.point]^fx
+          ==
+        ==
+      ::
       ==
       ::
       ++  get-owned-point
-        |=  =ship
-        ^-  (unit point)
-        ?~  point=(~(get by unv-ids) ship)  ~
-        ?.  (spending-sont owner.own.u.point)  ~
-        point
+        ^-  [(unit point) _cor]
+        ?~  point=(~(get by unv-ids) our)  ~^cor
+        ?:  &(?=(~ sig) (spending-sont sont.own.u.point))
+          point^cor
+        ?~  sig  [~ cor]
+        ?.  ?=([~ %pass *] mang.own.u.point)  [~ cor]
+        ?:  =(txh (cut 8 [1 1] pass.u.mang.own.u.point))  [~ cor]
+        =/  pub  (end 8 pass.u.mang.own.u.point)
+        =/  tw  (scap:ed pub (shax:sha pass.u.mang.own.u.point))
+        ?.  (veri-octs:ed u.sig raw tw)  [~ cor]
+        =.  pass.u.mang.own.u.point  (can 8 [1 pub] [1 txh] ~)
+        [point cor(unv-ids (~(put by unv-ids) our u.point))]
       ::
       ++  spending-sont
         |=  =sont
