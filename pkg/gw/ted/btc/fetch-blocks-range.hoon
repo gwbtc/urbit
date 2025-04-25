@@ -3,7 +3,10 @@
 |=  args=vase
 =/  m  (strand:strandio ,vase)
 ^-  form:m
+~&  %wtf
+=/  req  (need !<((unit [@t (unit @t) wut=(each @ud @ux) ?]) args))
 ;<  res=(unit block:btcio)  bind:m
-  %-  get-block-by-height:btcio
-  (need !<((unit [@t (unit @t) @ud ?]) args))
+  %.  req(wut `@`+.wut.req)
+  ?:(?=(%& -.wut.req) get-block-by-height:btcio get-block:btcio)
+
 (pure:m !>(res))

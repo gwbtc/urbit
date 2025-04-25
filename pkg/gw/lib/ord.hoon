@@ -1,10 +1,10 @@
-/+  wiry
-::!.
-=>  wiry
+::/+  wiry
+::=>  wiry
 ::/-  bc=bitcoin, bscr=btc-script, *mip, bio=btcio
-::/+  *mip
-::=*  sha  ..shax
-::=,  crypto
+/+  bscr=btc-script
+/+  *mip
+=*  sha  ..shax
+=,  crypto
 =|  lac=_|
 |%
 ++  debug
@@ -13,6 +13,7 @@
     +<+
   ~>  %slog.[0 meg]
   +<+
+::
 +$  block
   $:  hax=@ux
       reward=@ud
@@ -134,39 +135,49 @@
              [p=?(~ %1 %2 %4) =octs]
          ==
      ==
+  ::
   ++  de
-    ::  i think the endianness is gonna byte us here with subtract
-    ::  under-flow, maybe
     |=  a=octs
     ^-  (unit script)
-    ?:  =(p.a 0)  `~
+    ?:  =(p.a 0)  ~ :: `~
     =/  n  (dec p.a)
-    =-  ?:((levy - |=(a=(unit) !=(a ~))) `(turn - need) ~)
-    |-  ^-  (list (unit op:script))
+    |-  ^-  (unit script)
     =/  op  (cut 3 [n 1] q.a)
+    =-  ?~  -  ~
+        ?:  =(n.u 0)  `op.u^~
+        ?~  rest=%_($ n (dec n.u))  ~
+        `op.u^u.rest
+    ^-  (unit [=^op n=@])
     ?:  &(!=(0 op) (lte op 0x4b)) :: push next `op` bytes
+      ?:  (lth n op)  ~
       =.  n  (sub n op)
       =/  dat  (rev 3 op (cut 3 [n op] q.a))
-      [~ %op-push ~ op dat]^?:(=(n 0) ~ $(n (dec n)))
+      `[%op-push ~ op dat]^n
     ?:  ?=(%0x4c op) :: op_pushdata1
+      ?:  =(n 0)  ~
       =.  n  (dec n)
       =/  len  (cut 3 [n 1] q.a)
+      ?:  (lth n len)  ~
       =.  n  (sub n len)
       =/  dat  (rev 3 len (cut 3 [n len] q.a))
-      [~ %op-push %1 len dat]^?:(=(n 0) ~ $(n (dec n)))
+      `[%op-push %1 len dat]^n
     ?:  ?=(%0x4d op) :: op_pushdata2
+      ?:  (lth n 2)  ~
       =.  n  (sub n 2)
       =/  len  (rev 3 2 (cut 3 [n 2] q.a))
+      ?:  (lth n len)  ~
       =.  n  (sub n len)
       =/  dat  (rev 3 len (cut 3 [n len] q.a))
-      [~ %op-push %2 len dat]^?:(=(n 0) ~ $(n (dec n)))
+      `[%op-push %2 len dat]^n
     ?:  ?=(%0x4e op) :: op_pushdata4
+      ?:  (lth n 4)  ~
       =.  n  (sub n 4)
       =/  len  (rev 3 4 (cut 3 [n 4] q.a))
+      ?:  (lth n len)  ~
       =.  n  (sub n len)
       =/  dat  (rev 3 len (cut 3 [n len] q.a))
-      [~ %op-push %4 len dat]^?:(=(n 0) ~ $(n (dec n)))
-    :_  ?:(=(n 0) ~ $(n (dec n)))
+      `[%op-push %4 len dat]^n
+    =-  ?~(- ~ `u^n)
     ^-  (unit ^op)
     ?:  &((lth 0x50 op) (lte op 0x60))  :: op_1..op_16
       `[%op-push %num %1 (sub op 0x50)]
@@ -408,10 +419,7 @@
           ==
 ::
 +$  diff
-  $%  ::[%nonce =ship =proxy =nonce]
-      ::[%tx =raw-sotx err=(unit @tas)]
-      ::[%operator owner=sont operator=sont approved=?]
-      [%dns domains=(list @t)]
+  $%  [%dns domains=(list @t)]
       $:  %point  =ship
           $%  [%rift =rift]
               [%keys =life =pass]
@@ -590,6 +598,16 @@
 ::
 ++  en
   |%
+  ++  unv-to-script
+    |=  dat=@
+    ^-  script
+    =/  len  (met 3 dat)
+    :*  [%op-push %num %1 %0]
+        %op-if
+        op-push+~+3+'urb'
+        (push-data len dat) 
+     ==
+  ::
   ++  mails-to-script
     |=  mails=(list mail)
     ^-  script
@@ -635,6 +653,39 @@
       (con (lsh [3 (sub p 32)] txh.p.oid) idx.p.oid)
     --
   ::
+  ++  rip-octs
+    |=  octs
+    ^-  (list octs)
+    =/  met-q  (met 3 q)
+    ?>  (lte met-q p) :: todo: prob unnecessary
+    =/  ripped=(list octs)
+      (turn (rip [3 520] q) |=(@ [(met 3 +<) +<]))
+    ?:  =(p met-q)  ripped
+    =/  nzeros  (dvr (sub p met-q) 520)
+    =-  (weld - ripped)
+    ^-  (list octs)
+    =/  zero-520s=(list octs)  ?:(=(p.nzeros 0) ~ (turn (gulf 1 p.nzeros) |=(* [520 0])))
+    ?:  =(0 q.nzeros)  zero-520s
+    [q.nzeros 0]^zero-520s
+  ::
+  ++  push-data
+    |=  data=octs
+    =/  ripped  (rip-octs data)
+    ?:  =(ripped ~)  !! ::~|(%en-draft-push-no-content !!)
+    |-  ^-  script
+    ?~  ripped  [%op-endif ~]
+    :-  (push-one-data i.ripped)
+    $(ripped t.ripped)
+  ::
+  ++  push-one-data
+    |=  octs
+    ^-  op:script
+    ?>  !=(0 p)
+    ?>  (lte p 520)
+    ?:  (lte p 0x4b)  op-push+~+p^q
+    ?:  (lte p 0xff)  op-push+1+p^q
+    op-push+2+p^q
+  ::
   ++  draft-to-script
     |=  =draft
     ^-  script
@@ -649,29 +700,6 @@
       (push-one-data q.i.tags)
     $(tags t.tags)
     ::
-    ++  push-one-data
-      |=  octs
-      ^-  op:script
-      ?>  !=(0 p)
-      ?>  (lte p 520)
-      ?:  (lte p 0x4b)  op-push+~+p^q
-      ?:  (lte p 0xff)  op-push+1+p^q
-      op-push+2+p^q
-    ::
-    ++  rip-octs
-      |=  octs
-      ^-  (list octs)
-      =/  met-q  (met 3 q)
-      ?>  (lte met-q p) :: todo: prob unnecessary
-      =/  ripped=(list octs)  (turn (rip [3 520] q) |=(@ [(met 3 +<) +<]))
-      ?:  =(p met-q)  ripped
-      =/  nzeros  (dvr (sub p met-q) 520)
-      =-  (weld - ripped)
-      ^-  (list octs)
-      =/  zero-520s=(list octs)  ?:(=(p.nzeros 0) ~ (turn (gulf 1 p.nzeros) |=(* [520 0])))
-      ?:  =(0 q.nzeros)  zero-520s
-      [q.nzeros 0]^zero-520s
-    ::
     ++  push-meta
       ^-  script
       ?~  meta  push-data
@@ -685,13 +713,8 @@
     ++  push-data
       ^-  script
       ?~  data  [%op-endif ~]
-      =/  ripped  (rip-octs u.data)
-      ?:  =(ripped ~)  !! ::~|(%en-draft-push-no-content !!)
       =-  [op-push+num+1+0 -]
-      |-  ^-  script
-      ?~  ripped  [%op-endif ~]
-      :-  (push-one-data i.ripped)
-      $(ripped t.ripped)
+      (^push-data u.data)
     --
   --
 ::
@@ -789,23 +812,22 @@
     |=  =script
     ^-  (list @)
     ?~  script  ~
-    ?.  ?=([[%op-push * * %0] %op-if [%op-push * * %'urb'] *] script)  $(script t.script)
+    ?.  ?=([[%op-push * * %0] %op-if [%op-push * * %'urb'] *] script)
+      $(script t.script)
     =>  .(script t.t.t.script)
-    |^  ^+  ^$
+    |^  ^-  (list @)
     =^  unv  script  fetch-unv
-    ?~  unv  ^$  [q.u.unv ^$]
+    ?~  unv  ~  [p:(fax:plot bloq=3 u.unv) ^$]
     ::
     ++  fetch-unv
-      ^-  [(unit octs) ^script]
+      ^-  [(unit (list plat:plot)) ^script]
       ?>  ?=(^ script)
-      =|  dats=(list octs)
-      |-  ^-  [(unit octs) ^script]
-      ?.  ?=(%op-endif i.script)
-        ?>  ?=([[%op-push *] ^] script)
-        $(dats octs.i.script^dats, script t.script) 
-      :_  t.script
-      :-  ~
-      (roll dats |=([a=octs b=octs] (add p.a p.b)^(cat 3 q.a q.b)))
+      |-  ^-  [(unit (list plat:plot)) ^script]
+      ?:  ?=(%op-endif i.script)  [~ ~]^~
+      ?.  ?=([[%op-push *] ^] script)  ~^~
+      =/  rest  $(script t.script)
+      ?~  -.rest  ~^~
+      [~ octs.i.script u.-.rest]^+.rest
     --
   --
 ::
@@ -980,10 +1002,13 @@
       =/  raw-script=(unit octs)
         =/  rwit  (flop witness.i.is)
         ?.  ?=([* ^] rwit)  ~
-        ?.  =+(i.rwit &(!=(0 wid) =(0x50 (rsh [3 (dec wid)] dat))))  `i.t.rwit
+        ?.  =+(i.rwit &(!=(0 wid) =(0x50 (cut 3 [(dec wid) 1] dat))))
+          `i.t.rwit
         ?~(t.t.rwit ~ `i.t.rwit)
       ?~  raw-script  cor
       ?~  dscr=(de:script u.raw-script)  cor
+      ~|  [=+(u.raw-script [p `@ux`q]) =+((en:bscr u.dscr) [p `@ux`q])]
+      ?>  =(u.raw-script (en:bscr u.dscr))
       =/  unvs=(unit (list @))  (some (unv:de u.dscr))
       ?~  unvs  cor
       =/  sots=(list raw-sotx)  (zing (turn u.unvs parse-roll))
@@ -1160,8 +1185,9 @@
       ?~  raw-script  cor
       ::=/  scr  (mole |.((de:script u.raw-script)))
       :: XX: make crash-proof
-      =/  scr  (de:script u.raw-script)
-      ?~  scr  cor
+      ::=/  scr  (de:script u.raw-script)
+      ?~  scr=(de:script u.raw-script)  cor
+      ?>  =(u.raw-script (en:bscr u.scr))
       =/  mails=(list mail)  (mails:de u.scr)
       |-  ^+  cor
       ?~  mails  cor
