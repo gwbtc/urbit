@@ -299,10 +299,10 @@
   ::
   ++  scriptpubkey
     ^-  octs
-    35^(cat 3 0x1 q.q:tweaked-pubkey)
+    35^(cat 3 0x1 q:(to-octs x.q.tweaked-pubkey))
   ::
   ++  tweaked-pubkey
-    ^-  (pair @ octs)
+    ^-  (pair @ point)
     =/  pt=point
       ?~  p
         nums-point
@@ -314,7 +314,7 @@
     =/  tweaked=point
       (add-points pt (mul-point-scalar g.domain.curve t))
     =/  parity=@  ?:  =(0 (mod y.tweaked 2))  0  1
-    [parity (to-octs x.tweaked)]
+    [parity tweaked]
   ::
   ++  tapleaf-hash
     ^-  @I
