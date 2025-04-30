@@ -3,14 +3,27 @@
 /-  bp=btc-provider
 /+  psbt, btc, strandio, rpc=json-rpc, bc=bitcoin
 |%
++$  auth
+  $@  ~
+  [%basic dat=@]
+::
+++  auth-to-base64
+  |=  a=auth
+  ^-  (unit @t)
+  ::  ?~  a
+  ?.  ?=([%basic *] a)  ~
+  =-  `(cat 3 'Basic ' -)
+  (en:base64:mimes:html (met 3 dat.a) dat.a)
+::
++$  req-to  [url=@t =auth]
 ::  +request-rpc: send rpc request, with retry
 ::
 ++  request-rpc
-  |=  [url=@ta req=request:rpc]
+  |=  [=req-to req=request:rpc]
   =/  m  (strand:strandio response:rpc)
   ^-  form:m
   ;<  res=(list response:rpc)  bind:m
-    (request-batch-rpc-loose url req ~)
+    (request-batch-rpc-loose req-to req ~)
   ?:  ?=([* ~] res)
     (pure:m i.res)
   %+  strand-fail:strandio
@@ -23,7 +36,7 @@
 ::    including the ones that are unsuccessful.
 ::
 ++  request-batch-rpc-loose
-  |=  [url=@ta reqs=(list request:rpc)]
+  |=  [req-to reqs=(list request:rpc)]
   |^  %+  (retry:strandio results)
         `10
       attempt-request
@@ -37,7 +50,10 @@
     =/  =request:http
       :*  method=%'POST'
           url=url
-          header-list=['Content-Type'^'application/json' ~]
+          ^=  header-list
+          =+  'Content-Type'^'application/json'
+          ?~  auth  [- ~]
+          ['Authorization'^(need (auth-to-base64 auth)) - ~]
         ::
           ^=  body
           %-  some  %-  as-octs:mimes:html
@@ -100,9 +116,9 @@
   (crip ((x-co:co (mul 2 p.a)) q.a))
 ::
 ++  get-raw-transaction
-  |=  [url=@t id=(unit @t) txh=@ux verb=?]
+  |=  [=req-to id=(unit @t) txh=@ux verb=?]
   =/  m  (strand:strandio response:rpc)
-  %+  request-rpc  url
+  %+  request-rpc  req-to
   ^-  request:rpc
   :*  ?~(id 'get-raw-transaction' u.id)
       '2.0'
@@ -111,11 +127,11 @@
   ==
 ::
 ++  get-block-hash
-  |=  [url=@t id=(unit @t) height=@ud]
+  |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit @ux))
   ^-  form:m
   ;<  res=response:rpc  bind:m
-    %+  request-rpc  url
+    %+  request-rpc  req-to
     ^-  request:rpc
     :*  ?~(id 'get-block-hash' u.id)
         '2.0'
@@ -127,33 +143,38 @@
   (pure:m `q.u.res)
 ::
 ++  get-block
-  |=  [url=@t id=(unit @t) hax=@ux verb=?]
+  |=  [=req-to id=(unit @t) bloq=$%([%num p=@ud] [%hax p=@ux])]
+  =/  m  (strand:strandio (unit block))
+  ^-  form:m
+  ?-  -.bloq
+    %hax  (get-block-by-hash req-to id p.bloq)
+    %num  (get-block-by-number req-to id p.bloq)
+  ==
+::
+++  get-block-by-hash
+  |=  [=req-to id=(unit @t) hax=@ux]
   =/  m  (strand:strandio (unit block))
   ^-  form:m
   ;<  res=response:rpc  bind:m
-    %+  request-rpc  url
+    %+  request-rpc  req-to
     ^-  request:rpc
     :*  ?~(id 'get-block' u.id)
         '2.0'
         'getblock'
-        list+[s+(render-hex-bytes 32 hax) (numb:enjs:format ?.(verb 1 2)) ~]
+        list+[s+(render-hex-bytes 32 hax) (numb:enjs:format 2) ~]
     ==
   ?.  ?=([%result * [%o *]] res)  (pure:m ~)
   (pure:m `(parse-block res.res))
 ::
-++  get-block-by-height
-  |=  [url=@t id=(unit @t) height=@ud verb=?]
+++  get-block-by-number
+  |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit block))
   ^-  form:m
-  ~&  %block-by-height
-
   ;<  res=(unit @ux)  bind:m
-    (get-block-hash url ?~(id ~ `(cat 3 'get-block-hash-' u.id)) height)
-  ~&  height=res
+    (get-block-hash req-to ?~(id ~ `(cat 3 'get-block-hash-' u.id)) height)
   ;<  *  bind:m  (sleep:strandio ~s2)
   ?~  res  (pure:m ~)
-  ;<  block=(unit block)  bind:m  (get-block url id u.res verb)
-  (pure:m block)
+  (get-block-by-hash req-to id u.res)
 ::
 +$  block
   $:  hax=@ux
@@ -202,10 +223,10 @@
 ::::  +read-contract: calls a read function on a contract, produces result hex
 ::::
 ::++  read-contract
-::  |=  [url=@t req=proto-read-request:rpc:ethereum]
+::  |=  [=req-to req=proto-read-request:rpc:ethereum]
 ::  =/  m  (strand:strandio ,@t)
 ::  ;<  res=(list [id=@t res=@t])  bind:m
-::    (batch-read-contract-strict url [req]~)
+::    (batch-read-contract-strict req-to [req]~)
 ::  ?:  ?=([* ~] res)
 ::    (pure:m res.i.res)
 ::  %+  strand-fail:strandio
@@ -217,11 +238,11 @@
 ::::    but only if all of them are successful.
 ::::
 ::++  batch-read-contract-strict
-::  |=  [url=@t reqs=(list proto-read-request:rpc:ethereum)]
+::  |=  [=req-to reqs=(list proto-read-request:rpc:ethereum)]
 ::  |^  =/  m  (strand:strandio ,results)
 ::      ^-  form:m
 ::      ;<  res=(list [id=@t =json])  bind:m
-::        %+  request-batch-rpc-strict  url
+::        %+  request-batch-rpc-strict  req-to
 ::        (turn reqs proto-to-rpc)
 ::      =+  ^-  [=results =failures]
 ::        (roll res response-to-result)
@@ -250,15 +271,15 @@
 ::::
 ::::
 ::++  get-latest-block
-::  |=  url=@ta
+::  |=  =req-toa
 ::  =/  m  (strand:strandio ,block)
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    (request-rpc url `'block number' %eth-block-number ~)
-::  (get-block-by-number url (parse-eth-block-number:rpc:ethereum json))
+::    (request-rpc req-to `'block number' %eth-block-number ~)
+::  (get-block-by-number req-to (parse-eth-block-number:rpc:ethereum json))
 ::::
 ::++  get-block-by-number
-::  |=  [url=@ta =number:block]
+::  |=  [=req-toa =number:block]
 ::  =/  m  (strand:strandio ,block)
 ::  ^-  form:m
 ::  |^
@@ -266,7 +287,7 @@
 ::  =/  m  (strand:strandio ,(unit block))
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %+  request-rpc  url
+::    %+  request-rpc  req-to
 ::    :-  `'block by number'
 ::    [%eth-get-block-by-number number |]
 ::  (pure:m (parse-block json))
@@ -289,11 +310,11 @@
 ::  --
 ::::
 ::++  get-tx-by-hash
-::  |=  [url=@ta tx-hash=@ux]
+::  |=  [=req-toa tx-hash=@ux]
 ::  =/  m  (strand:strandio transaction-result:rpc:ethereum)
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %+  request-rpc  url
+::    %+  request-rpc  req-to
 ::    :*  `'tx by hash'
 ::        %eth-get-transaction-by-hash
 ::        tx-hash
@@ -302,11 +323,11 @@
 ::  (parse-transaction-result:rpc:ethereum json)
 ::::
 ::++  get-logs-by-hash
-::  |=  [url=@ta =hash:block contracts=(list address) =topics]
+::  |=  [=req-toa =hash:block contracts=(list address) =topics]
 ::  =/  m  (strand:strandio (list event-log:rpc:ethereum))
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %+  request-rpc  url
+::    %+  request-rpc  req-to
 ::    :*  `'logs by hash'
 ::        %eth-get-logs-by-hash
 ::        hash
@@ -317,7 +338,7 @@
 ::  (parse-event-logs:rpc:ethereum json)
 ::::
 ::++  get-logs-by-range
-::  |=  $:  url=@ta
+::  |=  $:  =req-toa
 ::          contracts=(list address)
 ::          =topics
 ::          =from=number:block
@@ -326,7 +347,7 @@
 ::  =/  m  (strand:strandio (list event-log:rpc:ethereum))
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %+  request-rpc  url
+::    %+  request-rpc  req-to
 ::    :*  `'logs by range'
 ::        %eth-get-logs
 ::        `number+from-number
@@ -338,21 +359,21 @@
 ::  (parse-event-logs:rpc:ethereum json)
 ::::
 ::++  get-next-nonce
-::  |=  [url=@ta =address]
+::  |=  [=req-toa =address]
 ::  =/  m  (strand:strandio ,@ud)
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %^  request-rpc  url  `'nonce'
+::    %^  request-rpc  req-to  `'nonce'
 ::    [%eth-get-transaction-count address [%label %latest]]
 ::  %-  pure:m
 ::  (parse-eth-get-transaction-count:rpc:ethereum json)
 ::::
 ::++  get-balance
-::  |=  [url=@ta =address]
+::  |=  [=req-toa =address]
 ::  =/  m  (strand:strandio ,@ud)
 ::  ^-  form:m
 ::  ;<  =json  bind:m
-::    %^  request-rpc  url  `'balance'
+::    %^  request-rpc  req-to  `'balance'
 ::    [%eth-get-balance address [%label %latest]]
 ::  %-  pure:m
 ::  (parse-eth-get-balance:rpc:ethereum json)
