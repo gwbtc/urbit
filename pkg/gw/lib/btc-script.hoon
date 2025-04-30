@@ -122,16 +122,18 @@
 ++  en
   |=  =script
   |^  ^-  octs
-  %-  cat:byt:bc
-  %+  turn  script  encode-op
+  =-  [r p]
+  %-  fax:plot  :-  bloq=3
+  %-  flop
+  (turn script encode-op)
   ::
   ++  encode-op
     |=  =op
-    ^-  octs
+    ^-  plat:plot
     ?:  ?=(^ op)
       ?-  p.op
         %num  1^?:(=(q.octs.op 81) 0x4f ?:(=(0 q.octs.op) 0 ?>((lte q.octs.op 0x10) (add 0x50 q.octs.op))))
-        *  (encode-pushdata +.op)
+        *  [%s ~]^(encode-pushdata +.op)
       ==
     ::
     ?-  op
@@ -239,9 +241,10 @@
   ::
   ++  encode-pushdata
     |=  [a=?(~ %1 %2 %4) b=byts]
-    ^-  byts
+    ^-  plot
+    :-  bloq=3
+    %-  flop
     ?>  (lte (met 3 +.b) dat.b)
-    %-  cat:byt:bc
     ~|  %push-data-too-big-for-opcode
     ?-    a
         ~

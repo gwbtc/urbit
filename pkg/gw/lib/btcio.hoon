@@ -145,8 +145,12 @@
   |=  [url=@t id=(unit @t) height=@ud verb=?]
   =/  m  (strand:strandio (unit block))
   ^-  form:m
+  ~&  %block-by-height
+
   ;<  res=(unit @ux)  bind:m
     (get-block-hash url ?~(id ~ `(cat 3 'get-block-hash-' u.id)) height)
+  ~&  height=res
+  ;<  *  bind:m  (sleep:strandio ~s2)
   ?~  res  (pure:m ~)
   ;<  block=(unit block)  bind:m  (get-block url id u.res verb)
   (pure:m block)
