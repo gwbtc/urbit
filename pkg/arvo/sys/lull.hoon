@@ -86,7 +86,7 @@
     |=(p=$ `(pair bloq step)`+:(fax p))
   --
 ::
-::  +mop: constructs and validates ordered ordered map based on key,
+::  +mop: constructs and validates ordered map based on key,
 ::  val, and comparator gate
 ::
 ++  mop
