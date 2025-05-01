@@ -166,6 +166,21 @@
   ?.  ?=([%result * [%o *]] res)  (pure:m ~)
   (pure:m `(parse-block res.res))
 ::
+++  mine-block-to-address
+  |=  [=req-to id=(unit @t) address=cord]
+  =/  m  (strand:strandio (unit @ux))
+  ^-  form:m
+  ;<  res=response:rpc  bind:m
+    %+  request-rpc  req-to
+    ^-  request:rpc
+    :*  ?~(id 'generate-to-address' u.id)
+        '2.0'
+        'generatetoaddress'
+        list+[(numb:enjs:format 1) s+address ~]
+    ==
+  ?.  ?=([%result *] res)  (pure:m ~)
+  (pure:m `((ar:dejs:format parse-hex) res.res))
+::
 ++  get-block-by-number
   |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit block))
