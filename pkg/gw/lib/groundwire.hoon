@@ -43,7 +43,7 @@
 +$  output
   $:  =out:tx
       spend-script=(unit script:scr)
-      internal-keys=(unit keypair)
+      internal-keys=keypair
   ==
 +$  transaction
   $:  tx:tx
@@ -57,7 +57,6 @@
   ++  add-input
     |=  $:  prev=outpoint
             from=output
-            int-key=(unit keypair)
             sigh=(unit @ux)
             nseq=(unit @ux)
         ==
@@ -70,16 +69,11 @@
         sig-hash           (fall sigh sig-hash.n)
         nsequence.in       (fall nseq nsequence.in.n)
       ==
-    ?:  =(^ internal-keys.from)
-      t(inputs (snoc inputs.t n))
-    ?~  int-key
-      ~!(%need-spending-key !!)
-    =.  internal-keys.utxo.n  int-key
     t(inputs (snoc inputs.t n))
   ::
   ++  add-output
     |=  $:  val=sats
-            int-key=(unit keypair)
+            int-key=keypair
             scr=(unit script:scr)
         ==
     ^-  transaction
@@ -87,9 +81,9 @@
     =.  o
       %_  o
         value.out          val
-        internal-key       int-key
+        internal-keys      int-key
         spend-script       scr
-        script-pubkey.out  ~(scriptpubkey p2tr int-key scr ~)
+        script-pubkey.out  ~(scriptpubkey p2tr `x.pub.int-key scr ~)
       ==
     t(outputs (snoc outputs.t o))
   ::
@@ -108,13 +102,13 @@
       =.  script-witness.in.n  ~[sig]
       t(inputs (snap inputs.t i `input`n))
     =.  script-witness.in.n
-      :~  (encode-pushdata:scr ~ 32^sig)
-          ~(scriptspend p2tr `x.pub.u.internal-keys.utxo.n spend-script.utxo.n ~)
-      ==
+      :-  (catb 1^0x20 sig ~)
+      ~(scriptspend p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n ~)
     t(inputs (snap inputs.t i `input`n))
   ::
   ++  finalize
     ^-  transaction
+    =|  i=@
     |-
     ?:  =((lent inputs.t) i)
       t
@@ -128,8 +122,8 @@
 ::
 ++  encode
   |%
-  ++  transaction
-    |=  t=tx:tx
+  ++  txn
+    |=  t=transaction
     ^-  octs
     %-  catb  %-  zing
     ^-  (list (list octs))
@@ -297,35 +291,35 @@
   |_  [p=(unit pubkey) s=(unit script:scr) sec=(unit @)]
   ++  tweak-keypair
     ^-  keypair
-    =/  tweaked-seckey=@  tweaked-privkey
+    =/  tweaked-seckey=@  tweak-privkey
     :: populated the pubkey sample to match the privkey in case not provided
-    [q.tweak-pubkey tweaked-seckey]
+    [q:tweak-pubkey tweaked-seckey]
   ::
   ++  scriptpubkey
     ^-  octs
-    35^(cat 3 0x1 q:(to-octs x.q.tweak-pubkey))
+    35^(cat 3 0x1 q:(to-octs x.q:tweak-pubkey))
   ::
   ++  tweak-pubkey
     ^-  (pair @ point)
-    =/  pt=point  (need (lift-x:schnorr u.p))
+    =/  pt=point  (need (lift-x:schnorr (need p)))
     =/  t=@I  (tweak pt)
     =/  tweaked=point
       (add-points pt (mul-point-scalar g.domain.curve t))
     =/  parity=@  ?:  =(0 (mod y.tweaked 2))  0  1
-    [parity tweaked]
+    [p=parity q=tweaked]
   ::
   ++  tweak-privkey
   ^-  @
   ?~  sec  !!
   =/  pt=point  (mul-point-scalar g.domain.curve u.sec)
-  ?:  &(p !=(p `x.pt))  ~!(%non-matching-keys !!)
+  ?:  &(=(^ p) !=(p `x.pt))  ~!(%non-matching-keys !!)
   =.  p  `x.pt
   =/  t=@I  (tweak pt)
   =/  priv=@
     ?:  =(0 (mod y.pt 2))
-      sec
-    (sub order.curve sec)
-  (mod (mix priv t) order.curve)
+      u.sec
+    (sub n.domain.curve u.sec)
+  (mod (mix priv t) n.domain.curve)
   ::
   ++  tweak
   |=  =point
@@ -345,11 +339,11 @@
     :: |=  sin=(list octs)
     ^-  (list octs)
     =/  sscr=octs  (en:scr (need s))
-    =+  cbyt=(mix 0xc0 p:tweaked-pubkey)
+    =+  cbyt=(mix 0xc0 p:tweak-pubkey)
     =/  control-block=octs
       %-  catb
       :~  (to-octs cbyt)
-          q:tweaked-pubkey
+          q:tweak-pubkey
           :: additional merkle hashes for multileaf taptree would go here - irrelevant for inscriptions rn
       ==
     :: %+  welp  (flipb sin)  :: assume script inputs provided in regular exec order
