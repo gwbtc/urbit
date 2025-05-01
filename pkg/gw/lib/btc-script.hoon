@@ -132,7 +132,7 @@
     ^-  plat:plot
     ?:  ?=(^ op)
       ?-  p.op
-        %num  1^?:(=(q.octs.op 81) 0x4f ?:(=(0 q.octs.op) 0 ?>((lte q.octs.op 0x10) (add 0x50 q.octs.op))))
+        %num  1^?:(=(q.octs.op 0x81) 0x4f ?:(=(0 q.octs.op) 0 ?>((lte q.octs.op 0x10) (add 0x50 q.octs.op))))
         *  [%s ~]^(encode-pushdata +.op)
       ==
     ::

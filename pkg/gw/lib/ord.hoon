@@ -183,7 +183,7 @@
       `[%op-push %num %1 (sub op 0x50)]
     ?+  op  ~
       %0     `[%op-push %num %1 0]
-      %0x4f  `[%op-push %num %1 81]
+      %0x4f  `[%op-push %num %1 0x81]
       %0x50  `%op-reserved
     ::
       %0x61  `%op-nop
@@ -1165,6 +1165,8 @@
         =.  pass.u.mang.own.u.point  (can 8 [1 pub] [1 txh] ~)
         [point cor(unv-ids (~(put by unv-ids) our u.point))]
       ::
+      :: we should have spending-from and spending-to variants
+      :: spawn should probably use spending-to
       ++  spending-sont
         |=  =sont
         =|  val=@ud
