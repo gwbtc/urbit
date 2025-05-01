@@ -166,6 +166,37 @@
   ?.  ?=([%result * [%o *]] res)  (pure:m ~)
   (pure:m `(parse-block res.res))
 ::
+++  mine-block-to-address
+  |=  [=req-to id=(unit @t) address=cord]
+  =/  m  (strand:strandio (unit (list octs)))
+  ^-  form:m
+  ;<  res=response:rpc  bind:m
+    %+  request-rpc  req-to
+    ^-  request:rpc
+    :*  ?~(id 'generate-to-address' u.id)
+        '2.0'
+        'generatetoaddress'
+        list+[(numb:enjs:format 1) s+address ~]
+    ==
+  ?.  ?=([%result *] res)  (pure:m ~)
+  (pure:m `((ar:dejs:format parse-hex) res.res))
+::
+++  send-raw-transaction
+  |=  [=req-to id=(unit @t) raw=octs]
+  =/  m  (strand:strandio (unit @ux))
+  ^-  form:m
+  ;<  res=response:rpc  bind:m
+    %+  request-rpc  req-to
+    ^-  request:rpc
+    :*  ?~(id 'send-raw-transaction' u.id)
+        '2.0'
+        'sendrawtransaction'
+        list+[s+(render-hex-bytes raw) ~]
+    ==
+  ?.  ?=([%result * [%s *]] res)  (pure:m ~)
+  ?~  res=(de:base16:mimes:html p.res.res)  (pure:m ~)
+  (pure:m `q.u.res)
+::
 ++  get-block-by-number
   |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit block))
