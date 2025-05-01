@@ -39,12 +39,11 @@
   $:  =in:tx
       utxo=output
       sig-hash=$~(0x1 @ux)
-      =keypair
   ==
 +$  output
   $:  =out:tx
       spend-script=(unit script:scr)
-      internal-key=(unit pubkey)
+      internal-keys=(unit keypair)
   ==
 +$  transaction
   $:  tx:tx
@@ -58,7 +57,7 @@
   ++  add-input
     |=  $:  prev=outpoint
             from=output
-            keys=keypair
+            int-key=(unit keypair)
             sigh=(unit @ux)
             nseq=(unit @ux)
         ==
@@ -68,25 +67,29 @@
       %_  n
         utxo               from
         prevout.in         prev
-        keypair            keys
         sig-hash           (fall sigh sig-hash.n)
         nsequence.in       (fall nseq nsequence.in.n)
       ==
+    ?: =(^ internal-keys.from)
+      t(inputs (snoc inputs.t n))
+    ?~  int-key
+      ~!(%need-spending-key !!)
+    =.  internal-keys.utxo.n  int-key
     t(inputs (snoc inputs.t n))
   ::
   ++  add-output
-    |=  $:  v=sats
-            k=(unit pubkey)
-            s=(unit script:scr)
+    |=  $:  val=sats
+            int-key=(unit keypair)
+            scr=(unit script:scr)
         ==
     ^-  transaction
     =|  o=output
     =.  o
       %_  o
-        value.out          v
-        internal-key       k
-        spend-script       s
-        script-pubkey.out  ~(scriptpubkey p2tr k s)
+        value.out          val
+        internal-key       int-key
+        spend-script       scr
+        script-pubkey.out  ~(scriptpubkey p2tr int-key scr ~)
       ==
     t(outputs (snoc outputs.t o))
   ::
@@ -96,18 +99,22 @@
     =/  n=input  (snag i inputs.t)
     ?.  =(~ script-witness.in.n)
       t
-    =+  int-key=(fall internal-key.utxo.n x.pub.keypair.n)
-    =/  sig=octs  (sign-input t i priv.keypair.n)
+    =/  sig=octs
+        %^  sign-input
+            t
+          i
+        ~(tweak-privkey p2tr ~ spend-script.utxo.n `priv.internal-keys.utxo.n)
     ?~  spend-script.utxo.n
       =.  script-witness.in.n  ~[sig]
       t(inputs (snap inputs.t i `input`n))
     =.  script-witness.in.n
-      [sig ~(scriptspend p2tr `int-key spend-script.utxo.n)]
+      :~  (encode-pushdata:scr ~ 32^sig)
+          ~(scriptspend p2tr `x.pub.u.internal-keys.utxo.n spend-script.utxo.n ~)
+      ==
     t(inputs (snap inputs.t i `input`n))
   ::
   ++  finalize
     ^-  transaction
-    =|  i=@
     |-
     ?:  =((lent inputs.t) i)
       t
@@ -115,15 +122,8 @@
       ::  todo: add checks - value (fees), sighash_single, valid nseq and nlock
     ?.  =(~ script-witness.in.n)
       $(i +(i), t t(vin (snoc vin.t in.n)))
-    =/  sig=octs  (sign-input t i priv.keypair.n)
-    ?~  spend-script.utxo.n
-      =.  script-witness.in.n  ~[sig]
-      =.  inputs.t  (snap inputs.t i `input`n)
-      $(i +(i))
-    =+  int-key=(fall internal-key.utxo.n x.pub.keypair.n)
-    =.  script-witness.in.n  [sig ~(scriptspend p2tr `int-key spend-script.utxo.n)]
-    =.  vin.t  (snoc vin.t in.n)
-    $(t t(inputs (snap inputs.t i `input`n)), i +(i))
+    =.  t  (finalize-input i)
+    $(i +(i))
   --
 ::
 ++  encode
@@ -285,36 +285,54 @@
     =/  ser-script=octs
       (snag (sub (lent script-witness.in.n) 2) script-witness.in.n)
     =/  [n=@ s=octs]  (read-compact-size ser-script)
-    :~  32^~(tapleaf-hash p2tr ~ `(de:scr s))
+    :~  32^~(tapleaf-hash p2tr ~ `(de:scr s) ~)
         1^0
         4^0xffff.ffff
     ==
   --
 ::
-:: +$  p2tr  [ik=(unit pubkey) ts=(unit script:scr)]
 ++  p2tr
   ::  current: single tapleaf
   =,  secp256k1:secp:crypto
-  |_  [p=(unit pubkey) s=(unit script:scr)]
+  |_  [p=(unit pubkey) s=(unit script:scr) sec=(unit @)]
+  ++  tweak-keypair
+    ^-  keypair
+    =/  tweaked-seckey=@  tweaked-privkey
+    :: populated the pubkey sample to match the privkey in case not provided
+    [q.tweak-pubkey tweaked-seckey]
   ::
   ++  scriptpubkey
     ^-  octs
-    35^(cat 3 0x1 q:(to-octs x.q.tweaked-pubkey))
+    35^(cat 3 0x1 q:(to-octs x.q.tweak-pubkey))
   ::
-  ++  tweaked-pubkey
+  ++  tweak-pubkey
     ^-  (pair @ point)
-    =/  pt=point
-      ?~  p
-        nums-point
-      (need (lift-x:schnorr u.p))
-    =/  t=@I
-      ?~  s
-        (tagged-hash:schnorr 'TapTweak' (to-octs x.pt))
-      (tagged-hash:schnorr 'TapTweak' (to-octs (mix x.pt tapleaf-hash)))
+    =/  pt=point  (need (lift-x:schnorr u.p))
+    =/  t=@I  (tweak pt)
     =/  tweaked=point
       (add-points pt (mul-point-scalar g.domain.curve t))
     =/  parity=@  ?:  =(0 (mod y.tweaked 2))  0  1
     [parity tweaked]
+  ::
+  ++  tweak-privkey
+  ^-  @
+  ?~  sec  !!
+  =/  pt=point  (mul-point-scalar g.domain.curve u.sec)
+  ?:  &(p !=(p `x.pt))  ~!(%non-matching-keys !!)
+  =.  p  `x.pt
+  =/  t=@I  (tweak pt)
+  =/  priv=@
+    ?:  =(0 (mod y.pt 2))
+      sec
+    (sub order.curve sec)
+  (mod (mix priv t) order.curve)
+  ::
+  ++  tweak
+  |=  =point
+  ^-  @I
+  ?~  s
+    (tagged-hash:schnorr 'TapTweak' (to-octs x.point))
+  (tagged-hash:schnorr 'TapTweak' (to-octs (mix x.point tapleaf-hash)))
   ::
   ++  tapleaf-hash
     ^-  @I
@@ -339,13 +357,13 @@
         control-block
     ==
   ::
-  ++  nums-point
-    ^-  point
-    =/  pt=point
-      %-  need
-      %-  lift-x:schnorr
-      0x5092.9b74.c1a0.4954.b78b.4b60.35e9.7a5e.078a.5a0f.28ec.96d5.47bf.ee9a.ce80.3ac0
-    (add-points pt (mul-point-scalar g.domain.curve x.pt))
+  :: ++  nums-point
+  ::   ^-  point
+  ::   =/  pt=point
+  ::     %-  need
+  ::     %-  lift-x:schnorr
+  ::     0x5092.9b74.c1a0.4954.b78b.4b60.35e9.7a5e.078a.5a0f.28ec.96d5.47bf.ee9a.ce80.3ac0
+  ::   (add-points pt (mul-point-scalar g.domain.curve x.pt))
   --
 ::
 :: consolidated bitcoin utils

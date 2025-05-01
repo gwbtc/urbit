@@ -181,6 +181,22 @@
   ?.  ?=([%result *] res)  (pure:m ~)
   (pure:m `((ar:dejs:format parse-hex) res.res))
 ::
+++  send-raw-transaction
+  |=  [=req-to id=(unit @t) raw=octs]
+  =/  m  (strand:strandio response:rpc)
+  ^-  form:m
+  ;<  res=response:rpc  bind:m
+    %+  request-rpc  req-to
+    ^-  request:rpc
+    :*  ?~(id 'send-raw-transaction' u.id)
+        '2.0'
+        'sendrawtransaction'
+        list+[s+(render-hex-bytes raw) ~]
+    ==
+  ?.  ?=([%result * [%s *]] res)  (pure:m ~)
+  ?~  res=(de:base16:mimes:html p.res.res)  (pure:m ~)
+  (pure:m `q.u.res)
+::
 ++  get-block-by-number
   |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit block))

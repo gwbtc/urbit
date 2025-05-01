@@ -12,14 +12,33 @@
 ;<  block=(unit block:btcio)  bind:m  (get-block:btcio req-to ~ (head u.mined))
 ?~  block  ~|(%wtf !!)
 ?~  txs.block  ~|(%wtf !!)
-=/  =outpoint:gw  [-<.txs.block 0]
-=/  value=sats:gw  value.-<.txs.block
+=/  commit=transaction:gw
+  %:  build-commit-tx
+    [-<.txs.block 0]
+    ext.wallet
+    value.-<.txs.block 
+    own.wallet
+  ==
+=/  commit-hex=octs  (encode:gw commit)
+=/  commit-txhash=octs  (shay [32 commit-hex])
+=/  reveal=transaction:gw
+  %:  build-reveal-tx
+    [commit-txhash 0]
+    (snag 0 outputs.commit)
+    own.wallet
+  ==
+=/  reveal-hex=octs  (encode:gw reveal)
+;<  comres=(unit @ux)  bind:m  (send-raw-transaction req-to ~ commit-hex)
+?~  comres  ~!(%commit-tx-failed !!)
+;<  revres=(unit @ux)  bind:m  (send-raw-transaction req-to ~ reveal-hex)
+?~  revres  ~!(%reveal-tx-failed !!)
+(pure:m !>(revres))
 ::
 |%
 +$  spender
-  $:  bare=keypair:gw
-      tweak=point:gw
-      addr=cord
+  $:  internal=keypair:gw
+      tweaked=keypair:gw
+      address=cord
   ==
 +$  wallet  
   $:  seed=@ux
@@ -39,13 +58,13 @@
   =+  seed=(~(raw og eny.bowl) 256)
   =+  init=(derive-sequence:(from-seed:bip32 32^seed) ~[1.337 0 0])
   =/  =keypair:gw  [pub=pub.ext priv=prv.ext]
-  =/  tweaked=point:gw  q:~(tweaked-pubkey p2tr:gw `(compress-point pub.keypair) ~)
-  =/  addr=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point tweaked)))
+  =/  tweaked=keypair:gw  ~(tweak-keypair p2tr:gw `x.pub.keypair ~ `priv.keypair)
+  =/  addr=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point pub.tweaked)))
   =/  ext=spender  [keypair tweaked addr]
   =+  owner=(derive-sequence:(from-seed:bip32 32^seed) ~[1.338 0 0])
   =/  k=keypair:gw  [pub=pub.owner priv=prv.owner]
-  =/  tweak=point:gw  q:~(tweaked-pubkey p2tr:gw `(compress-point pub.k) ~)
-  =/  address=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point tweak)))
+  =/  tweak=point:gw  ~(tweak-keypair p2tr:gw `x.pub.k ~ `priv.k)
+  =/  address=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point pub.tweak)))
   [seed ext [k tweak address]]
 ::
 ++  make-spend-script
@@ -56,20 +75,19 @@
 ::
 ++  build-commit-tx
   |=  $:  =outpoint:gw
-          spend=keypair:gw
+          from=spender
           val=@ud
-          owner=keypair:gw
+          owner=spender
       ==
   ^-  transaction:gw
   =|  tx=transaction:gw
-  =/  =pubkey:gw  (compress-point pub.spend)
-  =/  =output:gw  [val ~(scriptpubkey p2tr:gw `pubkey ~) ~ ~]
+  =/  =output:gw  [val ~(scriptpubkey p2tr:gw `x.pub.from ~ ~) ~ ~]
   =/  spend-script=script:scr:gw  make-spend-script
   =.  tx
     %:  ~(add-input build:gw tx)
       outpoint
       output
-      owner
+      `internal.from
       ~  ~
       :: by passing ~ we default to SIGHASH_ALL (and no nsequence constraint) so when we sign this input later we'll commit to all and only
       :: the inputs and outputs we've added to the transaction up to that point
@@ -77,7 +95,7 @@
   =.  tx
     %^  ~(add-output build:gw tx)
         (sub val 150)  :: a tx with 1 keypath-spend input and 1 P2TR output should weigh approximately 103vB
-      `(compress-point pub.owner)
+      `internal.owner
     `spend-script
   ~(finalize build:gw tx)
 ::
@@ -92,14 +110,14 @@
     %:  ~(add-input build:gw reveal)
       outpoint
       output
-      keypair
+      `keypair
       ~  ~
     ==
   ?~  spend-script.output  !!
   =.  reveal
     %^  ~(add-output build:gw reveal)
         (sub val.out.output (add (lent spend-script.output) 180))
-      `(compress-point: pub.owner)
+      `keypair
     ~
   ~(finalize build:gw reveal)
 ::
