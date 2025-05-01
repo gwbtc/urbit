@@ -7,9 +7,9 @@
 =/  =req-to:btcio  (need !<((unit req-to:btcio) args))
 ;<  =bowl:spider  bind:m  get-bowl:io
 =/  =wallet  (make-wallet bowl)
-;<  mined=(unit (list @ux))  bind:m  (mine-to-address:btcio req-to ~ addr.ext.wallet)
+;<  mined=(unit (list octs))  bind:m  (mine-to-address:btcio req-to ~ addr.ext.wallet)
 ?~  mined  ~|(%mine-block-fail !!)
-;<  block=(unit block:btcio)  bind:m  (get-block:btcio req-to ~ (head u.mined))
+;<  block=(unit block:btcio)  bind:m  (get-block:btcio req-to ~ q:(head u.mined))
 ?~  block  ~|(%wtf !!)
 ?~  txs.block  ~|(%wtf !!)
 =/  commit=transaction:gw
@@ -25,7 +25,7 @@
   %:  build-reveal-tx
     [commit-txhash 0]
     (snag 0 outputs.commit)
-    own.wallet
+    internal.own.wallet
   ==
 =/  reveal-hex=octs  (encode:gw reveal)
 ;<  comres=(unit @ux)  bind:m  (send-raw-transaction req-to ~ commit-hex)

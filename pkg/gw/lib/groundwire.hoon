@@ -70,7 +70,7 @@
         sig-hash           (fall sigh sig-hash.n)
         nsequence.in       (fall nseq nsequence.in.n)
       ==
-    ?: =(^ internal-keys.from)
+    ?:  =(^ internal-keys.from)
       t(inputs (snoc inputs.t n))
     ?~  int-key
       ~!(%need-spending-key !!)

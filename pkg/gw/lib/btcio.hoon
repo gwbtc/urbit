@@ -168,7 +168,7 @@
 ::
 ++  mine-block-to-address
   |=  [=req-to id=(unit @t) address=cord]
-  =/  m  (strand:strandio (unit @ux))
+  =/  m  (strand:strandio (unit (list octs)))
   ^-  form:m
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
@@ -183,7 +183,7 @@
 ::
 ++  send-raw-transaction
   |=  [=req-to id=(unit @t) raw=octs]
-  =/  m  (strand:strandio response:rpc)
+  =/  m  (strand:strandio (unit @ux))
   ^-  form:m
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
