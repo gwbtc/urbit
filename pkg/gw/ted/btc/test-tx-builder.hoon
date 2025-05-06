@@ -1,5 +1,5 @@
 /-  spider
-/+  *ord, *test, gw=groundwire, bip32, b173=bip-b173, rpc=json-rpc, scr=btc-script, strandio, btcio
+/+  *ord, *test, gw=groundwire, bip32, b173=bip-b173, rpc=json-rpc, scr=btc-script, strandio, btcio, psbt
 =<
 ^-  thread:spider
 |=  args=vase
@@ -8,32 +8,40 @@
 =/  =req-to:btcio  (need !<((unit req-to:btcio) args))
 ;<  =bowl:spider  bind:m  get-bowl:strandio
 =/  =wallet  (make-wallet bowl)
-;<  mined=(unit (list octs))  bind:m  (mine-block-to-address:btcio req-to ~ address.ext.wallet)
+~&  `@ux`x.pub.internal.own.wallet
+;<  mined=(unit (list octs))  bind:m  (mine-blocks-to-address:btcio req-to ~ address.ext.wallet 101)
 ?~  mined  ~|(%mine-block-fail !!)
 ;<  block=(unit block:btcio)  bind:m  (get-block:btcio req-to ~ [%hax q:(head u.mined)])
 ?~  block  ~|(%wtf !!)
 ?~  txs.u.block  ~|(%wtf !!)
+=/  txid=@ux  txid:(head txs.u.block)
+;<  fresh1=bowl:spider  bind:m  get-bowl:strandio
+=+  val=value:(head os.tx:(head txs.u.block))
 =/  commit=transaction:gw
   %:  build-commit-tx
-    [txh:(head txs.u.block) 0]
+    [txid 0]
     ext.wallet
-    value:(head os.tx:(head txs.u.block))
+    val
     own.wallet
+    fresh1
   ==
 =/  commit-hex=octs  (txn:encode:gw commit)
-=/  commit-txhash=@ux  (shay commit-hex)
+=/  commit-txid=@ux  (make-txid commit)
+;<  comres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ commit-hex)
+?~  comres  ~|('commit tx failed' !!)
+;<  fresh2=bowl:spider  bind:m  get-bowl:strandio
 =/  reveal=transaction:gw
   %:  build-reveal-tx
-    [commit-txhash 0]
+    [u.comres 0]
     (snag 0 outputs.commit)
     internal.own.wallet
+    fresh2
   ==
-=/  reveal-hex=octs  (txn:encode:gw reveal)
-;<  comres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ commit-hex)
-?~  comres  ~!(%commit-tx-failed !!)
+=/  reveal-hex  (txn:encode:gw reveal)
+=/  reveal-txid=@ux  (make-txid reveal)
 ;<  revres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ reveal-hex)
-?~  revres  ~!(%reveal-tx-failed !!)
-(pure:m !>(revres))
+?~  revres  ~|('reveal tx failed' !!)
+(pure:m !>([comres revres]))
 ::
 |%
 +$  spender
@@ -60,18 +68,24 @@
   =+  init=(derive-sequence:(from-seed:bip32 32^seed) ~[1.337 0 0])
   =/  =keypair:gw  [pub=pub.init priv=prv.init]
   =/  tweaked=keypair:gw  ~(tweak-keypair p2tr:gw `x.pub.keypair ~ `priv.keypair)
-  =/  addr=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point pub.tweaked)))
+  =/  addr=cord  (need (encode-taproot:b173 %regtest 32^x.pub.tweaked))
   =/  ext=spender  [keypair tweaked addr]
   =+  owner=(derive-sequence:(from-seed:bip32 32^seed) ~[1.338 0 0])
   =/  k=keypair:gw  [pub=pub.owner priv=prv.owner]
   =/  tweak=keypair:gw  ~(tweak-keypair p2tr:gw `x.pub.k ~ `priv.k)
-  =/  address=cord  (need (encode-pubkey:b173 %regtest 33^(compress-point pub.tweak)))
+  =/  address=cord  (need (encode-taproot:b173 %regtest 32^x.pub.tweaked))
   [seed ext [k tweak address]]
 ::
 ++  make-spend-script
+  |=  int-key=@
   ^-  script:scr:gw
   =/  mail  ord-0-mail
   =/  mails  mail(pntr [1 %& 92])
+  ~&  make-script+`@ux`int-key
+  %+  welp
+    :~  [%op-push ~ (flipb:gw 32^int-key)]
+        %op-checksig
+    ==
   (mails-to-script:en mails ~)
   :: todo test 0x55 ord corner case
 ::
@@ -80,6 +94,7 @@
           from=spender
           val=@ud
           owner=spender
+          =bowl:spider
       ==
   ^-  transaction:gw
   =|  tx=transaction:gw
@@ -90,13 +105,13 @@
       internal-keys  internal.from
       script-pubkey.out  ~(scriptpubkey p2tr:gw `x.pub.internal.from ~ ~)
     ==
-  =/  spend-script=script:scr:gw  make-spend-script
+  =/  spend-script=script:scr:gw  (make-spend-script x.pub.internal.owner)
   =.  tx
     %:  ~(add-input build:gw tx)
       outpoint
       output
       ~  ~
-      :: by passing ~ we default to SIGHASH_ALL (and no nsequence constraint) so when we sign this input later we'll commit to all and only
+      :: by passing ~ we default to SIGHASH_DEFAULT, equivalent to SIGHASH_ALL, so when we sign this input later we'll commit to all and only
       :: the inputs and outputs we've added to the transaction up to that point
     ==
   =.  tx
@@ -104,14 +119,16 @@
         (sub val 150)  :: a tx with 1 keypath-spend input and 1 P2TR output should weigh approximately 103vB
       internal.owner
     `spend-script
-  ~(finalize build:gw tx)
+  (~(finalize build:gw tx) eny.bowl)
 ::
 ++  build-reveal-tx
   |=  $:  =outpoint:gw
           =output:gw
           =keypair:gw
+          =bowl:spider
       ==
   ^-  transaction:gw
+  ?~  spend-script.output  !!
   =|  reveal=transaction:gw
   =.  reveal
     %:  ~(add-input build:gw reveal)
@@ -119,11 +136,23 @@
       output
       ~  ~
     ==
-  ?~  spend-script.output  !!
+  =/  less-fees=@
+    (sub value.out.output (add (lent spend-script.output) 400))
   =.  reveal
     %^  ~(add-output build:gw reveal)
-        (sub value.out.output (add (lent spend-script.output) 180))
+        less-fees
       keypair
     ~
-  ~(finalize build:gw reveal)
+  (~(finalize build:gw reveal) eny.bowl)
+::
+++  make-txid
+  |=  t=transaction:gw
+  ^-  @ux
+  :: %-  flipb:gw  %-  to-octs:gw
+  %-  shay  %-  to-octs:gw  %-  shay
+  %-  txn:encode:gw
+  %=  t
+    vin
+      (turn vin.t |=(=in:tx:gw in(script-witness ~)))
+  ==
 --

@@ -9,7 +9,7 @@
 +$  pubkey  @
 ++  sighash
   |%
-  ++  default                   0x1
+  ++  default                   0x0
   ++  all                       0x1
   ++  none                      0x2
   ++  single                    0x3
@@ -19,7 +19,7 @@
   |%
   +$  in
     $:  prevout=outpoint
-        nsequence=$~(0xffff.fffe @ux)
+        nsequence=$~(0xffff.ffff @ux)
         script-witness=(list octs)
     ==
   ::
@@ -31,14 +31,14 @@
   +$  tx
     $:  vin=(list in)
         vout=(list out)
-        nversion=$~(2 @)
+        nversion=$~(0x2 @)
         nlocktime=@
     ==
   --
 +$  input
   $:  =in:tx
       utxo=output
-      sig-hash=$~(0x1 @ux)
+      sig-hash=$~(0x0 @ux)
   ==
 +$  output
   $:  =out:tx
@@ -77,36 +77,35 @@
             scr=(unit script:scr)
         ==
     ^-  transaction
-    =|  o=output
-    =.  o
-      %_  o
-        value.out          val
+    =/  o=out:tx  [val ~(scriptpubkey p2tr `x.pub.int-key scr ~)]
+    =|  =output
+    =.  output
+      %_  output
+        out                o
         internal-keys      int-key
         spend-script       scr
-        script-pubkey.out  ~(scriptpubkey p2tr `x.pub.int-key scr ~)
       ==
-    t(outputs (snoc outputs.t o))
+    t(outputs (snoc outputs.t output), vout (snoc vout.t o))
   ::
   ++  finalize-input
-    |=  i=@
+    |=  [i=@ eny=@]
     ^-  transaction
     =/  n=input  (snag i inputs.t)
     ?.  =(~ script-witness.in.n)
       t
-    =/  sig=octs
-        %^  sign-input
-            t
-          i
-        ~(tweak-privkey p2tr ~ spend-script.utxo.n `priv.internal-keys.utxo.n)
+    =/  tpriv=@
+      ~(tweak-privkey p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n `priv.internal-keys.utxo.n)
     ?~  spend-script.utxo.n
-      =.  script-witness.in.n  ~[sig]
+      =.  script-witness.in.n  ~[(sign-input t i tpriv eny 0)]
       t(inputs (snap inputs.t i `input`n))
     =.  script-witness.in.n
-      :-  (catb 1^0x20 sig ~)
       ~(scriptspend p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n ~)
+    =/  sig=octs  (sign-input t i priv.internal-keys.utxo.n eny 1)
+    =.  script-witness.in.n  [sig script-witness.in.n]
     t(inputs (snap inputs.t i `input`n))
   ::
   ++  finalize
+    |=  eny=@
     ^-  transaction
     =|  i=@
     |-
@@ -116,8 +115,8 @@
       ::  todo: add checks - value (fees), sighash_single, valid nseq and nlock
     ?.  =(~ script-witness.in.n)
       $(i +(i), t t(vin (snoc vin.t in.n)))
-    =.  t  (finalize-input i)
-    $(i +(i))
+    =.  t  (finalize-input i eny)
+    $(i +(i), t t(vin (snoc vin.t in:(snag i inputs.t))))
   --
 ::
 ++  encode
@@ -134,6 +133,7 @@
         ~[(encode-compact-size (lent vout.t))]
         (turn vout.t output)
         (witness vin.t)
+        ~[(flipb 4^nlocktime.t)]
     ==
   ::
   ++  input
@@ -175,20 +175,28 @@
 ::
 ::  taproot spending and construction methods
 ++  sign-input
-  |=  [t=transaction i=@ priv=@]
+  |=  [t=transaction i=@ priv=@ eny=@ ext=@]
   ^-  octs
   =+  n=(snag i inputs.t)
   =/  neone=?  =(anyonecanpay:sighash (dis sig-hash.n 0x80))
   =/  single=?  =(single:sighash (dis sig-hash.n 3))
   =/  none=?  =(none:sighash (dis sig-hash.n 3))
   |^
-  =/  msghash=@uvI  (shay (flipb taproot-preimage))
-  =+  (ecdsa-raw-sign:secp256k1:secp:crypto msghash priv)
-  (catb ~[(flipb (en:der [%seq ~[[%int r] [%int s]]])) 1^sig-hash.n])
+  =/  preimage=octs  (catb ~[1^0x0 taproot-preimage])
+  =/  msghash=@uvI
+    %+  tagged-hash:schnorr:secp256k1:secp:crypto  'TapSighash'
+    preimage
+  =/  sig=octs
+    %-  to-octs
+    (sign:schnorr:secp256k1:secp:crypto priv msghash (~(raw og eny) 256))
+  =?  sig  !=(default:sighash sig-hash.n)
+    (catb ~[sig 1^sig-hash.n])
+  sig
   ::
   ++  taproot-preimage
     ^-  octs
     %-  catb
+    :-  1^sig-hash.n
     ;:  welp
       tx-fields
       input-fields
@@ -199,8 +207,7 @@
   ++  tx-fields
     |^  ^-  (list octs)
     =/  fields=(list octs)
-      :~  (flipb 4^sig-hash.n)
-          (flipb 4^nversion.t)
+      :~  (flipb 4^nversion.t)
           (flipb 4^nlocktime.t)
       ==
     =?  fields  !neone
@@ -217,36 +224,36 @@
     ++  sha-prevouts
       ^-  octs
       =/  preimage=octs
-        (catb (turn inputs.t |=(n=input (encode-outpoint prevout.in.n))))
-      [32 (shay (flipb preimage))]
+        (catb (turn inputs.t |=(np=input (encode-outpoint prevout.in.np))))
+      (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-amounts
       ^-  octs
       =/  preimage=octs
-        (catb (turn inputs.t |=(n=input (flipb 8^value.out.utxo.n))))
-      [32 (shay (flipb preimage))]
+        (catb (turn inputs.t |=(np=input (flipb 8^value.out.utxo.np))))
+      (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-scriptpubkeys
       ^-  octs
       =/  preimage=octs
         %-  catb
-        (turn inputs.t |=(n=input (encode-scriptpubkey script-pubkey.out.utxo.n)))
-      [32 (shay (flipb preimage))]
+        (turn inputs.t |=(np=input (encode-scriptpubkey script-pubkey.out.utxo.np)))
+      (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-sequences
       ^-  octs
       =/  preimage=octs
-        (catb (turn inputs.t |=(n=input (flipb 4^nsequence.in.n))))
-      [32 (shay (flipb preimage))]
+        (catb (turn inputs.t |=(np=input (flipb 4^nsequence.in.np))))
+      (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-outputs
       ^-  octs
       =/  preimage=octs
-        %-  catb  %+  turn  outputs.t
-        |=  o=output
-        ~!  o
-        (output:encode out.o)
-      [32 (shay (flipb preimage))]
+        %-  catb
+        %+  turn  outputs.t
+        |=  =output
+        (output:encode out.output)
+      (flipb 32^(shay (flipb preimage)))
     --
   ::
   ++  input-fields
@@ -255,34 +262,38 @@
     ^-  (list octs)
     =/  enc-out=octs  (encode-outpoint prevout.in.n)
     =/  fields=(list octs)
+      ?.  neone
+        ~[(flipb 4^i)]
       :~  (catb ~[(encode-compact-size p.enc-out) enc-out])
           (flipb 8^value.out.utxo.n)
           (catb ~[(encode-compact-size 35) script-pubkey.out.utxo.n])
           (flipb 4^nsequence.in.n)
       ==
-    =?  fields  !neone  (into fields 0 (flipb 4^i))
-    ?:  (gte (lent script-witness.in.n) 2)
-      (into fields 0 1^2)  :: 2 or 1? check BIP
-    (into fields 0 1^0)
+    ?:  =(1 ext)
+      (into fields 0 1^0x2)
+    ?:  =(0 ext)
+      (into fields 0 1^0x0)
+    !!
   ::
   ++  output-fields
     ^-  (list octs)
     ?.  single
       ~
-    ~[(output:encode out:(snag i outputs.t))]
+    :_  ~
+    %-  flipb  %-  to-octs
+    (shay (output:encode out:(snag i outputs.t)))
   ::
   ++  ext-fields
     ::  assume no OP_CODESEPARATORs
     ^-  (list octs)
-    ?.  (gte (lent script-witness.in.n) 2)
+    ?:  =(0 ext)
       ~
-    =/  ser-script=octs
-      (snag (sub (lent script-witness.in.n) 2) script-witness.in.n)
-    =/  [n=@ s=octs]  (read-compact-size ser-script)
-    :~  32^~(tapleaf-hash p2tr ~ `(de:scr s) ~)
-        1^0
-        4^0xffff.ffff
-    ==
+    ?:  =(1 ext)
+      :~  (to-octs ~(tapleaf-hash p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n ~))
+          1^0x0
+          4^0xffff.ffff
+      ==
+    !!
   --
 ::
 ++  p2tr
@@ -296,12 +307,12 @@
     [q:tweak-pubkey tweaked-seckey]
   ::
   ++  scriptpubkey
-    ^-  octs
-    35^(cat 3 0x1 q:(to-octs x.q:tweak-pubkey))
+    (catb ~[1^0x51 1^0x20 (to-octs x.q:tweak-pubkey)])
   ::
   ++  tweak-pubkey
     ^-  (pair @ point)
     =/  pt=point  (need (lift-x:schnorr (need p)))
+    ~&  tweak-time+`@ux`(need p)
     =/  t=@I  (tweak pt)
     =/  tweaked=point
       (add-points pt (mul-point-scalar g.domain.curve t))
@@ -309,45 +320,47 @@
     [p=parity q=tweaked]
   ::
   ++  tweak-privkey
-  ^-  @
-  ?~  sec  !!
-  =/  pt=point  (mul-point-scalar g.domain.curve u.sec)
-  ?:  &(=(^ p) !=(p `x.pt))  ~!(%non-matching-keys !!)
-  =.  p  `x.pt
-  =/  t=@I  (tweak pt)
-  =/  priv=@
-    ?:  =(0 (mod y.pt 2))
-      u.sec
-    (sub n.domain.curve u.sec)
-  (mod (mix priv t) n.domain.curve)
+    ^-  @
+    ?~  sec  !!
+    =/  pt=point  (mul-point-scalar g.domain.curve u.sec)
+    ?:  &(=(^ p) !=(p `x.pt))  ~!(%non-matching-keys !!)
+    =.  p  `x.pt
+    =/  t=@I  (tweak pt)
+    =/  priv=@
+      ?:  =(0 (mod y.pt 2))
+        u.sec
+      (sub n.domain.curve u.sec)
+    (mod (add priv t) n.domain.curve)
   ::
   ++  tweak
-  |=  =point
-  ^-  @I
-  ?~  s
-    (tagged-hash:schnorr 'TapTweak' (to-octs x.point))
-  (tagged-hash:schnorr 'TapTweak' (to-octs (mix x.point tapleaf-hash)))
+    |=  =point
+    ^-  @I
+    ?~  s
+      (tagged-hash:schnorr 'TapTweak' (to-octs x.point))
+    %+  tagged-hash:schnorr  'TapTweak'
+    (catb ~[(to-octs x.point) (to-octs tapleaf-hash)])
   ::
   ++  tapleaf-hash
     ^-  @I
     =/  scrbyt=octs  (en:scr (need s))
     %+  tagged-hash:schnorr  'TapLeaf'
-    (to-octs (mix 0xc0 q:(catb ~[(encode-compact-size p.scrbyt) scrbyt])))
+    (catb ~[1^0xc0 (encode-compact-size p.scrbyt) scrbyt])
   ::
   ++  scriptspend
     :: pre-signing (no script inputs, only ser-script and control block)
     :: |=  sin=(list octs)
     ^-  (list octs)
     =/  sscr=octs  (en:scr (need s))
-    =+  cbyt=(mix 0xc0 p:tweak-pubkey)
+    =+  cbyt=(add 0xc0 p:tweak-pubkey)
+    ~&  control-block+`@ux`(need p)
     =/  control-block=octs
       %-  catb
       :~  (to-octs cbyt)
-          q:tweak-pubkey
+          (to-octs (need p))
           :: additional merkle hashes for multileaf taptree would go here - irrelevant for inscriptions rn
       ==
-    :: %+  welp  (flipb sin)  :: assume script inputs provided in regular exec order
-    :~  (catb ~[(encode-compact-size p.sscr) sscr])
+    :: %+  welp  (flop sin)  :: assume script inputs provided in regular exec order
+    :~  sscr
         control-block
     ==
   ::
@@ -365,7 +378,8 @@
 ++  catb
   |=  dats=(list octs)
   ^-  octs
-  (roll dats |=([a=octs b=octs] (add p.a p.b)^(cat 3 q.a q.b)))
+  :-  (roll (turn dats |=(o=octs -.o)) add)
+  (can 3 (flop dats))
 ::
 ++  to-octs
   |=  dat=@
@@ -422,5 +436,5 @@
 ::
 ++  encode-scriptpubkey
   |=  spk=octs
-  (catb ~[(encode-compact-size 35) spk])
+  (catb ~[(encode-compact-size p.spk) spk])
 --

@@ -52,12 +52,16 @@
   (weld (expand-hrp hrp) data-and-checksum)
 ::
 ++  checksum
-  |=  [hrp=tape data=(list @)]
+  |=  [hrp=tape data=(list @) tr=?]
   ^-  (list @)
   ::  xor 1 with the polymod
   ::
+  =/  xorv=@
+    ?.  tr
+      1
+    0x2bc8.30a3
   =/  pmod=@
-    %+  mix  1
+    %+  mix  xorv
     %-  polymod
     (zing ~[(expand-hrp hrp) data (reap 6 0)])
   %+  turn  (gulf 0 5)
@@ -85,10 +89,10 @@
 ::  data should be 5bit words
 ::
 ++  encode-raw
-  |=  [hrp=tape data=(list @)]
+  |=  [hrp=tape tr=? data=(list @)]
   ^-  cord
   =/  combined=(list @)
-    (weld data (checksum hrp data))
+    (weld data (checksum hrp data tr))
   %-  crip
   (zing ~[hrp "1" (tape (murn combined value-to-charset))])
 ++  decode-raw
@@ -139,6 +143,21 @@
   =/  prefix  (~(get by prefixes) network)
   ?~  prefix  ~
   :-  ~
-  %+  encode-raw  u.prefix
+  %^  encode-raw
+      u.prefix
+    %.n
   [0v0 (to-atoms:bit 5 [160 `@ub`dat:(hash-160 pubkey)])]
+::
+++  encode-taproot
+  |=  [=network pubkey=byts]
+  ^-  (unit cord)
+  ?.  =(32 wid.pubkey)
+    ~|('scriptpubkey must be 32 byte x-only pubkey' !!)
+  =/  prefix  (~(get by prefixes) network)
+  ?~  prefix  ~
+  :-  ~
+  %^  encode-raw
+      u.prefix
+    %.y
+  [0v1 (to-atoms:bit 5 [256 `@ub`dat.pubkey])]
 --
