@@ -8,7 +8,6 @@
 =/  =req-to:btcio  (need !<((unit req-to:btcio) args))
 ;<  =bowl:spider  bind:m  get-bowl:strandio
 =/  =wallet  (make-wallet bowl)
-~&  `@ux`x.pub.internal.own.wallet
 ;<  mined=(unit (list octs))  bind:m  (mine-blocks-to-address:btcio req-to ~ address.ext.wallet 101)
 ?~  mined  ~|(%mine-block-fail !!)
 ;<  block=(unit block:btcio)  bind:m  (get-block:btcio req-to ~ [%hax q:(head u.mined)])
@@ -28,7 +27,7 @@
 =/  commit-hex=octs  (txn:encode:gw commit)
 =/  commit-txid=@ux  (make-txid commit)
 ;<  comres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ commit-hex)
-?~  comres  ~|('commit tx failed' !!)
+?~  comres  ~|(%commit-tx-failed !!)
 ;<  fresh2=bowl:spider  bind:m  get-bowl:strandio
 =/  reveal=transaction:gw
   %:  build-reveal-tx
@@ -40,7 +39,7 @@
 =/  reveal-hex  (txn:encode:gw reveal)
 =/  reveal-txid=@ux  (make-txid reveal)
 ;<  revres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ reveal-hex)
-?~  revres  ~|('reveal tx failed' !!)
+?~  revres  ~|(%reveal-tx-failed !!)
 (pure:m !>([comres revres]))
 ::
 |%
@@ -81,7 +80,6 @@
   ^-  script:scr:gw
   =/  mail  ord-0-mail
   =/  mails  mail(pntr [1 %& 92])
-  ~&  make-script+`@ux`int-key
   %+  welp
     :~  [%op-push ~ (flipb:gw 32^int-key)]
         %op-checksig
@@ -116,7 +114,7 @@
     ==
   =.  tx
     %^  ~(add-output build:gw tx)
-        (sub val 150)  :: a tx with 1 keypath-spend input and 1 P2TR output should weigh approximately 103vB
+        (sub val 150)  :: tx with 1 keypath-spend input and 1 P2TR output should weigh ~100vB
       internal.owner
     `spend-script
   (~(finalize build:gw tx) eny.bowl)
