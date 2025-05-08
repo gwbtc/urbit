@@ -63,7 +63,7 @@
 +$  signature  hexb:bc
 +$  witness    (list hexb:bc)
 +$  keyinfo    [fprint=hexb:bc path=(list @u)]
-+$  outpoint   [txid=hexb:bc idx=@]
++$  outpoint   [txid=@ux idx=@]
 ::
 ++  tx
   |%

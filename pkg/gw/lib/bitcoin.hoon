@@ -176,7 +176,7 @@
       |=  i=input:tx
       ^-  hexb
       %-  cat:byt
-      :~  (flip:byt txid.i)
+      :~  (flip:byt 32^txid.i)
           (flip:byt 4^pos.i)
           ?~  script-sig.i  1^0x0
         %-  cat:byt
@@ -236,7 +236,7 @@
       ++  input
         |=  b=hexb
         ^-  [i=input:tx rest=hexb]
-        =/  txid  (flip:byt (take:byt 32 b))
+        =/  txid  dat:(flip:byt (take:byt 32 b))
         =/  pos   dat:(flip:byt (take:byt 4 (drop:byt 32 b)))
         =^  sig=hexb  b  (script-sig (drop:byt 36 b))
         =^  seq=hexb  b  (sequence b)
@@ -277,7 +277,8 @@
     ==
   ++  get-id
     |=  =data:tx
-    ^-  hexb
+    ^-  txid
+    =<  dat
     %-  flip:byt
     %-  dsha256
     (basic-encode data)

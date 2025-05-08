@@ -19,7 +19,7 @@
 +$  hdkey  [=fprint pubkey=hexb =network =bipt =chyg =idx]
 +$  sats  @ud
 +$  vbytes  @ud
-+$  txid  hexb
++$  txid  @ux
 +$  utxo  [pos=@ =txid height=@ value=sats recvd=(unit @da)]
 ++  address-info
   $:  =address
@@ -78,6 +78,19 @@
     ==
   ::
   +$  witness    (list hexb)
+  --
+++  block
+  =<  block
+  |%
+  +$  id   [=hax =num]
+  +$  hax  @ux
+  +$  num  @ud
+  +$  block
+    $:  =hax
+        reward=@ud
+        height=@ud
+        txs=(list [txid=@ux tx=dataw:tx])
+    ==
   --
 ++  psbt
   |%

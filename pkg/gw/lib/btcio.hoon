@@ -126,6 +126,21 @@
       list+[s+(render-hex-bytes 32 txh) b+verb ~]
   ==
 ::
+++  get-block-count
+  |=  [=req-to id=(unit @t)]
+  =/  m  (strand:strandio (unit @ud))
+  ^-  form:m
+  ;<  res=response:rpc  bind:m
+    %+  request-rpc  req-to
+    ^-  request:rpc
+    :*  ?~(id 'get-block-count' u.id)
+        '2.0'
+        'getblockcount'
+        list+~
+    ==
+  ?.  ?=([%result *] res)  (pure:m ~)
+  (pure:m `(ni:dejs:format res.res))
+::
 ++  get-block-hash
   |=  [=req-to id=(unit @t) height=@ud]
   =/  m  (strand:strandio (unit @ux))
@@ -144,7 +159,7 @@
 ::
 ++  get-block
   |=  [=req-to id=(unit @t) bloq=$%([%num p=@ud] [%hax p=@ux])]
-  =/  m  (strand:strandio (unit block))
+  =/  m  (strand:strandio (unit block:bc))
   ^-  form:m
   ?-  -.bloq
     %hax  (get-block-by-hash req-to id p.bloq)
@@ -153,7 +168,7 @@
 ::
 ++  get-block-by-hash
   |=  [=req-to id=(unit @t) hax=@ux]
-  =/  m  (strand:strandio (unit block))
+  =/  m  (strand:strandio (unit block:bc))
   ^-  form:m
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
@@ -199,7 +214,7 @@
 ::
 ++  get-block-by-number
   |=  [=req-to id=(unit @t) height=@ud]
-  =/  m  (strand:strandio (unit block))
+  =/  m  (strand:strandio (unit block:bc))
   ^-  form:m
   ;<  res=(unit @ux)  bind:m
     (get-block-hash req-to ?~(id ~ `(cat 3 'get-block-hash-' u.id)) height)
@@ -207,16 +222,9 @@
   ?~  res  (pure:m ~)
   (get-block-by-hash req-to id u.res)
 ::
-+$  block
-  $:  hax=@ux
-      reward=@ud
-      height=@ud
-      txs=(list [txh=@ux tx=dataw:tx:bc])
-  ==
-::
 ++  parse-block
   |=  jon=json
-  ^-  block
+  ^-  block:bc
   =-  [hax (reward-from-height height) height txs]
   ^-  [hax=@ux height=@ud txs=(list [txh=@ux tx=dataw:tx:bc])]
   %.  jon
@@ -233,7 +241,7 @@
   %.  jon
   =,  dejs:format
   %-  ot
-  :~  hash+(cu |=([* @] +<+) parse-hex)
+  :~  txid+(cu |=([* @] +<+) parse-hex)
       hex+(cu |=(a=octs (decodew:txu:bc a)) parse-hex)
   ==
 ::

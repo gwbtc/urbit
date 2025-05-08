@@ -116,7 +116,7 @@
   ^-  (pair in:tx hexb:bc)
   =|  input=in:tx
   =^  prevout-hash  b  (read-bytes 32 b)
-  =+  prevout-txid=(flip:byt:bcu:bc prevout-hash)
+  =+  prevout-txid=dat:(flip:byt:bcu:bc prevout-hash)
   =^  prevout-n     b  (read-bytes 4 b)
   =+  idx=dat:(flip:byt:bcu:bc prevout-n)
   =^  script-len    b  (read-compact-size b)
@@ -184,7 +184,7 @@
   ^-  hexb:bc
   %-  cat:byt:bcu:bc
   %-  zing
-  :~  ~[(flip:byt:bcu:bc txid.prevout.in)]
+  :~  ~[(flip:byt:bcu:bc 256^txid.prevout.in)]
       ~[(flip:byt:bcu:bc 4^idx.prevout.in)]
       ?^  script-sig.in
         :~  (encode-compact-size wid.u.script-sig.in)
@@ -727,12 +727,12 @@
 ::  +outpoint: outpoint-related utilities
 ::
 ++  outpoint
-  |_  [txid=hexb:bc pos=@ud]
+  |_  [txid=@ux pos=@ud]
   ::
   ++  en
     ^-  hexb:bc
     %-  cat:byt:bcu:bc
-    :~  (flip:byt:bcu:bc txid)
+    :~  (flip:byt:bcu:bc 256^txid)
         (flip:byt:bcu:bc 4^pos)
     ==
   ::
@@ -864,7 +864,7 @@
       |=  =input
       ^-  hexb:bc
       %-  cat:byt:bcu:bc
-      :~  (flip:byt:bcu:bc txid.prevout.input)
+      :~  (flip:byt:bcu:bc 256^txid.prevout.input)
           (flip:byt:bcu:bc 4^idx.prevout.input)
       ==
     ::
