@@ -1,4 +1,4 @@
-/+  der, scr=btc-script
+/+  der, scr=btc-script, bc=bitcoin
 |%
 +$  point  point:secp256k1:secp:crypto
 +$  txid  @ux
@@ -16,6 +16,7 @@
   ++  anyonecanpay              0x80
   --
 ++  tx
+  =<  tx
   |%
   +$  in
     $:  prevout=outpoint
@@ -24,8 +25,8 @@
     ==
   ::
   +$  out
-    $:  value=sats
-        script-pubkey=octs
+    $:  script-pubkey=octs
+        value=sats
     ==
   ::
   +$  tx
@@ -33,26 +34,40 @@
         vout=(list out)
         nversion=$~(0x2 @)
         nlocktime=@
+        inputs=(list input)
+        outputs=(list output)
+    ==
+  ::
+  +$  input
+    $:  =in
+        utxo=output
+        sig-hash=$~(0x0 @ux)
+    ==
+  +$  output
+    $:  out
+        spend-script=(unit script:scr)
+        internal-keys=keypair
     ==
   --
-+$  input
-  $:  =in:tx
-      utxo=output
-      sig-hash=$~(0x0 @ux)
-  ==
-+$  output
-  $:  =out:tx
-      spend-script=(unit script:scr)
-      internal-keys=keypair
-  ==
-+$  transaction
-  $:  tx:tx
-      inputs=(list input)
-      outputs=(list output)
-  ==
++$  input  input:tx
++$  output  output:tx
+::
+++  raws
+  |=  [eny=@ bits=@]
+  ^-  [@ @]
+  [- +>-]:(~(raws og eny) bits)
 ::
 ++  build
-  |_  t=transaction
+  |_  t=tx
+  ::
+  ++  add-input-1
+    |=  $:  $:  prev=outpoint
+                from=output
+            ==
+            sigh=(unit @ux)
+            nseq=(unit @ux)
+        ==
+    (add-input prev from sigh nseq)
   ::
   ++  add-input
     |=  $:  prev=outpoint
@@ -60,7 +75,7 @@
             sigh=(unit @ux)
             nseq=(unit @ux)
         ==
-    ^-  transaction
+    ^-  tx
     =|  n=input
     =.  n
       %_  n
@@ -71,17 +86,22 @@
       ==
     t(inputs (snoc inputs.t n))
   ::
+  ++  add-output-1
+    |=  =output
+    ^-  tx
+    t(outputs (snoc outputs.t output), vout (snoc vout.t -:output))
+  ::
   ++  add-output
     |=  $:  val=sats
             int-key=keypair
             scr=(unit script:scr)
         ==
-    ^-  transaction
-    =/  o=out:tx  [val ~(scriptpubkey p2tr `x.pub.int-key scr ~)]
+    ^-  tx
+    =/  o=out:tx  [~(scriptpubkey p2tr `x.pub.int-key scr ~) val]
     =|  =output
     =.  output
       %_  output
-        out                o
+        -                  o
         internal-keys      int-key
         spend-script       scr
       ==
@@ -89,40 +109,57 @@
   ::
   ++  finalize-input
     |=  [i=@ eny=@]
-    ^-  transaction
+    ^-  [tx _eny]
     =/  n=input  (snag i inputs.t)
     ?.  =(~ script-witness.in.n)
-      t
+      [t eny]
     =/  tpriv=@
       ~(tweak-privkey p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n `priv.internal-keys.utxo.n)
     ?~  spend-script.utxo.n
-      =.  script-witness.in.n  ~[(sign-input t i tpriv eny 0)]
-      t(inputs (snap inputs.t i `input`n))
+      =^  sig  eny  (sign-input t i tpriv eny 0)
+      =.  script-witness.in.n  ~[sig]
+      [t(inputs (snap inputs.t i `input`n)) eny]
     =.  script-witness.in.n
       ~(scriptspend p2tr `x.pub.internal-keys.utxo.n spend-script.utxo.n ~)
-    =/  sig=octs  (sign-input t i priv.internal-keys.utxo.n eny 1)
+    =^  sig  eny  (sign-input t i priv.internal-keys.utxo.n eny 1)
     =.  script-witness.in.n  [sig script-witness.in.n]
-    t(inputs (snap inputs.t i `input`n))
+    [t(inputs (snap inputs.t i `input`n)) eny]
   ::
   ++  finalize
     |=  eny=@
-    ^-  transaction
+    ^-  [tx _eny]
     =|  i=@
     |-
     ?:  =((lent inputs.t) i)
-      t
+      t^eny
     =/  n=input  (snag i inputs.t)
       ::  todo: add checks - value (fees), sighash_single, valid nseq and nlock
     ?.  =(~ script-witness.in.n)
       $(i +(i), t t(vin (snoc vin.t in.n)))
-    =.  t  (finalize-input i eny)
+    =^  t  eny  (finalize-input i eny)
     $(i +(i), t t(vin (snoc vin.t in:(snag i inputs.t))))
   --
 ::
 ++  encode
   |%
+  ++  txid
+    |=  t=tx
+    ^-  @ux
+    =<  +
+    %-  flipb
+    %-  dsha256:bcu:bc
+    %-  catb  %-  zing
+    ^-  (list (list octs))
+    :~  ~[(flipb 4^nversion.t)]
+        ~[(encode-compact-size (lent vin.t))]
+        (turn vin.t input)
+        ~[(encode-compact-size (lent vout.t))]
+        (turn vout.t output)
+        ~[(flipb 4^nlocktime.t)]
+    ==
+  ::
   ++  txn
-    |=  t=transaction
+    |=  t=tx
     ^-  octs
     %-  catb  %-  zing
     ^-  (list (list octs))
@@ -175,8 +212,8 @@
 ::
 ::  taproot spending and construction methods
 ++  sign-input
-  |=  [t=transaction i=@ priv=@ eny=@ ext=@]
-  ^-  octs
+  |=  [t=tx i=@ priv=@ eny=@ ext=@]
+  ^-  [octs _eny]
   =+  n=(snag i inputs.t)
   =/  neone=?  =(anyonecanpay:sighash (dis sig-hash.n 0x80))
   =/  single=?  =(single:sighash (dis sig-hash.n 3))
@@ -186,12 +223,13 @@
   =/  msghash=@uvI
     %+  tagged-hash:schnorr:secp256k1:secp:crypto  'TapSighash'
     preimage
+  =^  sed  eny  (raws eny 256)
   =/  sig=octs
     %-  to-octs
-    (sign:schnorr:secp256k1:secp:crypto priv msghash (~(raw og eny) 256))
+    (sign:schnorr:secp256k1:secp:crypto priv msghash sed)
   =?  sig  !=(default:sighash sig-hash.n)
     (catb ~[sig 1^sig-hash.n])
-  sig
+  sig^eny
   ::
   ++  taproot-preimage
     ^-  octs
@@ -230,14 +268,14 @@
     ++  sha-amounts
       ^-  octs
       =/  preimage=octs
-        (catb (turn inputs.t |=(np=input (flipb 8^value.out.utxo.np))))
+        (catb (turn inputs.t |=(np=input (flipb 8^value.utxo.np))))
       (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-scriptpubkeys
       ^-  octs
       =/  preimage=octs
         %-  catb
-        (turn inputs.t |=(np=input (encode-scriptpubkey script-pubkey.out.utxo.np)))
+        (turn inputs.t |=(np=input (encode-scriptpubkey script-pubkey.utxo.np)))
       (flipb 32^(shay (flipb preimage)))
     ::
     ++  sha-sequences
@@ -252,7 +290,7 @@
         %-  catb
         %+  turn  outputs.t
         |=  =output
-        (output:encode out.output)
+        (output:encode -.output)
       (flipb 32^(shay (flipb preimage)))
     --
   ::
@@ -265,8 +303,8 @@
       ?.  neone
         ~[(flipb 4^i)]
       :~  (catb ~[(encode-compact-size p.enc-out) enc-out])
-          (flipb 8^value.out.utxo.n)
-          (catb ~[(encode-compact-size 35) script-pubkey.out.utxo.n])
+          (flipb 8^value.utxo.n)
+          (catb ~[(encode-compact-size 35) script-pubkey.utxo.n])
           (flipb 4^nsequence.in.n)
       ==
     ?:  =(1 ext)
@@ -281,7 +319,7 @@
       ~
     :_  ~
     %-  flipb  %-  to-octs
-    (shay (output:encode out:(snag i outputs.t)))
+    (shay (output:encode -:(snag i outputs.t)))
   ::
   ++  ext-fields
     ::  assume no OP_CODESEPARATORs
@@ -312,7 +350,6 @@
   ++  tweak-pubkey
     ^-  (pair @ point)
     =/  pt=point  (need (lift-x:schnorr (need p)))
-    ~&  tweak-time+`@ux`(need p)
     =/  t=@I  (tweak pt)
     =/  tweaked=point
       (add-points pt (mul-point-scalar g.domain.curve t))
@@ -352,7 +389,6 @@
     ^-  (list octs)
     =/  sscr=octs  (en:scr (need s))
     =+  cbyt=(add 0xc0 p:tweak-pubkey)
-    ~&  control-block+`@ux`(need p)
     =/  control-block=octs
       %-  catb
       :~  (to-octs cbyt)

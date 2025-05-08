@@ -28,7 +28,9 @@
       utxos=(set utxo)
   ==
 ++  tx
+  =<  tx
   |%
+  +$  tx  [id=txid dataw]
   +$  dataw
     $:  is=(list inputw)
         os=(list output)
@@ -89,7 +91,7 @@
     $:  =hax
         reward=@ud
         height=@ud
-        txs=(list [txid=@ux tx=dataw:tx])
+        txs=(list tx)
     ==
   --
 ++  psbt

@@ -9,15 +9,15 @@
 ;<  =bowl:spider  bind:m  get-bowl:strandio
 =/  =wallet  (make-wallet bowl)
 ~&  `@ux`x.pub.internal.own.wallet
-;<  mined=(unit (list octs))  bind:m  (mine-blocks-to-address:btcio req-to ~ address.ext.wallet 101)
+;<  mined=(unit (list @ux))  bind:m  (mine-blocks-to-address:btcio req-to ~ address.ext.wallet 101)
 ?~  mined  ~|(%mine-block-fail !!)
-;<  block=(unit block:bc)  bind:m  (get-block:btcio req-to ~ [%hax q:(head u.mined)])
+;<  block=(unit block:bc)  bind:m  (get-block:btcio req-to ~ [%hax (head u.mined)])
 ?~  block  ~|(%wtf !!)
 ?~  txs.u.block  ~|(%wtf !!)
-=/  txid=@ux  txid:(head txs.u.block)
+=/  txid=@ux  id:(head txs.u.block)
 ;<  fresh1=bowl:spider  bind:m  get-bowl:strandio
-=+  val=value:(head os.tx:(head txs.u.block))
-=/  commit=transaction:gw
+=+  val=value:(head os:(head txs.u.block))
+=/  commit=tx:gw
   %:  build-commit-tx
     [txid 0]
     ext.wallet
@@ -30,8 +30,9 @@
 =/  commit-txid=@ux  (make-txid commit)
 ;<  comres=(unit @ux)  bind:m  (send-raw-transaction:btcio req-to ~ commit-hex)
 ?~  comres  ~|('commit tx failed' !!)
+~&  comres=[res=u.comres txid=commit-txid =(u.comres commit-txid)]
 ;<  fresh2=bowl:spider  bind:m  get-bowl:strandio
-=/  reveal=transaction:gw
+=/  reveal=tx:gw
   %:  build-reveal-tx
     [u.comres 0]
     (snag 0 outputs.commit)
@@ -87,30 +88,25 @@
           =bowl:spider
           lopes=script:scr
       ==
-  ^-  transaction:gw
-  =|  tx=transaction:gw
+  ^-  tx:gw
+  =|  =tx:gw
   =|  =output:gw
   =.  output
     %_  output
-      value.out  val
+      value  val
       internal-keys  internal.from
-      script-pubkey.out  ~(scriptpubkey p2tr:gw `x.pub.internal.from ~ ~)
+      script-pubkey  ~(scriptpubkey p2tr:gw `x.pub.internal.from ~ ~)
     ==
   =/  spend-script=script:scr:gw  (make-spend-script x.pub.internal.owner lopes)
-  =.  tx
-    %:  ~(add-input build:gw tx)
-      outpoint
-      output
-      ~  ~
-      :: by passing ~ we default to SIGHASH_DEFAULT, equivalent to SIGHASH_ALL, so when we sign this input later we'll commit to all and only
-      :: the inputs and outputs we've added to the transaction up to that point
-    ==
+  :: by passing ~ we default to SIGHASH_DEFAULT, equivalent to SIGHASH_ALL, so when we sign this input later we'll commit to all and only
+  :: the inputs and outputs we've added to the transaction up to that point
+  =.  tx  (~(add-input build:gw tx) outpoint output ~ ~)
   =.  tx
     %^  ~(add-output build:gw tx)
         (sub val 150)  :: a tx with 1 keypath-spend input and 1 P2TR output should weigh approximately 103vB
       internal.owner
     `spend-script
-  (~(finalize build:gw tx) eny.bowl)
+  -:(~(finalize build:gw tx) eny.bowl)
 ::
 ++  build-reveal-tx
   |=  $:  =outpoint:gw
@@ -118,9 +114,9 @@
           =keypair:gw
           =bowl:spider
       ==
-  ^-  transaction:gw
+  ^-  tx:gw
   ?~  spend-script.output  !!
-  =|  reveal=transaction:gw
+  =|  reveal=tx:gw
   =.  reveal
     %:  ~(add-input build:gw reveal)
       outpoint
@@ -128,22 +124,16 @@
       ~  ~
     ==
   =/  less-fees=@
-    (sub value.out.output (add (lent spend-script.output) 400))
+    (sub value.output (add (lent spend-script.output) 400))
   =.  reveal
     %^  ~(add-output build:gw reveal)
         less-fees
       keypair
     ~
-  (~(finalize build:gw reveal) eny.bowl)
+  -:(~(finalize build:gw reveal) eny.bowl)
 ::
 ++  make-txid
-  |=  t=transaction:gw
+  |=  t=tx:gw
   ^-  @ux
-  :: %-  flipb:gw  %-  to-octs:gw
-  %-  shay  %-  to-octs:gw  %-  shay
-  %-  txn:encode:gw
-  %=  t
-    vin
-      (turn vin.t |=(=in:tx:gw in(script-witness ~)))
-  ==
+  (txid:encode:gw t)
 --

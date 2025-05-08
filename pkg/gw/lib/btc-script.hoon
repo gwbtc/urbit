@@ -132,8 +132,14 @@
     ^-  plat:plot
     ?:  ?=(^ op)
       ?-  p.op
-        %num  1^?:(=(q.octs.op 0x81) 0x4f ?:(=(0 q.octs.op) 0 ?>((lte q.octs.op 0x10) (add 0x50 q.octs.op))))
-        *  [%s ~]^(encode-pushdata +.op)
+          %num
+        :-  1
+        ?:  =(q.octs.op 0x81)  0x4f
+        ?:  =(0 q.octs.op)  0
+        ?>  (lte q.octs.op 0x10)
+        (add 0x50 q.octs.op)
+      ::
+          *  [%s ~]^(encode-pushdata +.op)
       ==
     ::
     ?-  op
@@ -265,142 +271,153 @@
     ==
   --
 ::
-::++  de
-::  |=  a=octs
-::  ^-  script
-::  ?:  =(p.a 0)  ~
-::  =/  n  (dec p.a)
-::  |-  ^-  script
-::  =/  op  (cut 3 [n 1] q.a)
-::  ?:  &(!=(0 op) (lte op 0x4b)) :: push next `op` bytes
-::    =.  n  (sub n op)
-::    =/  dat  (rev 3 op (cut 3 [n op] q.a))
-::    [%op-push ~ op dat]^?:(=(n 0) ~ $(n (dec n)))
-::  ?:  ?=(%0x4c op) :: op_pushdata1
-::    =.  n  (dec n)
-::    =/  len  (cut 3 [n 1] q.a)
-::    =.  n  (sub n len)
-::    =/  dat  (rev 3 len (cut 3 [n len] q.a))
-::    [%op-push %1 len dat]^?:(=(n 0) ~ $(n (dec n)))
-::  ?:  ?=(%0x4d op) :: op_pushdata2
-::    =.  n  (sub n 2)
-::    =/  len  (rev 3 2 (cut 3 [n 2] q.a))
-::    =.  n  (sub n len)
-::    =/  dat  (rev 3 len (cut 3 [n len] q.a))
-::    [%op-push %2 len dat]^?:(=(n 0) ~ $(n (dec n)))
-::  ?:  ?=(%0x4e op) :: op_pushdata4
-::    =.  n  (sub n 4)
-::    =/  len  (rev 3 4 (cut 3 [n 4] q.a))
-::    =.  n  (sub n len)
-::    =/  dat  (rev 3 len (cut 3 [n len] q.a))
-::    [%op-push %4 len dat]^?:(=(n 0) ~ $(n (dec n)))
-::  :_  ?:(=(n 0) ~ $(n (dec n)))
-::  ^-  ^op
-::  ?:  &((lth 0x50 op) (lte op 0x60))  :: op_1..op_16
-::    [%op-push %num %1 (sub op 0x50)]
-::  ?+  op  !!
-::    %0     [%op-push %num %1 0]
-::    %0x4f  [%op-push %num %1 81]
-::    %0x50  %op-reserved
-::  ::
-::    %0x61  %op-nop
-::    %0x62  %op-ver
-::    %0x63  %op-if
-::    %0x64  %op-notif
-::    %0x65  %op-verif
-::    %0x66  %op-vernotif
-::    %0x67  %op-else
-::    %0x68  %op-endif
-::    %0x69  %op-verify
-::    %0x6a  %op-return
-::    %0x6b  %op-toaltstack
-::    %0x6c  %op-fromaltstack
-::    %0x6d  %op-2drop
-::    %0x6e  %op-2dup
-::    %0x6f  %op-3dup
-::    %0x70  %op-2over
-::    %0x71  %op-2rot
-::    %0x72  %op-2swap
-::    %0x73  %op-ifdup
-::    %0x74  %op-depth
-::    %0x75  %op-drop
-::    %0x76  %op-dup
-::    %0x77  %op-nip
-::    %0x78  %op-over
-::    %0x79  %op-pick
-::    %0x7a  %op-roll
-::    %0x7b  %op-rot
-::    %0x7c  %op-swap
-::    %0x7d  %op-tuck
-::    ::
-::    %0x7e  %op-cat
-::    %0x7f  %op-substr
-::    %0x80  %op-left
-::    %0x81  %op-right
-::    %0x82  %op-size
-::    %0x83  %op-invert
-::    %0x84  %op-and
-::    %0x85  %op-or
-::    %0x86  %op-xor
-::    %0x87  %op-equal
-::    %0x88  %op-equalverify
-::    %0x89  %op-reserved1
-::    %0x8a  %op-reserved2
-::    ::
-::    %0x8b  %op-1add
-::    %0x8c  %op-1sub
-::    %0x8d  %op-2mul
-::    %0x8e  %op-2div
-::    %0x8f  %op-negate
-::    %0x90  %op-abs
-::    %0x91  %op-not
-::    %0x92  %op-0notequal
-::    %0x93  %op-add
-::    %0x94  %op-sub
-::    %0x95  %op-mul
-::    %0x96  %op-div
-::    %0x97  %op-mod
-::    %0x98  %op-lshift
-::    %0x99  %op-rshift
-::    %0x9a  %op-booland
-::    %0x9b  %op-boolor
-::    %0x9c  %op-numequal
-::    %0x9d  %op-numequalverify
-::    %0x9e  %op-numnotequal
-::    %0x9f  %op-lessthan
-::    %0xa0  %op-greaterthan
-::    %0xa1  %op-lessthanorequal
-::    %0xa2  %op-greaterthanorequal
-::    %0xa3  %op-min
-::    %0xa4  %op-max
-::    %0xa5  %op-within
-::    ::
-::    %0xa6  %op-ripemd160
-::    %0xa7  %op-sha1
-::    %0xa8  %op-sha256
-::    %0xa9  %op-hash160
-::    %0xaa  %op-hash256
-::    %0xab  %op-codeseparator
-::    %0xac  %op-checksig
-::    %0xad  %op-checksigverify
-::    %0xae  %op-checkmultisig
-::    %0xaf  %op-checkmultisigverify
-::    ::
-::    %0xb1  %op-checklocktimeverify
-::    %0xb2  %op-checksequenceverify
-::    ::
-::    %0xfd  %op-pubkeyhash
-::    %0xfe  %op-pubkey
-::    %0xff  %op-invalidopcode
-::    ::
-::    %0xb0  %op-nop1
-::    %0xb3  %op-nop4
-::    %0xb4  %op-nop5
-::    %0xb5  %op-nop6
-::    %0xb6  %op-nop7
-::    %0xb7  %op-nop8
-::    %0xb8  %op-nop9
-::    %0xb9  %op-nop10
-::  ==
-::
+++  de
+  |=  a=octs
+  ^-  (unit script)
+  ?:  =(p.a 0)  ~ :: `~
+  =/  n  (dec p.a)
+  |-  ^-  (unit script)
+  =/  op  (cut 3 [n 1] q.a)
+  =-  ?~  -  ~
+      ?:  =(n.u 0)  `op.u^~
+      ?~  rest=%_($ n (dec n.u))  ~
+      `op.u^u.rest
+  ^-  (unit [=^op n=@])
+  ?:  &(!=(0 op) (lte op 0x4b)) :: push next `op` bytes
+    ?:  (lth n op)  ~
+    =.  n  (sub n op)
+    =/  dat  (rev 3 op (cut 3 [n op] q.a))
+    `[%op-push ~ op dat]^n
+  ?:  ?=(%0x4c op) :: op_pushdata1
+    ?:  =(n 0)  ~
+    =.  n  (dec n)
+    =/  len  (cut 3 [n 1] q.a)
+    ?:  (lth n len)  ~
+    =.  n  (sub n len)
+    =/  dat  (rev 3 len (cut 3 [n len] q.a))
+    `[%op-push %1 len dat]^n
+  ?:  ?=(%0x4d op) :: op_pushdata2
+    ?:  (lth n 2)  ~
+    =.  n  (sub n 2)
+    =/  len  (rev 3 2 (cut 3 [n 2] q.a))
+    ?:  (lth n len)  ~
+    =.  n  (sub n len)
+    =/  dat  (rev 3 len (cut 3 [n len] q.a))
+    `[%op-push %2 len dat]^n
+  ?:  ?=(%0x4e op) :: op_pushdata4
+    ?:  (lth n 4)  ~
+    =.  n  (sub n 4)
+    =/  len  (rev 3 4 (cut 3 [n 4] q.a))
+    ?:  (lth n len)  ~
+    =.  n  (sub n len)
+    =/  dat  (rev 3 len (cut 3 [n len] q.a))
+    `[%op-push %4 len dat]^n
+  =-  ?~(- ~ `u^n)
+  ^-  (unit ^op)
+  ?:  &((lth 0x50 op) (lte op 0x60))  :: op_1..op_16
+    `[%op-push %num %1 (sub op 0x50)]
+  ?+  op  ~
+    %0     `[%op-push %num %1 0]
+    %0x4f  `[%op-push %num %1 0x81]
+    %0x50  `%op-reserved
+  ::
+    %0x61  `%op-nop
+    %0x62  `%op-ver
+    %0x63  `%op-if
+    %0x64  `%op-notif
+    %0x65  `%op-verif
+    %0x66  `%op-vernotif
+    %0x67  `%op-else
+    %0x68  `%op-endif
+    %0x69  `%op-verify
+    %0x6a  `%op-return
+    %0x6b  `%op-toaltstack
+    %0x6c  `%op-fromaltstack
+    %0x6d  `%op-2drop
+    %0x6e  `%op-2dup
+    %0x6f  `%op-3dup
+    %0x70  `%op-2over
+    %0x71  `%op-2rot
+    %0x72  `%op-2swap
+    %0x73  `%op-ifdup
+    %0x74  `%op-depth
+    %0x75  `%op-drop
+    %0x76  `%op-dup
+    %0x77  `%op-nip
+    %0x78  `%op-over
+    %0x79  `%op-pick
+    %0x7a  `%op-roll
+    %0x7b  `%op-rot
+    %0x7c  `%op-swap
+    %0x7d  `%op-tuck
+    ::
+    %0x7e  `%op-cat
+    %0x7f  `%op-substr
+    %0x80  `%op-left
+    %0x81  `%op-right
+    %0x82  `%op-size
+    %0x83  `%op-invert
+    %0x84  `%op-and
+    %0x85  `%op-or
+    %0x86  `%op-xor
+    %0x87  `%op-equal
+    %0x88  `%op-equalverify
+    %0x89  `%op-reserved1
+    %0x8a  `%op-reserved2
+    ::
+    %0x8b  `%op-1add
+    %0x8c  `%op-1sub
+    %0x8d  `%op-2mul
+    %0x8e  `%op-2div
+    %0x8f  `%op-negate
+    %0x90  `%op-abs
+    %0x91  `%op-not
+    %0x92  `%op-0notequal
+    %0x93  `%op-add
+    %0x94  `%op-sub
+    %0x95  `%op-mul
+    %0x96  `%op-div
+    %0x97  `%op-mod
+    %0x98  `%op-lshift
+    %0x99  `%op-rshift
+    %0x9a  `%op-booland
+    %0x9b  `%op-boolor
+    %0x9c  `%op-numequal
+    %0x9d  `%op-numequalverify
+    %0x9e  `%op-numnotequal
+    %0x9f  `%op-lessthan
+    %0xa0  `%op-greaterthan
+    %0xa1  `%op-lessthanorequal
+    %0xa2  `%op-greaterthanorequal
+    %0xa3  `%op-min
+    %0xa4  `%op-max
+    %0xa5  `%op-within
+    ::
+    %0xa6  `%op-ripemd160
+    %0xa7  `%op-sha1
+    %0xa8  `%op-sha256
+    %0xa9  `%op-hash160
+    %0xaa  `%op-hash256
+    %0xab  `%op-codeseparator
+    %0xac  `%op-checksig
+    %0xad  `%op-checksigverify
+    %0xae  `%op-checkmultisig
+    %0xaf  `%op-checkmultisigverify
+    ::
+    %0xb1  `%op-checklocktimeverify
+    %0xb2  `%op-checksequenceverify
+    ::
+    %0xfd  `%op-pubkeyhash
+    %0xfe  `%op-pubkey
+    %0xff  `%op-invalidopcode
+    ::
+    %0xb0  `%op-nop1
+    %0xb3  `%op-nop4
+    %0xb4  `%op-nop5
+    %0xb5  `%op-nop6
+    %0xb6  `%op-nop7
+    %0xb7  `%op-nop8
+    %0xb8  `%op-nop9
+    %0xb9  `%op-nop10
+  ==
 --

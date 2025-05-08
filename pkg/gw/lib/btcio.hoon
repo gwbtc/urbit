@@ -183,7 +183,7 @@
 ::
 ++  mine-blocks-to-address
   |=  [=req-to id=(unit @t) address=cord n=@]
-  =/  m  (strand:strandio (unit (list octs)))
+  =/  m  (strand:strandio (unit (list @ux)))
   ^-  form:m
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
@@ -194,13 +194,13 @@
         list+[(numb:enjs:format n) s+address ~]
     ==
   ?.  ?=([%result *] res)  (pure:m ~)
-  (pure:m `((ar:dejs:format parse-hex) res.res))
+  =,  dejs:format
+  (pure:m `((ar (cu |=([* @] +<+) parse-hex)) res.res))
 ::
 ++  send-raw-transaction
   |=  [=req-to id=(unit @t) raw=octs]
   =/  m  (strand:strandio (unit @ux))
   ^-  form:m
-  ~&  (render-hex-bytes raw)
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
     ^-  request:rpc
