@@ -181,8 +181,8 @@
   ?.  ?=([%result * [%o *]] res)  (pure:m ~)
   (pure:m `(parse-block res.res))
 ::
-++  mine-block-to-address
-  |=  [=req-to id=(unit @t) address=cord]
+++  mine-blocks-to-address
+  |=  [=req-to id=(unit @t) address=cord n=@]
   =/  m  (strand:strandio (unit (list octs)))
   ^-  form:m
   ;<  res=response:rpc  bind:m
@@ -191,7 +191,7 @@
     :*  ?~(id 'generate-to-address' u.id)
         '2.0'
         'generatetoaddress'
-        list+[(numb:enjs:format 1) s+address ~]
+        list+[(numb:enjs:format n) s+address ~]
     ==
   ?.  ?=([%result *] res)  (pure:m ~)
   (pure:m `((ar:dejs:format parse-hex) res.res))
@@ -200,6 +200,7 @@
   |=  [=req-to id=(unit @t) raw=octs]
   =/  m  (strand:strandio (unit @ux))
   ^-  form:m
+  ~&  (render-hex-bytes raw)
   ;<  res=response:rpc  bind:m
     %+  request-rpc  req-to
     ^-  request:rpc
@@ -237,7 +238,7 @@
 ::
 ++  parse-tx
   |=  jon=json
-  ^-  [txh=@ux tx=dataw:tx:bc]
+  ^-  [txid=@ux tx=dataw:tx:bc]
   %.  jon
   =,  dejs:format
   %-  ot
