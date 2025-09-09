@@ -47,7 +47,13 @@
         segwit=(unit @ud)
     ==
   ::
-  +$  val
+  +$  in-val
+    $:  =txid
+        pos=@ud
+        =address
+    ==
+  ::
+  +$  out-val
     $:  =txid
         pos=@ud
         =address
@@ -60,8 +66,8 @@
         =txid
         confs=@ud
         recvd=(unit @da)
-        inputs=(list val)
-        outputs=(list val)
+        inputs=(list in-val)
+        outputs=(list out-val)
     ==
   ::
   +$  input
@@ -70,7 +76,6 @@
         sequence=hexb
         script-sig=(unit hexb)
         pubkey=(unit hexb)
-        value=sats
     ==
   ::
   +$  inputw  [=witness input]

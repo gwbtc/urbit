@@ -15,6 +15,10 @@
           req-to=(unit req-to:btcio)
       ==
     +$  blocks  (list [=num:block:bc block:bc])
+    +$  poke
+      $@  %clear
+      $%  [%start block=@ud]
+      ==
     --
 ::
 ::  Helpers
@@ -72,10 +76,14 @@
 ++  on-poke
   |=  [=mark =vase]
   ?>  =(our src):bol
-  ?:  ?=(%noun mark)
-    ~&  state
-    `this
-  `this
+  =+  !<(poke vase)
+  ?-  -
+      %clear 
+    :_  this(state *app-state)
+    ~[(leave-spider /watcher-ted our.bol)]
+      [%start *]
+    !!
+  ==
 ::
 ::  +on-watch: subscribe & get initial subscription data
 ::

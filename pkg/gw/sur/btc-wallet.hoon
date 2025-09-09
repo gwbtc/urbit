@@ -127,8 +127,8 @@
       =txid
       confs=@ud
       recvd=(unit @da)
-      inputs=(list [=val:tx s=(unit ship)])
-      outputs=(list [=val:tx s=(unit ship)])
+      inputs=(list [=in-val:tx s=(unit ship)])
+      outputs=(list [=out-val:tx s=(unit ship)])
       note=(unit @t)
   ==
 +$  history  (map txid hest)
