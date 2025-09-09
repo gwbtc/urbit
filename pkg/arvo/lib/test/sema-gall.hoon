@@ -8,8 +8,8 @@
 ::
 |%
 ++  crypto-core
-  |%  ++  nec  (pit:nu:cryc:crypto 512 (shaz 'nec'))
-      ++  bud  (pit:nu:cryc:crypto 512 (shaz 'bud'))
+  |%  ++  nec  (pit:nu:cric:crypto 512 (shaz 'nec'))
+      ++  bud  (pit:nu:cric:crypto 512 (shaz 'bud'))
       ++  sign
         |=  [=ship data=@ux]
         %.  data

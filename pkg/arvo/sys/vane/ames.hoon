@@ -312,7 +312,7 @@
     ::  +derive-symmetric-key: $symmetric-key from $private-key and $public-key
     ::
     ::    Assumes keys have a tag on them like the result of the
-    ::    |ex:cryc core.
+    ::    |ex:cric core.
     ::
     ++  derive-symmetric-key
       ~/  %derive-symmetric-key
@@ -393,13 +393,13 @@
       ::  only a star or comet can sponsor a comet
       ::
       ?>  ?=(?(%king %pawn) (clan:title (^^sein:title rof /ames our now sndr.shot)))
-      =/  cyc  (com:nu:cryc:crypto pass.open-packet)
+      =/  cic  (com:nu:cric:crypto pass.open-packet)
       ::  comet public-key must hash to its @p address
       ::
-      ?>  =(sndr.shot fig:ex:cyc)
+      ?>  =(sndr.shot fig:ex:cic)
       ::  verify signature
       ::
-      ?>  (veri:ed:crypto signature signed sgn:ded:ex:cyc)
+      ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
       open-packet
     ::  +etch-shut-packet: encrypt and packetize a $shut-packet
     ::
@@ -652,7 +652,7 @@
       ^-  azimuth-state-26
       :*  symmetric-key
           life  rift
-          [ded:ex:(com:nu:cryc:crypto pass) pass]
+          [ded:ex:(com:nu:cric:crypto pass) pass]
           sponsor
       ==
     ::
@@ -902,7 +902,7 @@
           keens=(map path keen-state-13)
       ==
     ++  acru-25  ^?                                      ::  asym cryptosuite
-      |_  cyc=_cryc:crypto                                     ::  opaque object
+      |_  cic=_cric:crypto                                     ::  opaque object
       ++  as  ^?                                          ::  asym ops
       |%  ++  seal  |~([a=pass b=@] *@)                 ::  encrypt to a
           ++  sign  |~(a=@ *@)                          ::  certify as us
@@ -910,29 +910,29 @@
           ++  sure  |~(a=@ *(unit @))                   ::  authenticate from us
           ++  safe  |~([a=@ b=@] *?)                    ::  authentication only
           ++  tear  |~([a=pass b=@] *(unit @))          ::  accept from a
-        ::|%  ++  seal  |~([a=pass b=@] (seal:cyc +<))
-        ::    ++  sign  |~(a=@ (sign:cyc +<))
-        ::    ++  sigh  |~(a=@ (sigh:cyc +<))
-        ::    ++  sure  |~(a=@ (sure:cyc +<))
-        ::    ++  safe  |~([a=@ b=@] (safe:cyc +<))
-        ::    ++  tear  |~([a=pass b=@] (tear:cyc +<))
+        ::|%  ++  seal  |~([a=pass b=@] (seal:cic +<))
+        ::    ++  sign  |~(a=@ (sign:cic +<))
+        ::    ++  sigh  |~(a=@ (sigh:cic +<))
+        ::    ++  sure  |~(a=@ (sure:cic +<))
+        ::    ++  safe  |~([a=@ b=@] (safe:cic +<))
+        ::    ++  tear  |~([a=pass b=@] (tear:cic +<))
         --  ::as                                          ::
-      ::++  de  |~([a=@ b=@] (de:cyf:cyc +<))
-      ::++  dy  |~([a=@ b=@] (dy:cyf:cyc +<))
-      ::++  en  |~([a=@ b=@] (en:cyf:cyc +<))
+      ::++  de  |~([a=@ b=@] (de:cyf:cic +<))
+      ::++  dy  |~([a=@ b=@] (dy:cyf:cic +<))
+      ::++  en  |~([a=@ b=@] (en:cyf:cic +<))
       ++  de  |~([a=@ b=@] *(unit @))                     ::  symmetric de, soft
       ++  dy  |~([a=@ b=@] *@)                            ::  symmetric de, hard
       ++  en  |~([a=@ b=@] *@)                            ::  symmetric en
       ++  ex  ^?                                          ::  export
-        |%  ++  fig  fig:ex:cyc                              ::  fingerprint
-            ++  pac  pac:ex:cyc                              ::  default passcode
-            ++  pub  pub:ex:cyc                              ::  public key
-            ++  sec  sec:ex:cyc                              ::  private key
+        |%  ++  fig  fig:ex:cic                              ::  fingerprint
+            ++  pac  pac:ex:cic                              ::  default passcode
+            ++  pub  pub:ex:cic                              ::  public key
+            ++  sec  sec:ex:cic                              ::  private key
         --  ::ex                                          ::
       ++  nu                                              ::  reconstructors
-        |%  ++  pit  |~([a=@ b=@] ..nu(cyc (pit:nu:cyc a b %b ~))) ::  from [width seed]
-            ++  nol  |~(a=ring ..nu(cyc (nol:nu:cyc +<)))    ::  from ring
-            ++  com  |~(a=pass ..nu(cyc (com:nu:cyc +<)))    ::  from pass
+        |%  ++  pit  |~([a=@ b=@] ..nu(cic (pit:nu:cic a b %b ~))) ::  from [width seed]
+            ++  nol  |~(a=ring ..nu(cic (nol:nu:cic +<)))    ::  from ring
+            ++  com  |~(a=pass ..nu(cic (com:nu:cic +<)))    ::  from pass
         --  ::nu                                          ::
       --  ::acru                                          ::
 
@@ -3417,12 +3417,12 @@
               =/  cyf=@      (slav %uv cyf.pat.outer-path)
               =/  key=@      key:(got:on:chain chain.s idx)
               ~|  [%shut-crash key cyf]
-              (rash `@t`(dy:cyf:cryc:crypto key cyf) stap)
+              (rash `@t`(dy:cyf:cric:crypto key cyf) stap)
               ::
                 [%chum her=@ lyf=@ cyf=@ ~]
               =+  cyf=(slav %uv cyf.pat.outer-path)
               ~|  [%chum-crash symmetric-key.s cyf]
-              (rash `@t`(dy:cyf:cryc:crypto key=symmetric-key.s cyf) stap)
+              (rash `@t`(dy:cyf:cric:crypto key=symmetric-key.s cyf) stap)
             ==
           ::
               keens
@@ -3501,8 +3501,8 @@
         ~>  %slog.0^leaf/"ames: migrating from state %25 to %26"
         %=    old
             priv
-          =/  cyc  (nol:nu:cryc:crypto priv.old) 
-          [saf:ex:cyc priv.old pub:ex:cyc]
+          =/  cic  (nol:nu:cric:crypto priv.old) 
+          [saf:ex:cic priv.old pub:ex:cic]
         ::
             peers
           %-  ~(run by peers.old)
@@ -4233,7 +4233,7 @@
             ?>  ?=([%fine %shut kef=@ cyf=@ ~] rest.path.s)
             =/  [key=@ ,path]  (~(got by chain.u.per) (slav %ud idx.wire))
             =/  raw=@t
-              (dy:cyf:cryc:crypto key (slav %uv cyf.rest.path.s))
+              (dy:cyf:cric:crypto key (slav %uv cyf.rest.path.s))
             =/  pax=path
               (stab raw)
             =;  dat=(unit (unit page))
@@ -4248,11 +4248,11 @@
               ~  :: XX weird
             ?>  ?=([%atom @] u.q.dat.u.roar)
             =-  ``;;(page (cue -))
-            (dy:cyf:cryc:crypto key q.u.q.dat.u.roar)
+            (dy:cyf:cric:crypto key q.u.q.dat.u.roar)
           ?>  ?=([%chum *] wire)
           =/  pax
             %-  stab
-            (dy:cyf:cryc:crypto symmetric-key.u.per (slav %uv cyf.rest.path.s))
+            (dy:cyf:cric:crypto symmetric-key.u.per (slav %uv cyf.rest.path.s))
           =/  dat=(unit (unit page))
             ?:  ?|  ?=(~ roar)
                     ?=(~ q.dat.u.roar)
@@ -4260,7 +4260,7 @@
               ~  :: XX weird
             ?>  ?=([%atom @] u.q.dat.u.roar)
             =-  `?~(- ~ `(,page (cue -)))
-            (dy:cyf:cryc:crypto symmetric-key.u.per q.u.q.dat.u.roar)
+            (dy:cyf:cric:crypto symmetric-key.u.per q.u.q.dat.u.roar)
           %-  emil
           :~  [duct %give %near [ship.s pax] dat]
               :^  duct  %pass  /prune-tip
@@ -4606,7 +4606,7 @@
             =.  chain.u.ship-state
               (put:on:chain chain.u.ship-state [idx key /]:u.sec)
             =/  enc
-              (scot %uv (en:cyf:cryc:crypto key.u.sec (spat path)))
+              (scot %uv (en:cyf:cric:crypto key.u.sec (spat path)))
             =/  lav  /a/x/1//fine/shut/(scot %ud idx.u.sec)/[enc]
             =/  wir  /fine/shut/(scot %ud idx.u.sec)
             =.  tip.u.ship-state
@@ -4630,7 +4630,7 @@
             |=  todos=alien-agenda
             todos(chums (~(put ju chums.todos) [path %tune] duct))
           =/  cyf
-            (scot %uv (en:cyf:cryc:crypto symmetric-key.u.ship-state (spat path)))
+            (scot %uv (en:cyf:cric:crypto symmetric-key.u.ship-state (spat path)))
           =/  lav
             /a/x/1//chum/(scot %p our)/(scot %ud life.ames-state)/[cyf]
           =.  tip.u.ship-state
@@ -5697,13 +5697,13 @@
                 =/  idx=@ud    (slav %ud idx.pat.path)
                 =/  cyf=@      (slav %uv cyf.pat.path)
                 =/  key=@      key:(got:on:chain chain.per idx)
-                =/  pax=^path  (rash `@t`(dy:cyf:cryc:crypto key cyf) stap)
+                =/  pax=^path  (rash `@t`(dy:cyf:cric:crypto key cyf) stap)
                 [pax %shut idx key]
                 ::
                   [%chum her=@ lyf=@ cyf=@ ~]
                 =/  cyf=@      (slav %uv cyf.pat.path)
                 =*  key  symmetric-key.per
-                =/  pax=^path  (rash `@t`(dy:cyf:cryc:crypto key cyf) stap)
+                =/  pax=^path  (rash `@t`(dy:cyf:cric:crypto key cyf) stap)
                 [pax chum-to-our:mesa-ev-core]
               ==
             ::
@@ -7422,7 +7422,7 @@
             =/  key-idx  (slav %ud kef.tyl)
             =/  key  (got:on:chain server-chain.ames-state (slav %ud kef.tyl))
             =/  pat=(unit path)
-              (rush `@t`(dy:cyf:cryc:crypto key.key (slav %uv enc.tyl)) stap)
+              (rush `@t`(dy:cyf:cric:crypto key.key (slav %uv enc.tyl)) stap)
             ?~  pat
               [~ ~]
             ?~  blk=(de-part:balk our rift.ames-state life.ames-state u.pat)
@@ -7437,7 +7437,7 @@
             ?~  u.res
               ``atom+!>(~)
             =-  ``atom+!>(-)
-            `@uv`(en:cyf:cryc:crypto key.key (jam [p q.q]:u.u.res))
+            `@uv`(en:cyf:cric:crypto key.key (jam [p q.q]:u.u.res))
           ::
               [%chum her=@ lyf=@ cyf=@ ~]
             =/  who  (slaw %p her.tyl)
@@ -7449,7 +7449,7 @@
             ?.  &(?=([~ %known *] per) =(life.u.per u.lyf))
               ~
             =/  bal=(unit balk)
-              ?~  tex=(de:cyf:cryc:crypto symmetric-key.u.per u.cyf)  ~
+              ?~  tex=(de:cyf:cric:crypto symmetric-key.u.per u.cyf)  ~
               ?~  pax=(rush u.tex stap)                           ~
               (de-part:balk our 0 0 u.pax)
             ?~  bal
@@ -7457,7 +7457,7 @@
             ?~  res=(rof `[u.who ~ ~] /ames (as-omen:balk u.bal))
               ~
             =-  ``atom+!>(`@ux`-)
-            %+  en:cyf:cryc:crypto  symmetric-key.u.per
+            %+  en:cyf:cric:crypto  symmetric-key.u.per
             ?~(u.res ~ (jam [p q.q]:u.u.res))
             ::  private namespaces
             ::
@@ -9839,10 +9839,10 @@
                 |.("hear new key at life={<life>}")
             ::
             =/  peer  (sy-find-peer ship)
-            =/  cyc  (com:nu:cryc:crypto pass)
-            ?>  =(crypto-suite (sub suite:+<:cyc 'a'))
+            =/  cic  (com:nu:cric:crypto pass)
+            ?>  =(crypto-suite (sub suite:+<:cic 'a'))
             ?.  ?=([?(%ship %chum) ~ %known *] peer)
-              =+  ~:(com:nu:cryc:crypto pass)
+              =+  ~:(com:nu:cric:crypto pass)
               =|  =point:jael
               =.  life.point     life
               =.  keys.point     (my [life crypto-suite pass]~)
@@ -9851,7 +9851,7 @@
               (on-publ-full (my [ship point]~))
             ::
             =/  old-key         symmetric-key.+.u.peer
-            =/  =public-keys  ded:ex:(com:nu:cryc:crypto pass)
+            =/  =public-keys  ded:ex:(com:nu:cric:crypto pass)
             =/  =private-keys   sek.saf.ames-state
             =/  =symmetric-key  (derive-symmetric-key public-keys private-keys)
             ::  recalculate paths in .pit/.keens using the new key
@@ -10073,7 +10073,7 @@
                 ==
             ::
             =/  =pass     pass:(~(got by keys.point) life.point)
-            =/  =public-keys  ded:ex:(com:nu:cryc:crypto pass)
+            =/  =public-keys  ded:ex:(com:nu:cric:crypto pass)
             :: XX remove; needed when changing types in %lull (for testing)
             :: =.  priv.ames-state
             ::   ;;  @
@@ -10140,12 +10140,12 @@
               |.("hear new private key for life={<life>}")
           ::
           =/  =ring  (~(got by vein) life)
-          =/  cyc   (nol:nu:cryc:crypto ring)
+          =/  cic   (nol:nu:cric:crypto ring)
           ::  recalculate each peer's symmetric key
           ::
           =.  ring.ames-state  ring
-          =.  saf.ames-state   saf:ex:cyc
-          =.  pass.ames-state  pub:ex:cyc
+          =.  saf.ames-state   saf:ex:cic
+          =.  pass.ames-state  pub:ex:cic
           =.  chums.ames-state
             %-  ~(urn by chums.ames-state)
             |=  [=ship =chum-state]
@@ -10698,7 +10698,7 @@
         ++  al-verify-packet
           |=  [comet=@p com-life=@ open-packet]
           ^-  ?
-          =/  cyc  (com:nu:cryc:crypto pass)
+          =/  cic  (com:nu:cric:crypto pass)
           ::  assert the contents of the proof match those of a comet
           ::
           ?&  =(sndr comet)  =(com-life sndr-life)  =(1 com-life)
@@ -10708,7 +10708,7 @@
             ::
             ::  comet public-key must hash to its @p address
             ::
-            =(comet fig:ex:cyc)
+            =(comet fig:ex:cic)
           ==
         ::
         ++  al-register-comet
@@ -10716,8 +10716,8 @@
           ^+  al-core
           ?>  (al-verify-packet +<)
           ?>  =(1 com-life)
-          =/  cyc  (com:nu:cryc:crypto pass)
-          =/  keys  (~(put by *(map life [suite=@ud ^pass])) sndr-life num:ex:cyc pass)
+          =/  cic  (com:nu:cric:crypto pass)
+          =/  keys  (~(put by *(map life [suite=@ud ^pass])) sndr-life num:ex:cic pass)
 
           =/  ship-state  (~(get by chums.ames-state) comet)
           ?:  ?=([~ %known *] ship-state)
@@ -10815,7 +10815,7 @@
           ?>  ?=(^ gage)
           ?>  ?=(%open-packet p.gage)
           =+  ;;(=open-packet q.gage)
-          =/  =public-keys  ded:ex:(com:nu:cryc:crypto pass.open-packet)
+          =/  =public-keys  ded:ex:(com:nu:cric:crypto pass.open-packet)
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
@@ -11680,7 +11680,7 @@
           =/  =pass  pass.u.q.u.u.puby
           :-  ~
           %+  slar:ed:crypto
-            cry:ded:ex:(com:nu:cryc:crypto pass)
+            cry:ded:ex:(com:nu:cric:crypto pass)
           cry.sek.saf.ames-state
         ?.  =(life life.+.u.chum)
           ~  :: XX  log?
@@ -11819,7 +11819,7 @@
         ::
         =/  user-path=^path
           =/  cyf=@  (slav %uv cyf.pat.path)
-          (rash `@t`(dy:cyf:cryc:crypto symmetric-key.peer cyf) stap)
+          (rash `@t`(dy:cyf:cric:crypto symmetric-key.peer cyf) stap)
         =.  peers.ames-state.core
           =.  life.peer           her-life
           =.  symmetric-key.peer  new-key

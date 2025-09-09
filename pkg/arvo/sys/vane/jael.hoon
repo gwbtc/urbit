@@ -301,10 +301,10 @@
       ?~  kyz  !!
       =/  ky=[lyf=life key=ring]  i.kyz
       =.  pos.zim.pki
-        =/  cyc  (nol:nu:cryc:crypto key.ky)
+        =/  cic  (nol:nu:cric:crypto key.ky)
         %+  ~(put by pos.zim.pki)
           our
-        [0 lyf.ky (my [lyf.ky [num:ex:cyc pub:ex:cyc]] ~) spon-ship ~]
+        [0 lyf.ky (my [lyf.ky [num:ex:cic pub:ex:cic]] ~) spon-ship ~]
       ::  our initial private key
       ::
       =.  lyf.own.pki  lyf.ky
@@ -351,9 +351,9 @@
         %fake
       ::  single-homed
       ::
-      =>  ?@  +.tac  [cyc=(pit:nu:cryc:crypto 512 our %b ~) .]
-          =+  cyc=(pit:nu:cryc:crypto 512 seed.tac %c %fake) 
-          .(tac [%fake ship=`@p`fig:ex:cyc])
+      =>  ?@  +.tac  [cic=(pit:nu:cric:crypto 512 our %b ~) .]
+          =+  cic=(pit:nu:cric:crypto 512 seed.tac %c %fake) 
+          .(tac [%fake ship=`@p`fig:ex:cic])
       ?>  =(our ship.tac)
       ::  fake keys are deterministically derived from the ship
       ::
@@ -363,14 +363,14 @@
       =.  pos.zim.pki
         %+  ~(put by pos.zim.pki)
           our
-        [rift=0 life=1 (my [`@ud`1 [num:ex:cyc pub:ex:cyc]] ~) `(^sein:title our) ~]
+        [rift=0 life=1 (my [`@ud`1 [num:ex:cic pub:ex:cic]] ~) `(^sein:title our) ~]
       ::  our private key
       ::
       ::    Private key updates are disallowed for fake ships,
       ::    so we do this first.
       ::
       =.  lyf.own.pki  1
-      =.  jaw.own.pki  (my [1 sec:ex:cyc] ~)
+      =.  jaw.own.pki  (my [1 sec:ex:cic] ~)
       ::  set the fake bit
       ::
       =.  fak.own.pki  &
@@ -944,8 +944,8 @@
           ?~  whol
             ~
           ?:  =(%pawn (clan:title i.whol))  $(whol t.whol)
-          =/  cyc  (pit:nu:cryc:crypto 512 i.whol %b ~)
-          :-  [i.whol pub:ex:cyc]
+          =/  cic  (pit:nu:cric:crypto 512 i.whol %b ~)
+          :-  [i.whol pub:ex:cic]
           $(whol t.whol)
         =/  points=(list (pair ship point))
           %+  turn  passes
@@ -1416,9 +1416,9 @@
     ?~  lyf  [~ ~]
     ::
     ?:  fak.own.pki.lex
-      =/  cyc  (pit:nu:cryc:crypto 512 u.who %b ~)
+      =/  cic  (pit:nu:cric:crypto 512 u.who %b ~)
       :^  ~  ~  %noun
-      !>  [1 pub:ex:cyc ~]
+      !>  [1 pub:ex:cic ~]
     ::
     =/  rac  (clan:title u.who)
     ?:  ?=(%pawn rac)
@@ -1427,10 +1427,10 @@
       ?.  =(1 u.lyf)
         [~ ~]
       =/  sec  (~(got by jaw.own.pki.lex) u.lyf)
-      =/  cyc  (nol:nu:cryc:crypto sec)
-      =/  sig  (sign-raw:ed:crypto (shaf %self (sham [u.who 1 pub:ex:cyc])) [sgn.pub sgn.sek]:saf:ex:cyc)
+      =/  cic  (nol:nu:cric:crypto sec)
+      =/  sig  (sign-raw:ed:crypto (shaf %self (sham [u.who 1 pub:ex:cic])) [sgn.pub sgn.sek]:saf:ex:cic)
       :^  ~  ~  %noun
-      !>  [1 pub:ex:cyc `sig]
+      !>  [1 pub:ex:cic `sig]
     ::
     =/  pub  (~(get by pos.zim.pki.lex) u.who)
     ?~  pub
@@ -1459,8 +1459,8 @@
     ::
     =/  sec  (~(got by jaw.own.pki.lex) u.lyf)
     =/  moon-sec  (shaf %earl (sham our u.lyf sec u.who))
-    =/  cyc  (pit:nu:cryc:crypto 128 moon-sec %b ~)
-    =/  =feed  [[%2 ~] u.who 0 [1 sec:ex:cyc]~]
+    =/  cic  (pit:nu:cric:crypto 128 moon-sec %b ~)
+    =/  =feed  [[%2 ~] u.who 0 [1 sec:ex:cic]~]
     ``[%feed !>(feed)]
   ::
       %sein
