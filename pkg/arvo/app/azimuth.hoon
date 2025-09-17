@@ -104,64 +104,67 @@
     ^-  (quip card _this)
     |^
     =+  !<(old-state=app-states old)
-    ::=?  old-state  ?=(%0 -.old-state)
-    ::  =,  old-state
-    ::  [%1 url net whos nas own *sponsors logs]
-    ::=^  cards-1  old-state
-    ::  ?.  ?=(%1 -.old-state)
-    ::    `old-state
-    ::  %-  %-  slog  :_  ~
-    ::      leaf+"ship: loading snapshot with {<(lent logs.old-state)>} events"
-    ::  =.  +.state  +:(state-7-to-8 (state-6-to-7 (state-5-to-6 old-state)))
-    ::  =^  cards  state
-    ::    (%*(run-logs do nas.state *^state:naive) logs.state)
-    ::  [(jael-update:do (to-udiffs:do cards)) state]
-    ::=^  cards-2  old-state
-    ::  ?.  ?=(%2 -.old-state)
-    ::    `old-state
-    ::  ~&  >  '%azimuth: updating to state 3'
-    ::  =.  +.state  +:(state-7-to-8 (state-6-to-7 (state-5-to-6 old-state)))
-    ::  ::  replace naive state and indices with snapshot
-    ::  ::
-    ::  =:  nas.state   nas.sap.state
-    ::      own.state   owners.sap.state
-    ::      spo.state   sponsors.sap.state
-    ::      logs.state  ~
-    ::      ::  TODO: shouldn't be needed but have seen eth-watcher
-    ::      ::        threads use a url='' if this is not used
-    ::      ::
-    ::      url.state   'http://eth-mainnet.urbit.org:8545'
-    ::    ==
-    ::  =/  points=@ud  ~(wyt by points.nas.state)
-    ::  %-  %-  slog  :_  ~
-    ::      leaf+"ship: processing azimuth snapshot (~{<points>} points)"
-    ::  =/  snap-cards=udiffs:point  (run-state:do id.sap.state points.nas.state)
-    ::  :_  [%3 url net whos nas own spo logs]:state
-    ::  %+  weld
-    ::    (jael-update:do snap-cards)
-    ::  ::  start getting new logs after the last id:block in the snapshot
-    ::  ::
-    ::  start:do
-    ::=^  cards-3  old-state
-    ::  ?.  ?=(%3 -.old-state)  [cards-2 old-state]
-    ::  :_  old-state(- %4)
-    ::  ~&  >  '%azimuth: updating to state 4'
-    ::  [%pass /resend-pk %arvo %j %resend ~]^cards-2
-    ::=^  cards-4  old-state
-    ::  ?.  ?=(%4 -.old-state)  [cards-3 old-state]
-    ::  =^  cards  this
-    ::    %-  %*(. on-poke +.state.this +:(state-6-to-7 (state-5-to-6 old-state)))
-    ::    [%azimuth-poke !>([%watch [url net]:old-state])]
-    ::  ~&  >  '%azimuth: updating to state 5'
-    ::  [cards [%5 url net whos nas own spo logs]:state.this]
-    ::=?  old-state  ?=(%5 -.old-state)
-    ::  (state-5-to-6 old-state)
+    =?  old-state  ?=(%0 -.old-state)
+      =,  old-state
+      [%1 url net whos nas own *sponsors logs]
+    =^  cards-1  old-state
+      ?.  ?=(%1 -.old-state)
+        `old-state
+      %-  %-  slog  :_  ~
+          leaf+"ship: loading snapshot with {<(lent logs.old-state)>} events"
+      =.  +.state  +:(state-7-to-8 (state-6-to-7 (state-5-to-6 old-state)))
+      =^  cards  state
+        (%*(run-logs do nas.state *^state:naive) logs.state)
+      [(jael-update:do (to-udiffs:do cards)) state]
+    =^  cards-2  old-state
+      ?.  ?=(%2 -.old-state)
+        `old-state
+      ~&  >  '%azimuth: updating to state 3'
+      =.  +.state  +:(state-7-to-8 (state-6-to-7 (state-5-to-6 old-state)))
+      =:  nas.state   *^state:naive
+          own.state   ~
+          spo.state   ~
+          logs.state  ~
+          ::  TODO: shouldn't be needed but have seen eth-watcher
+          ::        threads use a url='' if this is not used
+          ::
+          url.state   'http://eth-mainnet.urbit.org:8545'
+        ==
+      :_  :*  %3
+              url.state
+              net.state
+              whos.state
+              *state-0:naive
+              own.state
+              spo.state
+              logs.state
+          ==
+      ::  start getting new logs after the last id:block in the snapshot
+      ::
+      start:do
+    =^  cards-3  old-state
+      ?.  ?=(%3 -.old-state)  [cards-2 old-state]
+      :_  old-state(- %4)
+      ~&  >  '%azimuth: updating to state 4'
+      [%pass /resend-pk %arvo %j %resend ~]^cards-2
+    =^  cards-4  old-state
+      ?.  ?=(%4 -.old-state)  [cards-3 old-state]
+      =^  cards  this
+        %-  %*    .  on-poke
+                +.state.this
+              +:(state-7-to-8 (state-6-to-7 (state-5-to-6 old-state)))
+            ==
+        [%azimuth-poke !>([%watch [url net]:old-state])]
+      ~&  >  '%azimuth: updating to state 5'
+      [cards state.this]
+    =?  old-state  ?=(%5 -.old-state)
+      (state-5-to-6 old-state)
     =?  old-state  ?=(%6 -.old-state)
       (state-6-to-7 old-state)
     =?  old-state  ?=(%7 -.old-state)
       (state-7-to-8 old-state)
     ?>  ?=(%8 -.old-state)
-    [~ this(state old-state)]
+    [cards-4 this(state old-state)]
     ::
     ++  app-states  $%(state-0 state-1-2-3-4-5 state-6 state-7 app-state)
 
