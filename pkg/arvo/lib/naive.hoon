@@ -1,5 +1,5 @@
 /+  tiny
-::!.
+!.
 =>  =>  tiny
 ::  Laconic bit
 ::
