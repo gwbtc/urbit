@@ -665,7 +665,7 @@
   ::                                                    ::  ++curd:of
   ++  curd                                              ::  relative moves
     |=  $:  moz=(list move)
-            pki=state-pki-3
+            pki=state-pki-4
             etn=state-eth-node
         ==
     +>(pki pki, etn etn, moz (weld (flop moz) ^moz))
@@ -685,7 +685,7 @@
   =|  moz=(list move)
   =|  $:  hen=duct
           now=@da
-          state-pki-3
+          state-pki-4
           state-eth-node
       ==
   ::  moz: moves in reverse order
@@ -1211,6 +1211,7 @@
         $:  %3
             pki=state-pki-3
             etn=state-eth-node
+            tim=[%plea (unit resend-timer)]
         ==
       +$  state-pki-3
         $:  $=  own
@@ -1281,6 +1282,7 @@
             ^-  point
             [rift life keys sponsor ~]
       ==  ==
+    ==
   ?>  ?=(%4 -.old)
   ..^$(lex old)
 ::                                                      ::  ++scry

@@ -1835,6 +1835,10 @@
           pit=(map path request-state)           :: active +peek namespace paths
           =client=chain                          :: stores keys for %shut requests
           tip=(jug =user=path [duct =ames=path]) :: reverse .pit lookup map
+          ::  a migrated flow in a weird state is tagged with a $term, and data
+          ::
+          weir=(jug side [tag=term data=*])
+
       ==
     ::
     +$  axle-25
@@ -3510,12 +3514,16 @@
             %-  ~(rep by pit.c)
             |=  [[=ames=path req=request-state-23] tip=(jug path [duct path])]
             =|  tmp-per=fren-state
-            =.  tmp-per  tmp-per(- (azimuth-state-25-to-27 +<.c), client-chain client-chain.c)
+            =.  tmp-per
+              %=  tmp-per
+                -             (azimuth-state-25-to-27 +<.c)
+                client-chain  client-chain.c
+              ==
             =+  ev-core=ev:(mesa:adult-core now eny rof)
             =.  chums.ames-state.ev-core
               (~(put by chums.ames-state) her known/tmp-per)
             =/  [=space cyf=(unit @) =user=path]
-              (ev-decrypt-path:ev-core ames-path her)
+              (decrypt-path:ev-core ames-path her)
             %-  ~(rep in for.req)
             |=  [=duct t=_tip]
             (~(put ju t) user-path [duct ames-path])
@@ -3569,6 +3577,8 @@
                   snd  snd.flow(send-window [send-window.snd.flow-state acks=~])
                   rcv  rcv.flow
             ==
+          ::
+              tip  [tip.c weir=~]
           ==
         ==
       ::
@@ -4631,7 +4641,7 @@
             ?>  ?=([%fine %shut kef=@ cyf=@ ~] rest.path.p.sage)
             =/  [key=@ ,path]  (~(got by chain.u.per) (slav %ud idx.wire))
             =/  raw=@t
-              (dy:cyf:cryc:crypto key (slav %uv cyf.rest.path.s))
+              (dy:cyf:cryc:crypto key (slav %uv cyf.rest.path.p.sage))
             =/  pax=path
               (stab raw)
             =/  dat=gage:mess
@@ -10770,11 +10780,11 @@
             =/  peer
               ::  XX if the peer doesn't previously exist we insert it
               ::  based on the chosen core in state; see find-peer
-              ?:  ?=(%ship wer)
-                :-  %ship
+              ?:  ?=(%ames wer)
+                :-  %ames
                 (gut-peer-state:(ev:ames now^eny^rof hen ames-state) ship)
               =/  chum-state  (~(get by chums.ames-state) ship)
-              :-  %chum
+              :-  %mesa
               ?.(?=([~ %known *] chum-state) *fren-state +.u.chum-state)
             =.  life.peer           life.point
             =.  rift.peer           rift.point
@@ -12020,7 +12030,8 @@
           =/  gag  [p q.q]:u.u.res  :: XX how does receiver distinguish these?
           =/  ful  (en-beam bem)
           =/  ser  (jam gag)  :: unencrypted
-          =/  sig  (sign:crypt priv ful (root:lss (met 3 ser)^ser))
+          =/  rut  (root:lss (met 3 ser)^ser)
+          =/  sig  (sign:crypt saf ful rut)
           :^  ~  ~  %message
           !>([%sign sig ser])
         ::  publisher-side, message-level (two-party encrypted namespace)
@@ -12209,10 +12220,10 @@
             [~ ~]
           =/  ful  (en-beam [[u.her %$ ud+1] pat.tyl])
           :^  ~  ~  %flag  !>  :: XX is this right?
-          %.  [(get-path-key pat.tyl u.her) u.aut ful u.rut]
+          =+  [u.aut ful u.rut]
           ?-  typ.tyl
-            %sign  verify-sig:crypt
-            %hmac  verify-mac:crypt
+            %sign  (verify-sig:crypt (get-path-pub-key pat.tyl u.her) -)
+            %hmac  (verify-mac:crypt (get-path-sym-key pat.tyl u.her) -)
           ==
         ::  metadata query; XX only flow information supported
         ::
@@ -12401,7 +12412,6 @@
                 ``noun+!>(u.chum)
                 ::
                   [%lanes ~]
->>>>>>> develop
                 ::  this duplicates the routing hack from +send-blob:ev-core
                 ::  so long as neither the peer nor the peer's sponsoring
                 ::  galaxy is  us, and the peer has been reached recently:
