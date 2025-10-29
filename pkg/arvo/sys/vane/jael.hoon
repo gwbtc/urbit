@@ -233,7 +233,7 @@
     +>.$(moz [move moz])
   ::
   ++  poke-watch
-    |=  [hen=duct app=term =purl:eyre]
+    |=  [hen=duct app=term pok=*]
     %-  emit
     :*  hen
         %pass
@@ -243,8 +243,8 @@
         [our our /jael]
         app
         %poke
-        %azimuth-poke
-        !>([%watch (crip (en-purl:html purl)) %default])
+        %noun
+        !>(pok)
     ==
   ::
   ++  sein                                              ::  sponsor
@@ -324,9 +324,12 @@
       ::  start subscriptions
       ::
       =.  +>.$
-        %^  poke-watch  hen  %azimuth
-        %+  fall  node.tac
-        (need (de-purl:html 'http://eth-mainnet.urbit.org:8545'))
+        |-  ^+  +>.^$
+        ?~  cad.tac  +>.^$
+        =.  +>.^$  (poke-watch hen i.cad.tac)
+        $(cad.tac t.cad.tac)
+        ::%+  fall  node.tac
+        ::(need (de-purl:html 'http://eth-mainnet.urbit.org:8545'))
       ::
       =.  moz
         %+  weld  moz
@@ -1249,6 +1252,7 @@
   ^-  roon
   |=  [lyc=gang pov=path car=term bem=beam]
   ^-  (unit (unit cage))
+  ~&  jael-scry=+<
   =*  ren  car
   =*  why=shop  &/p.bem
   =*  syd  q.bem

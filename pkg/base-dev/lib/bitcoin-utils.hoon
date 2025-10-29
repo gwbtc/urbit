@@ -70,13 +70,9 @@
     |=  [bitwidth=@ bs=bits]
     ^-  (list @)
     =|  res=(list @)
+    ?>  =(0 (mod wid.bs bitwidth))
     |-
-    ?:  (lth wid.bs bitwidth)
-      ?:  =(0 wid.bs)
-        res
-      =/  pad=@  (sub bitwidth wid.bs)
-      =.  res  (snoc res dat:(take:bit wid.bs bs))
-      (lsh [0 pad] res)
+    ?:  =(0 wid.bs)  res
     %=  $
         res  (snoc res dat:(take:bit bitwidth bs))
         bs   (drop:bit bitwidth bs)

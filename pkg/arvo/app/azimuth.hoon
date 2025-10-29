@@ -230,7 +230,12 @@
     ^-  (quip card _this)
     ?>  (team:title [our src]:bowl)
     ?:  =(%noun mark)
-      ?+    q.vase  !!
+      ?+    q.vase
+        %_  $
+          mark  %azimuth-poke
+          vase  !>(;;(poke-data q.vase))
+        ==
+      ::
           [%refresh-rate @]
         =.  refresh.state  +.q.vase
         [start:do this]

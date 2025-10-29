@@ -4065,8 +4065,10 @@
           spon=(list [=ship point])
           lams=(map ship point)
           turf=(list turf)
-          bloq=@ud
-          node=(unit purl:eyre)
+          :: we can make q a mark too, but need to
+          :: specify desk too, and then delay
+          :: til they're installed
+          cad=(list [p=term q=*])
       ==
     ::
     ++  to-latest
@@ -4104,7 +4106,10 @@
           lam-points
           turf.tac
           bloq.tac
-          node.tac
+        ::
+          =<  [%azimuth %watch - %default]~
+          'http://eth-mainnet.urbit.org:8545'
+        ::
       ==
     --
   ::

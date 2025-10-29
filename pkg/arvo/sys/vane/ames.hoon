@@ -7809,14 +7809,14 @@
                         ping-bone  current.ping-snd  next.ping-snd
                     ==
               ?.   ?=([~ %known *] chu)
-                ``noun+!>(~)
+                ``noun+!>([~ who])
               =,  u.chu
               =/  ducs
                 %+  skim
                   ~(tap in ~(key by by-duct.ossuary))
                 |=  =duct
                 ?=([* [%gall %use %ping @ %out @ %ping %ping ~] *] duct)
-              ?~  ducs  ``noun+!>(~)
+              ?~  ducs  ``noun+!>([~ who])
               =/  ping-bone
                 (~(got by by-duct.ossuary) -.ducs)
               =/  flow=flow-state
