@@ -50,12 +50,19 @@ jobs:
           urbit -d -F zod -c zod
 
           echo "Waiting for fakeship to boot..."
-          sleep 120
 
-          if [ -d "./zod" ]; then
-            echo "Fakeship ~zod booted successfully."
-          else
-            echo "ERROR: Fakeship failed to boot."
+          # Poll for the socket instead of a fixed sleep
+          for i in $(seq 1 30); do
+            if [ -S "./zod/.urb/conn.sock" ]; then
+              echo "Ship is up after $((i * 10)) seconds."
+              break
+            fi
+            echo "Waiting... ($((i * 10))s elapsed)"
+            sleep 10
+          done
+
+          if [ ! -S "./zod/.urb/conn.sock" ]; then
+            echo "ERROR: Ship failed to boot after 300 seconds."
             exit 1
           fi
 
@@ -65,9 +72,22 @@ jobs:
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
+          # Install nmap which includes ncat
+          sudo apt-get install -y nmap
+
           echo "Creating desk: $DESK_NAME"
 
-          # ncat is pre-installed on ubuntu github actions runners
+          # Verify the socket exists before trying to connect
+          echo "Checking for conn.sock..."
+          ls -la ./zod/.urb/
+
+          if [ ! -S "./zod/.urb/conn.sock" ]; then
+            echo "ERROR: conn.sock not found, ship may not be fully booted."
+            exit 1
+          fi
+
+          echo "Socket found, sending commands..."
+
           echo "|new-desk %buildpill" | ncat -U ./zod/.urb/conn.sock
           sleep 10
 
