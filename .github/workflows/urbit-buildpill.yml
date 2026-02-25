@@ -47,13 +47,20 @@ jobs:
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
-          urbit -F zod &
-          URBIT_PID=$!
-          echo "URBIT_PID=$URBIT_PID" >> $GITHUB_ENV
+          # Boot fakeship in daemon mode (no TTY required)
+          urbit -F -d zod
 
           # Wait for fakeship to finish booting
           echo "Waiting for fakeship to boot..."
-          sleep 60
+          sleep 120
+
+          # Confirm pier directory exists
+          if [ -d "./zod" ]; then
+            echo "Fakeship ~zod booted successfully."
+          else
+            echo "ERROR: Fakeship failed to boot."
+            exit 1
+          fi
 
           # Confirm dojo is available by checking for pier directory
           if [ -d "./zod" ]; then
@@ -69,15 +76,17 @@ jobs:
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          # Send dojo commands to the running fakeship using
-          # the -i (pipe input) approach with urbit-king / conn.c
+          # Install netcat for socket communication
+          sudo apt-get install -y netcat
+
+          # Send commands via the .urb/conn.sock unix socket
           echo "Creating desk: $DESK_NAME"
 
-          # Use the dojo pipe to send commands to the live ship
-          echo "|new-desk %buildpill" | urbit -i zod
+          # Use curl or netcat to talk to the conn socket
+          echo "|new-desk %buildpill" | nc -U ./zod/.urb/conn.sock
           sleep 10
 
-          echo "|mount %buildpill" | urbit -i zod
+          echo "|mount %buildpill" | nc -U ./zod/.urb/conn.sock
           sleep 10
 
           # Confirm the desk directory was mounted
