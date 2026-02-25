@@ -37,8 +37,8 @@ jobs:
       - name: Install Urbit binary
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
-          tar zxvf ./linux-x86_64.tgz --strip=1
-          sudo mv urbit /usr/local/bin/urbit
+          tar zxvf ./linux-x86_64.tgz
+          sudo mv urbit-v*/urbit /usr/local/bin/urbit
           urbit --version
 
       # -------------------------------------------------------
