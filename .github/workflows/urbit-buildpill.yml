@@ -65,20 +65,15 @@ jobs:
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          # Install netcat for socket communication
-          sudo apt-get install -y netcat
-
-          # Send commands via the .urb/conn.sock unix socket
           echo "Creating desk: $DESK_NAME"
 
-          # Use curl or netcat to talk to the conn socket
-          echo "|new-desk %buildpill" | nc -U ./zod/.urb/conn.sock
+          # ncat is pre-installed on ubuntu github actions runners
+          echo "|new-desk %buildpill" | ncat -U ./zod/.urb/conn.sock
           sleep 10
 
-          echo "|mount %buildpill" | nc -U ./zod/.urb/conn.sock
+          echo "|mount %buildpill" | ncat -U ./zod/.urb/conn.sock
           sleep 10
 
-          # Confirm the desk directory was mounted
           if [ -d "./zod/buildpill" ]; then
             echo "Desk 'buildpill' created and mounted successfully."
           else
