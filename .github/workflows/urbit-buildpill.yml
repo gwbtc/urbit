@@ -3,10 +3,10 @@ name: Urbit Fakeship CI/CD - buildpill Desk
 on:
   push:
     branches:
-      - main
+      - gw/next/kelvin/408
   pull_request:
     branches:
-      - main
+      - gw/next/kelvin/408
 
 jobs:
   boot-fakeship-and-create-desk:
