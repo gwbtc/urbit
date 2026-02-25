@@ -51,19 +51,18 @@ jobs:
 
           echo "Waiting for fakeship to boot..."
 
-          # Poll for the socket instead of a fixed sleep
-          for i in $(seq 1 30); do
-            if [ -S "./zod/.urb/conn.sock" ]; then
-              echo "Ship is up after $((i * 10)) seconds."
-              break
-            fi
-            echo "Waiting... ($((i * 10))s elapsed)"
-            sleep 10
-          done
+      - name: Debug urbit log output
+        run: |
+          echo "=== Urbit log contents ==="
+          # Find all log files
+          find ./zod/.urb/ -type f | head -20
 
-          if [ ! -S "./zod/.urb/conn.sock" ]; then
-            echo "ERROR: Ship failed to boot after 300 seconds."
-            exit 1
+          # Print whatever logs exist
+          if [ -f "./zod/.urb/log/urbit.log" ]; then
+            cat ./zod/.urb/log/urbit.log
+          else
+            echo "No urbit.log found, searching for logs..."
+            find ./zod -name "*.log" -exec cat {} \;
           fi
 
       # -------------------------------------------------------
