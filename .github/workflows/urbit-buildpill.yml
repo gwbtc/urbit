@@ -47,22 +47,11 @@ jobs:
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
-          # Boot fakeship in daemon mode (no TTY required)
-          urbit -F -d zod
+          urbit -d -F zod -c zod
 
-          # Wait for fakeship to finish booting
           echo "Waiting for fakeship to boot..."
           sleep 120
 
-          # Confirm pier directory exists
-          if [ -d "./zod" ]; then
-            echo "Fakeship ~zod booted successfully."
-          else
-            echo "ERROR: Fakeship failed to boot."
-            exit 1
-          fi
-
-          # Confirm dojo is available by checking for pier directory
           if [ -d "./zod" ]; then
             echo "Fakeship ~zod booted successfully."
           else
