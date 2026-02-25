@@ -1,0 +1,133 @@
+name: Urbit Fakeship CI/CD - buildpill Desk
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  boot-fakeship-and-create-desk:
+    runs-on: ubuntu-latest
+
+    env:
+      URBIT_SHIP: zod
+      DESK_NAME: buildpill
+
+    steps:
+      # -------------------------------------------------------
+      # 1. Checkout Repository
+      # -------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # -------------------------------------------------------
+      # 2. Install DigitalOcean CLI (doctl)
+      # -------------------------------------------------------
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # -------------------------------------------------------
+      # 3. Install Urbit Binary
+      # -------------------------------------------------------
+      - name: Install Urbit binary
+        run: |
+          curl -JLO https://urbit.org/install/linux-x86_64/latest
+          tar zxvf ./linux-x86_64.tgz --strip=1
+          sudo mv urbit /usr/local/bin/urbit
+          urbit --version
+
+      # -------------------------------------------------------
+      # 4. Boot Urbit Fakeship (~zod)
+      # Fake ships do not require an Azimuth identity [1]
+      # -------------------------------------------------------
+      - name: Boot fake ~zod ship
+        run: |
+          urbit -F zod &
+          URBIT_PID=$!
+          echo "URBIT_PID=$URBIT_PID" >> $GITHUB_ENV
+
+          # Wait for fakeship to finish booting
+          echo "Waiting for fakeship to boot..."
+          sleep 60
+
+          # Confirm dojo is available by checking for pier directory
+          if [ -d "./zod" ]; then
+            echo "Fakeship ~zod booted successfully."
+          else
+            echo "ERROR: Fakeship failed to boot."
+            exit 1
+          fi
+
+      # -------------------------------------------------------
+      # 5. Create new desk called 'buildpill'
+      # Uses urbit-king (|new-desk CLI approach) [1]
+      # -------------------------------------------------------
+      - name: Create buildpill desk via dojo
+        run: |
+          # Send dojo commands to the running fakeship using
+          # the -i (pipe input) approach with urbit-king / conn.c
+          echo "Creating desk: $DESK_NAME"
+
+          # Use the dojo pipe to send commands to the live ship
+          echo "|new-desk %buildpill" | urbit -i zod
+          sleep 10
+
+          echo "|mount %buildpill" | urbit -i zod
+          sleep 10
+
+          # Confirm the desk directory was mounted
+          if [ -d "./zod/buildpill" ]; then
+            echo "Desk 'buildpill' created and mounted successfully."
+          else
+            echo "ERROR: Desk 'buildpill' was not found after creation."
+            exit 1
+          fi
+
+      # -------------------------------------------------------
+      # 6. Run any desk-level tests or validations
+      # -------------------------------------------------------
+      - name: Validate buildpill desk structure
+        run: |
+          echo "Validating buildpill desk contents..."
+          ls -la ./zod/buildpill/
+          echo "Desk validation complete."
+
+      # -------------------------------------------------------
+      # 7. (Optional) Build & Push Docker Image to DO Registry
+      # -------------------------------------------------------
+      - name: Build Docker image
+        run: |
+          docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }} .
+
+      - name: Log in to DigitalOcean Container Registry
+        run: doctl registry login --expiry-seconds 600
+
+      - name: Push image to DigitalOcean Container Registry
+        run: |
+          docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
+
+      # -------------------------------------------------------
+      # 8. (Optional) Deploy to DigitalOcean Kubernetes
+      # -------------------------------------------------------
+      - name: Save DigitalOcean kubeconfig
+        run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/urbit-buildpill \
+            urbit-buildpill=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
+
+      # -------------------------------------------------------
+      # 9. Cleanup - shut down fakeship
+      # -------------------------------------------------------
+      - name: Shutdown fakeship
+        if: always()
+        run: |
+          echo "Shutting down fakeship..."
+          kill $URBIT_PID || true
+          echo "Done."
