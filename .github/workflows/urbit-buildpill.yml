@@ -1,5 +1,4 @@
 name: Urbit Fakeship CI/CD - buildpill Desk
-
 on:
   push:
     branches:
@@ -7,15 +6,12 @@ on:
   pull_request:
     branches:
       - gw/next/kelvin/408
-
 jobs:
   boot-fakeship-and-create-desk:
     runs-on: ubuntu-latest
-
     env:
       URBIT_SHIP: zod
       DESK_NAME: buildpill
-
     steps:
       # -------------------------------------------------------
       # 1. Checkout Repository
@@ -38,70 +34,167 @@ jobs:
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
-          sudo mv vere-v* /usr/local/bin/urbit
+          sudo mv vere-v*/urbit /usr/local/bin/urbit
           urbit --version
 
       # -------------------------------------------------------
-      # 4. Boot Urbit Fakeship (~zod)
-      # Fake ships do not require an Azimuth identity [1]
+      # 4. Install click (Urbit control plane CLI)
+      # -------------------------------------------------------
+      - name: Install click
+        run: |
+          curl -JLO https://github.com/urbit/click/releases/latest/download/click-linux-x86_64
+          chmod +x click-linux-x86_64
+          sudo mv click-linux-x86_64 /usr/local/bin/click
+          click --version
+
+      # -------------------------------------------------------
+      # 5. Boot Urbit Fakeship (~zod)
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
           urbit -d -F zod -c zod
-
-          echo "Waiting for fakeship to boot..."
-
-      - name: Debug urbit log output
-        run: |
-          echo "=== Urbit log contents ==="
-          # Find all log files
-          find ./zod/.urb/ -type f | head -20
-
-          # Print whatever logs exist
-          if [ -f "./zod/.urb/log/urbit.log" ]; then
-            cat ./zod/.urb/log/urbit.log
-          else
-            echo "No urbit.log found, searching for logs..."
-            find ./zod -name "*.log" -exec cat {} \;
-          fi
+          echo "Fakeship boot initiated in daemon mode."
 
       # -------------------------------------------------------
-      # 5. Create new desk called 'buildpill'
-      # Uses urbit-king (|new-desk CLI approach) [1]
+      # 6. Wait for fakeship to be fully idle
+      # Poll using a hood/mass poke via click - only succeeds
+      # when the ship is truly idle and responsive
+      # -------------------------------------------------------
+      - name: Wait for fakeship to be idle
+        run: |
+          cat > mass-hood.hoon << 'EOF'
+          =>
+          |%
+          ++  take-poke-ack
+            |=  =wire
+            =/  m  (strand ,?)
+            ^-  form:m
+            |=  tin=strand-input:strand
+            ?+  in.tin  `[%skip ~]
+                ~  `[%wait ~]
+                [~ %agent * %poke-ack *]
+              ?.  =(wire wire.u.in.tin)
+                `[%skip ~]
+              ?~  p.sign.u.in.tin
+                `[%done %.y]
+              `[%done %.n]
+            ==
+          ++  poke
+            |=  [=dock =cage]
+            =/  m  (strand ,?)
+            ^-  form:m
+            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
+            ;<  ~  bind:m  (send-raw-card card)
+            (take-poke-ack /poke)
+          --
+          =/  m  (strand ,vase)
+          ;<  [=ship =desk =case]  bind:m  get-beak
+          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '+hood/mass'] [%app %hood]]))
+          (pure:m !>(ok))
+          EOF
+
+          echo "Polling ship with mass poke until idle..."
+          for i in $(seq 1 60); do
+            echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
+            if click -k -p -i mass-hood.hoon ./zod 2>/dev/null; then
+              echo "Ship is idle and responsive after $((i * 10)) seconds."
+              exit 0
+            fi
+            echo "Ship not ready yet, waiting 10s..."
+            sleep 10
+          done
+
+          echo "ERROR: Ship never became idle after 600 seconds."
+          echo "=== Last log output ==="
+          find ./zod/.urb/ -type f | head -20
+          find ./zod -name "*.log" -exec tail -20 {} \;
+          exit 1
+
+      # -------------------------------------------------------
+      # 7. Create new desk called 'buildpill'
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          # ncat is a separate package on Ubuntu
-          sudo apt-get install -y ncat
+          cat > new-desk.hoon << 'EOF'
+          =>
+          |%
+          ++  take-poke-ack
+            |=  =wire
+            =/  m  (strand ,?)
+            ^-  form:m
+            |=  tin=strand-input:strand
+            ?+  in.tin  `[%skip ~]
+                ~  `[%wait ~]
+                [~ %agent * %poke-ack *]
+              ?.  =(wire wire.u.in.tin)
+                `[%skip ~]
+              ?~  p.sign.u.in.tin
+                `[%done %.y]
+              `[%done %.n]
+            ==
+          ++  poke
+            |=  [=dock =cage]
+            =/  m  (strand ,?)
+            ^-  form:m
+            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
+            ;<  ~  bind:m  (send-raw-card card)
+            (take-poke-ack /poke)
+          --
+          =/  m  (strand ,vase)
+          ;<  [=ship =desk =case]  bind:m  get-beak
+          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '|new-desk %buildpill'] [%app %hood]]))
+          (pure:m !>(ok))
+          EOF
 
-          echo "Creating desk: $DESK_NAME"
+          cat > mount-desk.hoon << 'EOF'
+          =>
+          |%
+          ++  take-poke-ack
+            |=  =wire
+            =/  m  (strand ,?)
+            ^-  form:m
+            |=  tin=strand-input:strand
+            ?+  in.tin  `[%skip ~]
+                ~  `[%wait ~]
+                [~ %agent * %poke-ack *]
+              ?.  =(wire wire.u.in.tin)
+                `[%skip ~]
+              ?~  p.sign.u.in.tin
+                `[%done %.y]
+              `[%done %.n]
+            ==
+          ++  poke
+            |=  [=dock =cage]
+            =/  m  (strand ,?)
+            ^-  form:m
+            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
+            ;<  ~  bind:m  (send-raw-card card)
+            (take-poke-ack /poke)
+          --
+          =/  m  (strand ,vase)
+          ;<  [=ship =desk =case]  bind:m  get-beak
+          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '|mount %buildpill'] [%app %hood]]))
+          (pure:m !>(ok))
+          EOF
 
-          # Verify the socket exists
-          echo "Checking for conn.sock..."
-          ls -la ./zod/.urb/
+          echo "Creating buildpill desk..."
+          click -k -p -i new-desk.hoon ./zod
+          sleep 5
 
-          if [ ! -S "./zod/.urb/conn.sock" ]; then
-            echo "ERROR: conn.sock not found, ship may not be fully booted."
-            exit 1
-          fi
-
-          echo "Socket found, sending commands..."
-
-          echo "|new-desk %buildpill" | ncat -U ./zod/.urb/conn.sock
-          sleep 10
-
-          echo "|mount %buildpill" | ncat -U ./zod/.urb/conn.sock
-          sleep 10
+          echo "Mounting buildpill desk..."
+          click -k -p -i mount-desk.hoon ./zod
+          sleep 5
 
           if [ -d "./zod/buildpill" ]; then
             echo "Desk 'buildpill' created and mounted successfully."
+            ls -la ./zod/buildpill/
           else
             echo "ERROR: Desk 'buildpill' was not found after creation."
             exit 1
           fi
 
       # -------------------------------------------------------
-      # 6. Run any desk-level tests or validations
+      # 8. Validate buildpill desk structure
       # -------------------------------------------------------
       - name: Validate buildpill desk structure
         run: |
@@ -110,7 +203,7 @@ jobs:
           echo "Desk validation complete."
 
       # -------------------------------------------------------
-      # 7. (Optional) Build & Push Docker Image to DO Registry
+      # 9. Build & Push Docker Image to DO Registry
       # -------------------------------------------------------
       - name: Build Docker image
         run: |
@@ -124,7 +217,7 @@ jobs:
           docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
 
       # -------------------------------------------------------
-      # 8. (Optional) Deploy to DigitalOcean Kubernetes
+      # 10. Deploy to DigitalOcean Kubernetes
       # -------------------------------------------------------
       - name: Save DigitalOcean kubeconfig
         run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
@@ -135,11 +228,18 @@ jobs:
             urbit-buildpill=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
 
       # -------------------------------------------------------
-      # 9. Cleanup - shut down fakeship
+      # 11. Cleanup - shut down fakeship
       # -------------------------------------------------------
       - name: Shutdown fakeship
         if: always()
         run: |
           echo "Shutting down fakeship..."
-          kill $URBIT_PID || true
+          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
+          if [ -n "$URBIT_PID" ]; then
+            kill $URBIT_PID || true
+            echo "Killed fakeship PID $URBIT_PID"
+          else
+            echo "No PID file found, trying pkill..."
+            pkill -f "urbit" || true
+          fi
           echo "Done."
