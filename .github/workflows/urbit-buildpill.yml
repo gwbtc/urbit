@@ -196,7 +196,7 @@ jobs:
                             %:  poke-our
                                 %hood
                                 %kiln-mount
-                                !>([(en-beam [our %buildpill [%da now]] /) %buildpill])
+                                !>([/(scot @p our)/buildpill/(scot %da now) %buildpill])
                             ==
                           (pure:m !>(~))
                           '''
