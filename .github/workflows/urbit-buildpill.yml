@@ -54,79 +54,62 @@ jobs:
           urbit -d -F zod -c zod
           echo "Fakeship boot initiated in daemon mode."
 
-      - name: Debug conn.sock raw output
-        run: |
-          echo "=== Testing raw socket response ==="
-
-          # First just check the socket is alive with the simplest possible fyrd
-          FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '(add 1 1)']"
-
-          echo "Sending: $FYRD"
-          echo ""
-
-          # Show raw bytes coming back before decode
-          RAW=$(echo "$FYRD" | urbit eval -jn 2>&1 | xxd | head -5)
-          echo "Jammed input (hex): $RAW"
-          echo ""
-
-          # Send and capture raw response as hex so we can see what we get back
-          RESPONSE=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | nc -U -W 1 ./zod/.urb/conn.sock 2>&1 | xxd | head -10)
-          echo "Raw socket response (hex): $RESPONSE"
-          echo ""
-
-          # Now try to decode it
-          DECODED=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | nc -U -W 1 ./zod/.urb/conn.sock 2>/dev/null | urbit eval -cn 2>&1)
-          echo "Decoded response: $DECODED"
       # -------------------------------------------------------
       # 6. Wait for fakeship to be fully idle
-      # Replicates what click does:
-      #   urbit eval -jn | nc -U -W 1 conn.sock | urbit eval -cn
-      # We send a helm-hi poke to hood and wait for a success
-      # response — this only works when the ship is truly idle
+      # Any %avow response means the ship is up and processing
+      # %bail or %newt-decode means not ready yet
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
           FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '(add 1 1)']"
 
+          echo "Polling ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
 
             RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 ./zod/.urb/conn.sock 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true)
 
             echo "Result: $RESULT"
 
-            if echo "$RESULT" | grep -q "2"; then
-              echo "Ship is idle after $((i * 10)) seconds."
+            # %avow means the ship responded regardless of thread outcome
+            # %bail or %newt-decode means the ship is not ready yet
+            if echo "$RESULT" | grep -q "%avow"; then
+              echo "Ship is idle and responsive after $((i * 10)) seconds."
               exit 0
             fi
 
+            echo "Ship not ready yet, waiting 10s..."
             sleep 10
           done
+
+          echo "ERROR: Ship never became idle after 600 seconds."
+          exit 1
 
       # -------------------------------------------------------
       # 7. Create new desk called 'buildpill'
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          # Helper function that replicates click behavior
-          run_thread() {
-            local HOON="$1"
-            echo "$HOON" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 1 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null
-          }
+          # |new-desk %buildpill via lens
+          NEW_DESK_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %dojo] %lens-command !>([%\$ [%dojo \"|new-desk %buildpill\"] [%app %hood]]))  (pure:m !>(~))']"
 
-          # |new-desk %buildpill
-          NEW_DESK_HOON=$'=/  m  (strand ,vase)  ;<  ~  bind:m  (poke [~zod %hood] %helm-hi !>(\\\'\\\'))  (pure:m !>(\\\'success\\\'))'
+          # |mount %buildpill via lens
+          MOUNT_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %dojo] %lens-command !>([%\$ [%dojo \"|mount %buildpill\"] [%app %hood]]))  (pure:m !>(~))']"
 
           echo "Creating buildpill desk..."
-          run_thread "[0 %fyrd [%base %khan-eval %noun %ted-eval '[0 %fyrd [%base %new-desk %noun %noun %buildpill]]']]"
+          RESULT=$(echo "$NEW_DESK_FYRD" | urbit eval -jn 2>/dev/null | \
+            nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+            urbit eval -cn 2>/dev/null || true)
+          echo "new-desk result: $RESULT"
           sleep 5
 
           echo "Mounting buildpill desk..."
-          run_thread "[0 %fyrd [%base %khan-eval %noun %ted-eval '[0 %fyrd [%base %mount %noun %noun %buildpill]]']]"
+          RESULT=$(echo "$MOUNT_FYRD" | urbit eval -jn 2>/dev/null | \
+            nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+            urbit eval -cn 2>/dev/null || true)
+          echo "mount result: $RESULT"
           sleep 5
 
           if [ -d "./zod/buildpill" ]; then
