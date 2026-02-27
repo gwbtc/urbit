@@ -173,6 +173,26 @@ jobs:
                              :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
                              ==
                          =="
+          echo "Creating buildpill desk..."
+          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
+          echo "new-desk result: $RESULT"
+
+          if echo "$RESULT" | grep -q "%avow 0"; then
+            echo "Desk created successfully."
+          else
+            echo "ERROR: Failed to create desk."
+            exit 1
+          fi
+          sleep 5
+
+      - name: Mount buildpill desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
 
           MOUNT_FYRD=":*  0
                           %fyrd
@@ -190,18 +210,6 @@ jobs:
                           :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
                           ==
                       =="
-
-          echo "Creating buildpill desk..."
-          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
-          echo "new-desk result: $RESULT"
-
-          if echo "$RESULT" | grep -q "%avow 0"; then
-            echo "Desk created successfully."
-          else
-            echo "ERROR: Failed to create desk."
-            exit 1
-          fi
-          sleep 5
 
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
