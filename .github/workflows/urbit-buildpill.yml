@@ -168,7 +168,7 @@ jobs:
                                      ==
                                    --
                                ==
-                             (pure:m !>((crip "Created desk")))
+                             (pure:m !>(~))
                              '''
                              :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
                              ==
