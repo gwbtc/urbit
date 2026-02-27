@@ -12,6 +12,8 @@ jobs:
     env:
       URBIT_SHIP: zod
       DESK_NAME: buildpill
+      PIER: ./zod
+      CONN_SOCK: ./zod/.urb/conn.sock
     steps:
       # -------------------------------------------------------
       # 1. Checkout Repository
@@ -38,14 +40,11 @@ jobs:
           urbit --version
 
       # -------------------------------------------------------
-      # 4. Install click (Urbit control plane CLI)
+      # 4. Install netcat
       # -------------------------------------------------------
-      - name: Install click
+      - name: Install netcat
         run: |
-          curl -JLO https://github.com/urbit/click/releases/latest/download/click-linux-x86_64
-          chmod +x click-linux-x86_64
-          sudo mv click-linux-x86_64 /usr/local/bin/click
-          click --version
+          sudo apt-get install -y netcat-openbsd
 
       # -------------------------------------------------------
       # 5. Boot Urbit Fakeship (~zod)
@@ -57,55 +56,37 @@ jobs:
 
       # -------------------------------------------------------
       # 6. Wait for fakeship to be fully idle
-      # Poll using a hood/mass poke via click - only succeeds
-      # when the ship is truly idle and responsive
+      # Replicates what click does:
+      #   urbit eval -jn | nc -U -W 1 conn.sock | urbit eval -cn
+      # We send a helm-hi poke to hood and wait for a success
+      # response — this only works when the ship is truly idle
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
-          cat > mass-hood.hoon << 'EOF'
-          =>
-          |%
-          ++  take-poke-ack
-            |=  =wire
-            =/  m  (strand ,?)
-            ^-  form:m
-            |=  tin=strand-input:strand
-            ?+  in.tin  `[%skip ~]
-                ~  `[%wait ~]
-                [~ %agent * %poke-ack *]
-              ?.  =(wire wire.u.in.tin)
-                `[%skip ~]
-              ?~  p.sign.u.in.tin
-                `[%done %.y]
-              `[%done %.n]
-            ==
-          ++  poke
-            |=  [=dock =cage]
-            =/  m  (strand ,?)
-            ^-  form:m
-            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
-            ;<  ~  bind:m  (send-raw-card card)
-            (take-poke-ack /poke)
-          --
-          =/  m  (strand ,vase)
-          ;<  [=ship =desk =case]  bind:m  get-beak
-          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '+hood/mass'] [%app %hood]]))
-          (pure:m !>(ok))
-          EOF
+          HOON=$'=/  m  (strand ,vase)  ;<  ~  bind:m  (poke [~zod %hood] %helm-hi !>(\\\'\\\'))  (pure:m !>(\\\'success\\\'))'
 
-          echo "Polling ship with mass poke until idle..."
+          echo "Polling ship with helm-hi poke until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-            if click -k -p -i mass-hood.hoon ./zod 2>/dev/null; then
+
+            # Replicate click: jam hoon -> send to conn.sock -> decode response
+            RESULT=$(echo "$HOON" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 1 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true)
+
+            echo "Result: $RESULT"
+
+            if echo "$RESULT" | grep -q "success"; then
               echo "Ship is idle and responsive after $((i * 10)) seconds."
               exit 0
             fi
+
             echo "Ship not ready yet, waiting 10s..."
             sleep 10
           done
 
           echo "ERROR: Ship never became idle after 600 seconds."
-          echo "=== Last log output ==="
+          echo "=== Log output ==="
           find ./zod/.urb/ -type f | head -20
           find ./zod -name "*.log" -exec tail -20 {} \;
           exit 1
@@ -115,74 +96,23 @@ jobs:
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          cat > new-desk.hoon << 'EOF'
-          =>
-          |%
-          ++  take-poke-ack
-            |=  =wire
-            =/  m  (strand ,?)
-            ^-  form:m
-            |=  tin=strand-input:strand
-            ?+  in.tin  `[%skip ~]
-                ~  `[%wait ~]
-                [~ %agent * %poke-ack *]
-              ?.  =(wire wire.u.in.tin)
-                `[%skip ~]
-              ?~  p.sign.u.in.tin
-                `[%done %.y]
-              `[%done %.n]
-            ==
-          ++  poke
-            |=  [=dock =cage]
-            =/  m  (strand ,?)
-            ^-  form:m
-            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
-            ;<  ~  bind:m  (send-raw-card card)
-            (take-poke-ack /poke)
-          --
-          =/  m  (strand ,vase)
-          ;<  [=ship =desk =case]  bind:m  get-beak
-          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '|new-desk %buildpill'] [%app %hood]]))
-          (pure:m !>(ok))
-          EOF
+          # Helper function that replicates click behavior
+          run_thread() {
+            local HOON="$1"
+            echo "$HOON" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 1 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null
+          }
 
-          cat > mount-desk.hoon << 'EOF'
-          =>
-          |%
-          ++  take-poke-ack
-            |=  =wire
-            =/  m  (strand ,?)
-            ^-  form:m
-            |=  tin=strand-input:strand
-            ?+  in.tin  `[%skip ~]
-                ~  `[%wait ~]
-                [~ %agent * %poke-ack *]
-              ?.  =(wire wire.u.in.tin)
-                `[%skip ~]
-              ?~  p.sign.u.in.tin
-                `[%done %.y]
-              `[%done %.n]
-            ==
-          ++  poke
-            |=  [=dock =cage]
-            =/  m  (strand ,?)
-            ^-  form:m
-            =/  =card:agent:gall  [%pass /poke %agent dock %poke cage]
-            ;<  ~  bind:m  (send-raw-card card)
-            (take-poke-ack /poke)
-          --
-          =/  m  (strand ,vase)
-          ;<  [=ship =desk =case]  bind:m  get-beak
-          ;<  ok=?  bind:m  (poke [ship %dojo] %lens-command !>([%$ [%dojo '|mount %buildpill'] [%app %hood]]))
-          (pure:m !>(ok))
-          EOF
+          # |new-desk %buildpill
+          NEW_DESK_HOON=$'=/  m  (strand ,vase)  ;<  ~  bind:m  (poke [~zod %hood] %helm-hi !>(\\\'\\\'))  (pure:m !>(\\\'success\\\'))'
 
           echo "Creating buildpill desk..."
-          click -k -p -i new-desk.hoon ./zod
+          run_thread "[0 %fyrd [%base %khan-eval %noun %ted-eval '[0 %fyrd [%base %new-desk %noun %noun %buildpill]]']]"
           sleep 5
 
           echo "Mounting buildpill desk..."
-          click -k -p -i mount-desk.hoon ./zod
+          run_thread "[0 %fyrd [%base %khan-eval %noun %ted-eval '[0 %fyrd [%base %mount %noun %noun %buildpill]]']]"
           sleep 5
 
           if [ -d "./zod/buildpill" ]; then
