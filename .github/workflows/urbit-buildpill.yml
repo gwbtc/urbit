@@ -93,7 +93,7 @@ jobs:
       # rather than going through dojo/lens which requires
       # a different mark structure
       # -------------------------------------------------------
-      - name: Create buildpill desk via dojo
+      - name: Create buildpill desk
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -101,79 +101,53 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-
-          # Helper that pretty-prints tanks into a readable cord
-          # Uses wash to convert tank -> tape -> cord
-          # then returns it as the vase result so we can read it
-          NEW_DESK_FYRD=":*  0
-                             %FYRD
-                             %base
-                             %khan-eval
-                             %noun
-                             %ted-eval
-                             '''
-                             =/  m  (strand ,vase)
-                             ;<  [=ship =desk =case]  bind:m  get-beak
-                             =/  res
-                               %-  mule  |.
-                               (poke [ship %hood] %helm-new-desk !>(%buildpill))
-                             ?-  res
-                               [%& *]  (pure:m !>(~))
-                               [%| *]
-                                 =/  =tang  p.res
-                                 =/  =tape  ~(ram re [%rose [~ ~] tang])
-                                 (pure:m !>((crip tape)))
-                             ==
-                             '''
-                         =="
-
-          MOUNT_FYRD=":*  0
-                          %FYRD
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          '''
-                          =/  m  (strand ,vase)
-                          ;<  [=ship =desk =case]  bind:m  get-beak
-                          =/  res
-                            %-  mule  |.
-                            (poke [ship %hood] %helm-mount !>([~ %buildpill]))
-                          ?-  res
-                            [%& *]  (pure:m !>(~))
-                            [%| *]
-                              =/  =tang  p.res
-                              =/  =tape  ~(ram re [%rose [~ ~] tang])
-                              (pure:m !>((crip tape)))
-                          ==
-                          '''
-                      =="
-
+      
+          # Invoke the +new-desk generator directly
+          # The generator signature is:
+          #   [=desk ~]
+          #   [from=$~(%base desk) hard=_| gall=_|]
+          # We set hard=%.y to skip the interactive prompt
+          # and gall=%.n since we just want a minimal desk [1]
+          NEW_DESK_FYRD="[0 %fyrd %base %ted-eval %noun %noun '
+            =/  m  (strand ,vase)
+            ;<  [=ship =desk =case]  bind:m  get-beak
+            =/  gen-input
+              ^-  $:  [=desk ~]
+                      [from=^desk hard=? gall=?]
+                  ==
+              [[%buildpill ~] [%base %.y %.n]]
+            ;<  ~  bind:m
+              %-  poke
+              :*  [ship %dojo]
+                  %noun
+                  !>(gen-input)
+              ==
+            (pure:m !>(~))
+          ']"
+      
           echo "Creating buildpill desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
-          echo "new-desk result: $RESULT"
-
-          if echo "$RESULT" | grep -q "%poke-fail\|%thread-fail\|%crash"; then
-            echo "ERROR: Failed to create desk. See result above."
-            exit 1
-          fi
+          echo "Result: $RESULT"
           sleep 5
-
+      
+          MOUNT_FYRD="[0 %fyrd %base %ted-eval %noun %noun '
+            =/  m  (strand ,vase)
+            ;<  [=ship =desk =case]  bind:m  get-beak
+            ;<  ~  bind:m
+              (poke [ship %hood] %helm-mount !>([~ %buildpill]))
+            (pure:m !>(~))
+          ']"
+      
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
-          echo "mount result: $RESULT"
-
-          if echo "$RESULT" | grep -q "%poke-fail\|%thread-fail\|%crash"; then
-            echo "ERROR: Failed to mount desk. See result above."
-            exit 1
-          fi
+          echo "Result: $RESULT"
           sleep 5
-
+      
           if [ -d "./zod/buildpill" ]; then
             echo "Desk 'buildpill' created and mounted successfully."
             ls -la ./zod/buildpill/
           else
-            echo "ERROR: Desk 'buildpill' was not found after creation."
+            echo "ERROR: Desk 'buildpill' was not found."
             exit 1
           fi
 
