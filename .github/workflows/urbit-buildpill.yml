@@ -61,7 +61,17 @@ jobs:
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
-          FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '(add 1 1)']"
+          FYRD=":*  0
+                    %fyrd
+                    %base
+                    %khan-eval
+                    %noun
+                    %ted-eval
+                    '''
+                    =/  m  (strand ,vase)
+                    (pure:m !>('Success!'))
+                    '''
+                =="
 
           echo "Polling ship until idle..."
           for i in $(seq 1 60); do
