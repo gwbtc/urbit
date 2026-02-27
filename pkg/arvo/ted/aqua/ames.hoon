@@ -50,7 +50,7 @@
     %+  emit-aqua-events  our
     :_  ~
     :-  %read
-    [[[rcvr rcvr-tick.shot] path.peep] [hear-lane sndr-tick.shot] num.peep]
+    [[[u.rcvr rcvr-tick.shot] path.peep] [hear-lane sndr-tick.shot] num.peep]
   =+  ^=  peers
       ;;  (unit (map ship ?(%alien %known)))
       .^  *
@@ -58,7 +58,7 @@
           (scot %p our)
           %aqua
           (scot %da now)
-          /i/(scot %p rcvr)/ax/(scot %p rcvr)//(scot %da now)/peers/noun
+          /i/(scot %p u.rcvr)/ax/(scot %p u.rcvr)//(scot %da now)/peers/noun
       ==
   =/  is-known=?
     ?.  ?=(^ peers)  |
@@ -74,7 +74,7 @@
           ::
           :: =-  ~?  -  %not-forwarded
           ::     -
-          =(rcvr rcvr.shot)
+          =(u.rcvr rcvr.shot)
           =+  ;;(out=(soft [~ signature=@ signed=@]) (mole |.((cue content.shot))))
           ?|  ?&  ?=(~ out)
                   ::  if this is not an attestation packet, check that the receiver
@@ -95,13 +95,13 @@
     ~
   :: ~&  >>   "inject packet"^content.shot
   %+  emit-aqua-events  our
-  [%event rcvr /a/newt/0v1n.2m9vh %hear hear-lane pac]~
+  [%event u.rcvr /a/newt/0v1n.2m9vh %hear hear-lane pac]~
 ::  XX  this should use the (TODO) message layer in %ames
 ::
 ++  handle-push
   =,  ames
   |=  [our=ship now=@da sndr=@p way=wire %push lan=(list lane:pact:ames) q=@]
-  ^-  (list card:agent:gall)
+  ^-  (quip card:agent:gall fiefs)
   =/  =pact:pact:ames  (parse-packet:ames-raw q)
   =/  rcvr=ship
     ?-  +<.pact
@@ -112,6 +112,7 @@
              `@p`i.lan
     ==
   =/  lan=lane:pact:ames  ?:(?=(%page +<.pact) `@ux`rcvr `@ux`sndr)
+  :_  fez
   %+  emit-aqua-events  our
   [%event rcvr /a/newt/0v1n.2m9vh %heer lan q]~
 ::  +lane-to-ship: decode a ship from an aqua lane
