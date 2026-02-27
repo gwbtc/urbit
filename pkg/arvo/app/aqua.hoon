@@ -887,7 +887,10 @@
   |=  [who=ship feed=(unit feed:jael)]
   ^-  dawn-event:jael
   =/  clan  (clan:title who)
+  =/  suite=?(%b %c)
+    suite:(~(gut by comets:aqua-azimuth) who [suite=%b seed=*@uw])
   =/  spon=(list [ship point:jael])
+    ?:  =(suite %c)  ~
     %-  flop
     |-  ^-  (list [ship point:jael])
     =/  =ship  (^sein:title who)
