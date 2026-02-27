@@ -116,8 +116,6 @@ jobs:
                                      /lib/strandio/hoon
                                  ==
                              '''
-                             /-  spider
-                             /+  *strandio
                              =/  m  (strand ,vase)
                              ^-  form:m
                              ;<  =beak  bind:m  get-beak
@@ -191,12 +189,9 @@ jobs:
                           %noun
                           %ted-eval
                           :_  :~  /sur/spider/hoon
-                              /lib/strandio/hoon
-                          ==
+                                  /lib/strandio/hoon
+                              ==
                           '''
-                          /-  spider
-                          /+  *strandio
-                          =,  strand=strand:spider
                           =/  m  (strand ,vase)
                           ^-  form:m
                           ;<  our=@p   bind:m  get-our
