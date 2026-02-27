@@ -114,10 +114,7 @@ jobs:
                              '''
                              /-  spider
                              /+  *strandio
-                             =,  strand=strand:spider
-                             ^-  thread:spider
-                             |=  *
-                             =/  m  (strand:spider ,vase)
+                             =/  m  (strand ,vase)
                              ^-  form:m
                              ;<  =beak  bind:m  get-beak
                              ;<  ~  bind:m
@@ -168,6 +165,9 @@ jobs:
                                ==
                              (pure:m !>(~))
                              '''
+                            :~  /sur/spider/hoon
+                                /lib/strandio/hoon
+                            ==
                          =="
           echo "Creating buildpill desk..."
           sleep 5
@@ -191,8 +191,6 @@ jobs:
                           /-  spider
                           /+  *strandio
                           =,  strand=strand:spider
-                          ^-  thread:spider
-                          |=  *
                           =/  m  (strand:spider ,vase)
                           ^-  form:m
                           ;<  our=@p   bind:m  get-our
