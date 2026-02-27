@@ -105,35 +105,49 @@ jobs:
           # Helper that pretty-prints tanks into a readable cord
           # Uses wash to convert tank -> tape -> cord
           # then returns it as the vase result so we can read it
-          NEW_DESK_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '
-            =/  m  (strand ,vase)
-            ;<  [=ship =desk =case]  bind:m  get-beak
-            =/  res
-              %-  mule  |.
-              (poke [ship %hood] %helm-new-desk !>(%buildpill))
-            ?-  res
-              [%& *]  (pure:m !>(~))
-              [%| *]
-                =/  =tang  p.res
-                =/  =tape  ~(ram re [%rose [~ ~] tang])
-                (pure:m !>((crip tape)))
-            ==
-          ']"
+          NEW_DESK_FYRD=":*  0
+                             %FYRD
+                             %base
+                             %khan-eval
+                             %noun
+                             %ted-eval
+                             '''
+                             =/  m  (strand ,vase)
+                             ;<  [=ship =desk =case]  bind:m  get-beak
+                             =/  res
+                               %-  mule  |.
+                               (poke [ship %hood] %helm-new-desk !>(%buildpill))
+                             ?-  res
+                               [%& *]  (pure:m !>(~))
+                               [%| *]
+                                 =/  =tang  p.res
+                                 =/  =tape  ~(ram re [%rose [~ ~] tang])
+                                 (pure:m !>((crip tape)))
+                             ==
+                             '''
+                         =="
 
-          MOUNT_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '
-            =/  m  (strand ,vase)
-            ;<  [=ship =desk =case]  bind:m  get-beak
-            =/  res
-              %-  mule  |.
-              (poke [ship %hood] %helm-mount !>([~ %buildpill]))
-            ?-  res
-              [%& *]  (pure:m !>(~))
-              [%| *]
-                =/  =tang  p.res
-                =/  =tape  ~(ram re [%rose [~ ~] tang])
-                (pure:m !>((crip tape)))
-            ==
-          ']"
+          MOUNT_FYRD=":*  0
+                          %FYRD
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          '''
+                          =/  m  (strand ,vase)
+                          ;<  [=ship =desk =case]  bind:m  get-beak
+                          =/  res
+                            %-  mule  |.
+                            (poke [ship %hood] %helm-mount !>([~ %buildpill]))
+                          ?-  res
+                            [%& *]  (pure:m !>(~))
+                            [%| *]
+                              =/  =tang  p.res
+                              =/  =tape  ~(ram re [%rose [~ ~] tang])
+                              (pure:m !>((crip tape)))
+                          ==
+                          '''
+                      =="
 
           echo "Creating buildpill desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
