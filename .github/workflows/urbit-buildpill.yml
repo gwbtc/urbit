@@ -112,11 +112,63 @@ jobs:
                              %noun
                              %ted-eval
                              '''
-                             =/  m  (strand ,vase)
-                             ;<  =beak:rand  bind:m  get-beak
+                             /-  spider
+                             /+  *strandio
+                             =,  strand=strand:spider
+                             |=  raw=vase
+                             =+  !<(dek=(unit desk) raw)
+                             ?~  dek
+                               ~|(%missing-desk !!)
+                             =/  m  (strand:spider ,vase)
+                             ^-  form:m
+                             ;<  =beak  bind:m  get-beak
                              ;<  ~  bind:m
-                               (poke [ship.beak %hood] %helm-new-desk !>(%buildpill))
-                             (pure:m !>('new-desk success'))
+                               %:  send-raw-card
+                                   %pass   /make-new-desk
+                                   %agent  [p.beak %hood]
+                                   %poke   %helm-pass
+                                   !>  ^-  note-arvo
+                                   %^    new-desk:cloy
+                                       u.dek
+                                     ~
+                                   %-  ~(gas by *(map path page:clay))
+                                   |^  =-  (turn - mage)
+                                       ^-  (list path)
+                                       =/  common-files=(list path)
+                                         :~
+                                           /mar/noun/hoon
+                                           /mar/hoon/hoon
+                                           /mar/txt/hoon
+                                           /mar/kelvin/hoon
+                                           /sys/kelvin
+                                         ==
+                                       =/  extra-files=(list path)
+                                         :~
+                                           /mar/bill/hoon
+                                           /mar/mime/hoon
+                                           /mar/json/hoon
+                                           /lib/skeleton/hoon
+                                           /lib/default-agent/hoon
+                                           /lib/dbug/hoon
+                                         ==
+                                       (weld common-files extra-files)
+                                   ::
+                                   ++  mage
+                                     |=  =path
+                                     :-  path
+                                     ^-  page:clay
+                                     :-  (rear path)
+                                     ~|  [%missing-source-file %base path]
+                                     .^  *
+                                       %cx
+                                       (scot %p p.beak)
+                                       %base
+                                       (scot %da p.r.beak)
+                                       path
+                                     ==
+                                   --
+                               ==
+                             (pure:m !>((crip "Created desk {<u.dek>}")))
                              '''
                              :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
                              ==
