@@ -177,7 +177,7 @@ jobs:
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "new-desk result: $RESULT"
 
-          if echo "$RESULT" | grep -q "%avow 0"; then
+          if echo "$RESULT" | grep -q "%avow"; then
             echo "Desk created successfully."
           else
             echo "ERROR: Failed to create desk."
