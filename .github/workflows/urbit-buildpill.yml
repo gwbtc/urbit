@@ -106,19 +106,21 @@ jobs:
           }
 
           NEW_DESK_FYRD=":*  0
-                              %fyrd
-                              %base
-                              %khan-eval
-                              %noun
-                              %ted-eval
-                              '''
-                              =/  m  (strand ,vase)
-                              ;<  [=ship =desk =case]  bind:m  get-beak
-                              ;<  ~  bind:m
-                                (poke [ship %hood] %helm-new-desk !>(%buildpill))
-                              (pure:m !>('new-desk success'))
-                              '''
-                          =="
+                             %fyrd
+                             %base
+                             %khan-eval
+                             %noun
+                             %ted-eval
+                             '''
+                             =/  m  (strand ,vase)
+                             ;<  =beak:rand  bind:m  get-beak
+                             ;<  ~  bind:m
+                               (poke [ship.beak %hood] %helm-new-desk !>(%buildpill))
+                             (pure:m !>('new-desk success'))
+                             '''
+                             :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
+                             ==
+                         =="
 
           MOUNT_FYRD=":*  0
                           %fyrd
