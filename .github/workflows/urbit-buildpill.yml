@@ -189,14 +189,17 @@ jobs:
                           /-  spider
                           /+  *strandio
                           =,  strand=strand:spider
+                          ^-  thread:spider
+                          |=  *
                           =/  m  (strand:spider ,vase)
+                          ^-  form:m
                           ;<  our=@p   bind:m  get-our
                           ;<  now=@da  bind:m  get-time
                           ;<  ~  bind:m
                             %:  poke-our
                                 %hood
                                 %kiln-mount
-                                !>([/(scot @p our)/buildpill/(scot %da now) %buildpill])
+                                !>([(en-beam [[our %buildpill [%da now]] /]) %buildpill])
                             ==
                           (pure:m !>(~))
                           '''
