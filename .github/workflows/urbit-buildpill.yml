@@ -170,8 +170,6 @@ jobs:
                                ==
                              (pure:m !>(~))
                              '''
-                             :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
-                             ==
                          =="
           echo "Creating buildpill desk..."
           sleep 5
@@ -195,10 +193,19 @@ jobs:
                           /-  spider
                           /+  *strandio
                           =,  strand=strand:spider
-                          =/  m  (strand ,vase)
-                          ;<  =beak  bind:m  get-beak
+                          |=  raw=vase
+                          =+  !<(dek=(unit desk) raw)
+                          ?~  dek
+                           ~|(%missing-desk !!)
+                          =/  m  (strand:spider ,vase)
+                          ;<  our=@p   bind:m  get-our
+                          ;<  now=@da  bind:m  get-time
                           ;<  ~  bind:m
-                            (poke [p.beak %hood] %kiln-mount !>([(en-beam [p.beak q.beak [%da p.r.beak]] /) %buildpill]))
+                            %:  poke-our
+                                %hood
+                                %kiln-mount
+                                !>([(en-beam [our u.dek [%da now]] /) u.dek])
+                            ==
                           (pure:m !>(~))
                           '''
                       =="
