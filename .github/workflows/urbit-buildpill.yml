@@ -184,9 +184,11 @@ jobs:
                           =/  m  (strand ,vase)
                           ;<  [=ship =desk =case]  bind:m  get-beak
                           ;<  ~  bind:m
-                            (poke [ship %hood] %helm-mount !>([~ %buildpill]))
-                          (pure:m !>('mount success'))
+                            (poke [ship %hood] %kiln-mount !>([(en-beam [ship desk [%da p.case]] /) %buildpill]))
+                          (pure:m !>(~))
                           '''
+                          :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
+                          ==
                       =="
 
           echo "Creating buildpill desk..."
