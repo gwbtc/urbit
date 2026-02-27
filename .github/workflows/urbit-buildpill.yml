@@ -89,26 +89,32 @@ jobs:
 
       # -------------------------------------------------------
       # 7. Create new desk called 'buildpill'
+      # Poke %hood directly with %helm-new-desk and %helm-mount
+      # rather than going through dojo/lens which requires
+      # a different mark structure
       # -------------------------------------------------------
       - name: Create buildpill desk via dojo
         run: |
-          # |new-desk %buildpill via lens
-          NEW_DESK_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %dojo] %lens-command !>([%\$ [%dojo \"|new-desk %buildpill\"] [%app %hood]]))  (pure:m !>(~))']"
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
 
-          # |mount %buildpill via lens
-          MOUNT_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %dojo] %lens-command !>([%\$ [%dojo \"|mount %buildpill\"] [%app %hood]]))  (pure:m !>(~))']"
+          # Poke %hood directly with %helm-new-desk
+          NEW_DESK_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %hood] %helm-new-desk !>(%buildpill))  (pure:m !>(~))']"
+
+          # Poke %hood directly with %helm-mount
+          MOUNT_FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '=/  m  (strand ,vase)  ;<  [=ship =desk =case]  bind:m  get-beak  ;<  ~  bind:m  (poke [ship %hood] %helm-mount !>([~ %buildpill]))  (pure:m !>(~))']"
 
           echo "Creating buildpill desk..."
-          RESULT=$(echo "$NEW_DESK_FYRD" | urbit eval -jn 2>/dev/null | \
-            nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-            urbit eval -cn 2>/dev/null || true)
+          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "new-desk result: $RESULT"
           sleep 5
 
           echo "Mounting buildpill desk..."
-          RESULT=$(echo "$MOUNT_FYRD" | urbit eval -jn 2>/dev/null | \
-            nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-            urbit eval -cn 2>/dev/null || true)
+          RESULT=$(send_fyrd "$MOUNT_FYRD")
           echo "mount result: $RESULT"
           sleep 5
 
