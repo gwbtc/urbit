@@ -115,6 +115,8 @@ jobs:
                              /-  spider
                              /+  *strandio
                              =,  strand=strand:spider
+                             ^-  thread:spider
+                             |=  *
                              =/  m  (strand:spider ,vase)
                              ^-  form:m
                              ;<  =beak  bind:m  get-beak
