@@ -204,6 +204,8 @@ jobs:
 
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
+          files="$(ls)"
+          echo $files
 
           if [ -e "/zod/buildpill/sys.kelvin" ]; then
             echo "Desk mounted successfully."
