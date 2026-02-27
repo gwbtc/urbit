@@ -914,7 +914,7 @@
       feed
       spon
       get-czars
-      ~[/arvo/netw/ork]
+      `(list turf)`~[/arvo/netw/ork]
       `(need (de-purl:html 'http://fake.aqua.domain/'))
       *(list (pair @tas *))
   ==
