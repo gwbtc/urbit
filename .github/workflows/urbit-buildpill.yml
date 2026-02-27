@@ -205,13 +205,13 @@ jobs:
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
 
+          sleep 5
           if [ -e "./zod/buildpill/sys.kelvin" ]; then
             echo "Desk mounted successfully."
             cat ./zod/buildpill/sys.kelvin
           else
             echo "ERROR: Failed to mount desk - $RESULT"
           fi
-          sleep 5
 
       # -------------------------------------------------------
       # 8. Validate buildpill desk structure
