@@ -115,10 +115,6 @@ jobs:
                              /-  spider
                              /+  *strandio
                              =,  strand=strand:spider
-                             |=  raw=vase
-                             =+  !<(dek=(unit desk) raw)
-                             ?~  dek
-                               ~|(%missing-desk !!)
                              =/  m  (strand:spider ,vase)
                              ^-  form:m
                              ;<  =beak  bind:m  get-beak
@@ -129,7 +125,7 @@ jobs:
                                    %poke   %helm-pass
                                    !>  ^-  note-arvo
                                    %^    new-desk:cloy
-                                       u.dek
+                                       %buildpill
                                      ~
                                    %-  ~(gas by *(map path page:clay))
                                    |^  =-  (turn - mage)
@@ -193,10 +189,6 @@ jobs:
                           /-  spider
                           /+  *strandio
                           =,  strand=strand:spider
-                          |=  raw=vase
-                          =+  !<(dek=(unit desk) raw)
-                          ?~  dek
-                           ~|(%missing-desk !!)
                           =/  m  (strand:spider ,vase)
                           ;<  our=@p   bind:m  get-our
                           ;<  now=@da  bind:m  get-time
@@ -204,7 +196,7 @@ jobs:
                             %:  poke-our
                                 %hood
                                 %kiln-mount
-                                !>([(en-beam [our u.dek [%da now]] /) u.dek])
+                                !>([(en-beam [our %buildpill [%da now]] /) %buildpill])
                             ==
                           (pure:m !>(~))
                           '''
