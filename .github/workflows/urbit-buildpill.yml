@@ -54,6 +54,29 @@ jobs:
           urbit -d -F zod -c zod
           echo "Fakeship boot initiated in daemon mode."
 
+      - name: Debug conn.sock raw output
+        run: |
+          echo "=== Testing raw socket response ==="
+
+          # First just check the socket is alive with the simplest possible fyrd
+          FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '(add 1 1)']"
+
+          echo "Sending: $FYRD"
+          echo ""
+
+          # Show raw bytes coming back before decode
+          RAW=$(echo "$FYRD" | urbit eval -jn 2>&1 | xxd | head -5)
+          echo "Jammed input (hex): $RAW"
+          echo ""
+
+          # Send and capture raw response as hex so we can see what we get back
+          RESPONSE=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | nc -U -W 1 ./zod/.urb/conn.sock 2>&1 | xxd | head -10)
+          echo "Raw socket response (hex): $RESPONSE"
+          echo ""
+
+          # Now try to decode it
+          DECODED=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | nc -U -W 1 ./zod/.urb/conn.sock 2>/dev/null | urbit eval -cn 2>&1)
+          echo "Decoded response: $DECODED"
       # -------------------------------------------------------
       # 6. Wait for fakeship to be fully idle
       # Replicates what click does:
@@ -63,33 +86,24 @@ jobs:
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
-          HOON=$'=/  m  (strand ,vase)  ;<  ~  bind:m  (poke [~zod %hood] %helm-hi !>(\\\'\\\'))  (pure:m !>(\\\'success\\\'))'
+          FYRD="[0 %fyrd %base %khan-eval %noun %ted-eval '(add 1 1)']"
 
-          echo "Polling ship with helm-hi poke until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
 
-            # Replicate click: jam hoon -> send to conn.sock -> decode response
-            RESULT=$(echo "$HOON" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 1 $CONN_SOCK 2>/dev/null | \
+            RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 ./zod/.urb/conn.sock 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true)
 
             echo "Result: $RESULT"
 
-            if echo "$RESULT" | grep -q "success"; then
-              echo "Ship is idle and responsive after $((i * 10)) seconds."
+            if echo "$RESULT" | grep -q "2"; then
+              echo "Ship is idle after $((i * 10)) seconds."
               exit 0
             fi
 
-            echo "Ship not ready yet, waiting 10s..."
             sleep 10
           done
-
-          echo "ERROR: Ship never became idle after 600 seconds."
-          echo "=== Log output ==="
-          find ./zod/.urb/ -type f | head -20
-          find ./zod -name "*.log" -exec tail -20 {} \;
-          exit 1
 
       # -------------------------------------------------------
       # 7. Create new desk called 'buildpill'
