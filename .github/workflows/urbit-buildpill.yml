@@ -36,7 +36,7 @@ jobs:
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
-          sudo mv vere-v* /usr/local/bin/urbit
+          sudo mv vere-v*/urbit /usr/local/bin/urbit
           urbit --version
 
       # -------------------------------------------------------
@@ -56,8 +56,6 @@ jobs:
 
       # -------------------------------------------------------
       # 6. Wait for fakeship to be fully idle
-      # Any %avow response means the ship is up and processing
-      # %bail or %newt-decode means not ready yet
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
@@ -83,8 +81,6 @@ jobs:
 
             echo "Result: $RESULT"
 
-            # %avow means the ship responded regardless of thread outcome
-            # %bail or %newt-decode means the ship is not ready yet
             if echo "$RESULT" | grep -q "%avow"; then
               echo "Ship is idle and responsive after $((i * 10)) seconds."
               exit 0
@@ -99,11 +95,8 @@ jobs:
 
       # -------------------------------------------------------
       # 7. Create new desk called 'buildpill'
-      # Poke %hood directly with %helm-new-desk and %helm-mount
-      # rather than going through dojo/lens which requires
-      # a different mark structure
       # -------------------------------------------------------
-      - name: Create buildpill desk via dojo
+      - name: Create buildpill desk
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -112,33 +105,23 @@ jobs:
               urbit eval -cn 2>/dev/null || true
           }
 
-          # Helper that pretty-prints tanks into a readable cord
-          # Uses wash to convert tank -> tape -> cord
-          # then returns it as the vase result so we can read it
           NEW_DESK_FYRD=":*  0
-                             %FYRD
-                             %base
-                             %khan-eval
-                             %noun
-                             %ted-eval
-                             '''
-                             =/  m  (strand ,vase)
-                             ;<  [=ship =desk =case]  bind:m  get-beak
-                             =/  res
-                               %-  mule  |.
-                               (poke [ship %hood] %helm-new-desk !>(%buildpill))
-                             ?-  res
-                               [%& *]  (pure:m !>(~))
-                               [%| *]
-                                 =/  =tang  p.res
-                                 =/  =tape  ~(ram re [%rose [~ ~] tang])
-                                 (pure:m !>((crip tape)))
-                             ==
-                             '''
-                         =="
+                              %fyrd
+                              %base
+                              %khan-eval
+                              %noun
+                              %ted-eval
+                              '''
+                              =/  m  (strand ,vase)
+                              ;<  [=ship =desk =case]  bind:m  get-beak
+                              ;<  ~  bind:m
+                                (poke [ship %hood] %helm-new-desk !>(%buildpill))
+                              (pure:m !>('new-desk success'))
+                              '''
+                          =="
 
           MOUNT_FYRD=":*  0
-                          %FYRD
+                          %fyrd
                           %base
                           %khan-eval
                           %noun
@@ -146,16 +129,9 @@ jobs:
                           '''
                           =/  m  (strand ,vase)
                           ;<  [=ship =desk =case]  bind:m  get-beak
-                          =/  res
-                            %-  mule  |.
+                          ;<  ~  bind:m
                             (poke [ship %hood] %helm-mount !>([~ %buildpill]))
-                          ?-  res
-                            [%& *]  (pure:m !>(~))
-                            [%| *]
-                              =/  =tang  p.res
-                              =/  =tape  ~(ram re [%rose [~ ~] tang])
-                              (pure:m !>((crip tape)))
-                          ==
+                          (pure:m !>('mount success'))
                           '''
                       =="
 
@@ -163,8 +139,10 @@ jobs:
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "new-desk result: $RESULT"
 
-          if echo "$RESULT" | grep -q "%poke-fail\|%thread-fail\|%crash"; then
-            echo "ERROR: Failed to create desk. See result above."
+          if echo "$RESULT" | grep -q "%avow 0"; then
+            echo "Desk created successfully."
+          else
+            echo "ERROR: Failed to create desk."
             exit 1
           fi
           sleep 5
@@ -173,8 +151,10 @@ jobs:
           RESULT=$(send_fyrd "$MOUNT_FYRD")
           echo "mount result: $RESULT"
 
-          if echo "$RESULT" | grep -q "%poke-fail\|%thread-fail\|%crash"; then
-            echo "ERROR: Failed to mount desk. See result above."
+          if echo "$RESULT" | grep -q "%avow 0"; then
+            echo "Desk mounted successfully."
+          else
+            echo "ERROR: Failed to mount desk."
             exit 1
           fi
           sleep 5
@@ -183,7 +163,7 @@ jobs:
             echo "Desk 'buildpill' created and mounted successfully."
             ls -la ./zod/buildpill/
           else
-            echo "ERROR: Desk 'buildpill' was not found after creation."
+            echo "ERROR: Desk 'buildpill' was not found on filesystem."
             exit 1
           fi
 
