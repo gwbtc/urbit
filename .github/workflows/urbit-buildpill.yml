@@ -192,6 +192,9 @@ jobs:
                           %noun
                           %ted-eval
                           '''
+                          /-  spider
+                          /+  *strandio
+                          =,  strand=strand:spider
                           =/  m  (strand ,vase)
                           ;<  [=ship =desk =case]  bind:m  get-beak
                           ;<  ~  bind:m
@@ -205,11 +208,11 @@ jobs:
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
 
-          if [ -e "./zod/buildpill/sys.kelvin" ]; then
-            echo "Desk mounted successfully."
-          else
-            echo "ERROR: Failed to mount desk - $RESULT"
-          fi
+          # if [ -e "./zod/buildpill/sys.kelvin" ]; then
+          #   echo "Desk mounted successfully."
+          # else
+          #   echo "ERROR: Failed to mount desk - $RESULT"
+          # fi
           sleep 5
 
           if [ -d "./zod/buildpill" ]; then
