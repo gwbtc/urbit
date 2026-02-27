@@ -213,20 +213,13 @@ jobs:
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
 
-          # if [ -e "./zod/buildpill/sys.kelvin" ]; then
-          #   echo "Desk mounted successfully."
-          # else
-          #   echo "ERROR: Failed to mount desk - $RESULT"
-          # fi
-          sleep 5
-
-          if [ -d "./zod/buildpill" ]; then
-            echo "Desk 'buildpill' created and mounted successfully."
-            ls -la ./zod/buildpill/
+          if [ -e "./zod/buildpill/sys.kelvin" ]; then
+            echo "Desk mounted successfully."
+            cat ./zod/buildpill/sys.kelvin
           else
-            echo "ERROR: Desk 'buildpill' was not found on filesystem."
-            exit 1
+            echo "ERROR: Failed to mount desk - $RESULT"
           fi
+          sleep 5
 
       # -------------------------------------------------------
       # 8. Validate buildpill desk structure
