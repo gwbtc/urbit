@@ -163,13 +163,15 @@ jobs:
                                      ==
                                    --
                                ==
-                             (pure:m !>(~))
+                            (pure:m !>('Created desk!'))
                              '''
                             :~  /sur/spider/hoon
                                 /lib/strandio/hoon
                             ==
                          =="
           echo "Creating buildpill desk..."
+          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
+          echo "Result: $RESULT"
           sleep 5
 
       - name: Mount buildpill desk
@@ -191,7 +193,7 @@ jobs:
                           /-  spider
                           /+  *strandio
                           =,  strand=strand:spider
-                          =/  m  (strand:spider ,vase)
+                          =/  m  (strand ,vase)
                           ^-  form:m
                           ;<  our=@p   bind:m  get-our
                           ;<  now=@da  bind:m  get-time
@@ -203,6 +205,9 @@ jobs:
                             ==
                           (pure:m !>(~))
                           '''
+                          :~  /sur/spider/hoon
+                              /lib/strandio/hoon
+                          ==
                       =="
 
           echo "Mounting buildpill desk..."
