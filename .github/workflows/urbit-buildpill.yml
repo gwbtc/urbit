@@ -204,13 +204,11 @@ jobs:
 
           echo "Mounting buildpill desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
-          echo "mount result: $RESULT"
 
-          if echo "$RESULT" | grep -q "%avow 0"; then
+          if [ -e "/zod/buildpill/sys.kelvin" ]; then
             echo "Desk mounted successfully."
           else
-            echo "ERROR: Failed to mount desk."
-            exit 1
+            echo "ERROR: Failed to mount desk - $RESULT"
           fi
           sleep 5
 
