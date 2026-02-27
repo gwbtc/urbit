@@ -168,7 +168,7 @@ jobs:
                                      ==
                                    --
                                ==
-                             (pure:m !>((crip "Created desk {<u.dek>}")))
+                             (pure:m !>((crip "Created desk")))
                              '''
                              :~  /(scot %p p.beak)/base/(scot %da q.beak)/lib/strandio/hoon
                              ==
