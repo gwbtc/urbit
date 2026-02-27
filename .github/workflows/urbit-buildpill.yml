@@ -65,6 +65,7 @@ jobs:
                     %khan-eval
                     %noun
                     %ted-eval
+                    :_  ~
                     '''
                     =/  m  (strand ,vase)
                     (pure:m !>('Success!'))
@@ -111,6 +112,9 @@ jobs:
                              %khan-eval
                              %noun
                              %ted-eval
+                             :_  :~  /sur/spider/hoon
+                                     /lib/strandio/hoon
+                                 ==
                              '''
                              /-  spider
                              /+  *strandio
@@ -163,11 +167,8 @@ jobs:
                                      ==
                                    --
                                ==
-                            (pure:m !>('Created desk!'))
+                             (pure:m !>('Created desk!'))
                              '''
-                            :~  /sur/spider/hoon
-                                /lib/strandio/hoon
-                            ==
                          =="
           echo "Creating buildpill desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
@@ -189,6 +190,9 @@ jobs:
                           %khan-eval
                           %noun
                           %ted-eval
+                          :_  :~  /sur/spider/hoon
+                              /lib/strandio/hoon
+                          ==
                           '''
                           /-  spider
                           /+  *strandio
@@ -205,9 +209,6 @@ jobs:
                             ==
                           (pure:m !>(~))
                           '''
-                          :~  /sur/spider/hoon
-                              /lib/strandio/hoon
-                          ==
                       =="
 
           echo "Mounting buildpill desk..."
