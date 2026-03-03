@@ -294,11 +294,16 @@ jobs:
                             (pure:m !>('Built pill!'))
                             '''
                         =="
-          echo "Building brass pill..."
+          echo "Building brass pill (this may take 5-10 minutes)..."
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
-          echo "Result: $RESULT"
-          echo "Waiting for pill build to complete (this may take a while)..."
-          sleep 60
+          echo "Fyrd result: $RESULT"
+          if echo "$RESULT" | grep -q "%avow"; then
+            echo "Pill build fyrd accepted."
+          else
+            echo "WARNING: Pill build fyrd may not have been accepted."
+            echo "Checking ship logs..."
+            tail -50 ./zod/.urb/log 2>/dev/null || true
+          fi
       # -------------------------------------------------------
       # 13. Extract pill from gw-base desk
       # -------------------------------------------------------
@@ -325,18 +330,24 @@ jobs:
                           (pure:m !>('Commit successful!'))
                           '''
                       =="
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          sleep 10
-          echo "Looking for pill file..."
-          find ./zod/gw-base/ -name "*.pill" -o -name "pill" | head -20
-          if [ -f "./zod/gw-base/build.pill" ]; then
-            cp ./zod/gw-base/build.pill ./gw-base.pill
-            echo "Pill extracted successfully."
-            ls -la ./gw-base.pill
-          else
-            echo "Pill not found at expected location, searching..."
-            find ./zod/ -name "*.pill" 2>/dev/null | head -20
-            echo "WARNING: Pill may not have been written to unix mount."
+          # Poll for pill to appear
+          for i in $(seq 1 30); do
+            echo "Checking for pill... attempt $i of 30"
+            send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1
+            sleep 10
+            echo "All files in gw-base desk:"
+            find ./zod/gw-base/ -type f
+            PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
+            if [ -n "$PILL_FILE" ]; then
+              echo "Found pill at: $PILL_FILE"
+              cp "$PILL_FILE" ./gw-base.pill
+              ls -la ./gw-base.pill
+              break
+            fi
+          done
+          if [ ! -f ./gw-base.pill ]; then
+            echo "ERROR: Pill was never written after 300 seconds."
+            exit 1
           fi
       # -------------------------------------------------------
       # 14. Shutdown first fakeship
