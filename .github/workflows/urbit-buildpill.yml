@@ -392,14 +392,34 @@ jobs:
       # -------------------------------------------------------
       - name: Setup urcrypt for vere build
         run: |
-          echo "Replacing vere's ext/urcrypt with gwbtc/urcrypt..."
-          rm -rf gwbtc-vere/ext/urcrypt/*
-          cp -rv gwbtc-urcrypt/* gwbtc-vere/ext/urcrypt/
-          echo "Contents of ext/urcrypt after copy:"
+          echo "Current contents of vere's ext/urcrypt:"
           ls -la gwbtc-vere/ext/urcrypt/
-          echo "Patching build.zig for Zig 0.14 compatibility..."
-          sed -i 's/var reader = file\.reader(&buf);/var reader = file.reader();/' gwbtc-vere/build.zig
-          echo "Patched."
+          echo ""
+          echo "build.zig exists?" 
+          cat gwbtc-vere/ext/urcrypt/build.zig.zon 2>/dev/null || echo "no build.zig.zon"
+          echo ""
+          echo "Contents of gwbtc-urcrypt:"
+          ls -la gwbtc-urcrypt/
+          echo ""
+          echo "Copying urcrypt source files (preserving vere's zig build files)..."
+          # Copy urcrypt source INTO vere's ext/urcrypt without deleting zig build files
+          for item in gwbtc-urcrypt/*/; do
+            dirname=$(basename "$item")
+            echo "Copying directory: $dirname"
+            cp -rv "$item" gwbtc-vere/ext/urcrypt/
+          done
+          # Copy loose files except build.zig and build.zig.zon
+          for file in gwbtc-urcrypt/*; do
+            [ -d "$file" ] && continue
+            basename=$(basename "$file")
+            if [ "$basename" != "build.zig" ] && [ "$basename" != "build.zig.zon" ]; then
+              echo "Copying file: $basename"
+              cp -v "$file" gwbtc-vere/ext/urcrypt/
+            fi
+          done
+          echo ""
+          echo "Final contents of ext/urcrypt:"
+          ls -la gwbtc-vere/ext/urcrypt/
       # -------------------------------------------------------
       # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
