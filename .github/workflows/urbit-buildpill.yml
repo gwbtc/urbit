@@ -390,13 +390,25 @@ jobs:
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
       # -------------------------------------------------------
-      # 18. Build gwbtc/vere with zig build
+      # 18. Symlink urcrypt so vere can find it
+      # -------------------------------------------------------
+      - name: Setup urcrypt for vere build
+        run: |
+          echo "Vere build.zig.zon contents:"
+          cat gwbtc-vere/build.zig.zon
+          echo ""
+          echo "Setting up urcrypt as sibling..."
+          # Create symlink so vere finds urcrypt at expected path
+          # "in the same folder as the Vere source repo" means sibling
+          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
+          ls -la $(pwd)/gwbtc-vere/../urcrypt
+      # -------------------------------------------------------
+      # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
       - name: Build gwbtc/vere
         run: |
           cd gwbtc-vere
           echo "Building gwbtc/vere with zig build..."
-          ls -la
           zig build
           echo "Build complete. Looking for binary..."
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
