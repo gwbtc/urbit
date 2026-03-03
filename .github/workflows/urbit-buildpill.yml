@@ -397,6 +397,9 @@ jobs:
           cp -rv gwbtc-urcrypt/* gwbtc-vere/ext/urcrypt/
           echo "Contents of ext/urcrypt after copy:"
           ls -la gwbtc-vere/ext/urcrypt/
+          echo "Patching build.zig for Zig 0.14 compatibility..."
+          sed -i 's/var reader = file\.reader(&buf);/var reader = file.reader();/' gwbtc-vere/build.zig
+          echo "Patched."
       # -------------------------------------------------------
       # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
