@@ -360,10 +360,10 @@ jobs:
       # -------------------------------------------------------
       - name: Install Zig
         run: |
-          curl -LO https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
-          tar xf zig-linux-x86_64-0.13.0.tar.xz
-          sudo mv zig-linux-x86_64-0.13.0/zig /usr/local/bin/
-          sudo mv zig-linux-x86_64-0.13.0/lib /usr/local/lib/zig
+          curl -LO https://ziglang.org/download/0.14.1/zig-linux-x86_64-0.14.1.tar.xz
+          tar xf zig-linux-x86_64-0.14.1.tar.xz
+          sudo mv zig-linux-x86_64-0.14.1/zig /usr/local/bin/
+          sudo mv zig-linux-x86_64-0.14.1/lib /usr/local/lib/zig
           zig version
       # -------------------------------------------------------
       # 16. Checkout gwbtc/urcrypt
@@ -389,6 +389,16 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
+      # -------------------------------------------------------
+      # 18. Copy urcrypt into vere's ext/urcrypt
+      # -------------------------------------------------------
+      - name: Setup urcrypt for vere build
+        run: |
+          echo "Replacing vere's ext/urcrypt with gwbtc/urcrypt..."
+          rm -rf gwbtc-vere/ext/urcrypt/*
+          cp -rv gwbtc-urcrypt/* gwbtc-vere/ext/urcrypt/
+          echo "Contents of ext/urcrypt after copy:"
+          ls -la gwbtc-vere/ext/urcrypt/
       # -------------------------------------------------------
       # 18. Symlink urcrypt so vere can find it
       # -------------------------------------------------------
