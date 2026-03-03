@@ -388,38 +388,12 @@ jobs:
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
       # -------------------------------------------------------
-      # 18. Copy urcrypt into vere's ext/urcrypt
+      # 18. Setup urcrypt as sibling to vere
       # -------------------------------------------------------
       - name: Setup urcrypt for vere build
         run: |
-          echo "Current contents of vere's ext/urcrypt:"
-          ls -la gwbtc-vere/ext/urcrypt/
-          echo ""
-          echo "build.zig exists?" 
-          cat gwbtc-vere/ext/urcrypt/build.zig.zon 2>/dev/null || echo "no build.zig.zon"
-          echo ""
-          echo "Contents of gwbtc-urcrypt:"
-          ls -la gwbtc-urcrypt/
-          echo ""
-          echo "Copying urcrypt source files (preserving vere's zig build files)..."
-          # Copy urcrypt source INTO vere's ext/urcrypt without deleting zig build files
-          for item in gwbtc-urcrypt/*/; do
-            dirname=$(basename "$item")
-            echo "Copying directory: $dirname"
-            cp -rv "$item" gwbtc-vere/ext/urcrypt/
-          done
-          # Copy loose files except build.zig and build.zig.zon
-          for file in gwbtc-urcrypt/*; do
-            [ -d "$file" ] && continue
-            basename=$(basename "$file")
-            if [ "$basename" != "build.zig" ] && [ "$basename" != "build.zig.zon" ]; then
-              echo "Copying file: $basename"
-              cp -v "$file" gwbtc-vere/ext/urcrypt/
-            fi
-          done
-          echo ""
-          echo "Final contents of ext/urcrypt:"
-          ls -la gwbtc-vere/ext/urcrypt/
+          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
+          ls -la $(pwd)/gwbtc-vere/../urcrypt/
       # -------------------------------------------------------
       # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
