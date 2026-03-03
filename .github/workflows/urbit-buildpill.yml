@@ -400,26 +400,58 @@ jobs:
           echo "Contents of ext/urcrypt after copy:"
           ls -la gwbtc-vere/ext/urcrypt/
       # -------------------------------------------------------
-      # 18. Symlink urcrypt so vere can find it
-      # -------------------------------------------------------
-      - name: Setup urcrypt for vere build
-        run: |
-          echo "Vere build.zig.zon contents:"
-          cat gwbtc-vere/build.zig.zon
-          echo ""
-          echo "Setting up urcrypt as sibling..."
-          # Create symlink so vere finds urcrypt at expected path
-          # "in the same folder as the Vere source repo" means sibling
-          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
-          ls -la $(pwd)/gwbtc-vere/../urcrypt
-      # -------------------------------------------------------
       # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
       - name: Build gwbtc/vere
         run: |
           cd gwbtc-vere
           echo "Building gwbtc/vere with zig build..."
-          zig build
+
+          # Retry zig build up to 3 times in case of transient download failures
+          for attempt in 1 2 3; do
+            echo "Build attempt $attempt of 3..."
+            if zig build; then
+              echo "Build succeeded on attempt $attempt."
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "All 3 attempts failed. Checking if zlib URL is the issue..."
+                ZLIB_URL="https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz"
+                HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$ZLIB_URL")
+                echo "zlib URL returned HTTP $HTTP_CODE"
+
+                if [ "$HTTP_CODE" != "200" ]; then
+                  echo "zlib URL is not reachable. Patching build.zig.zon to use vendored zlib..."
+                  mkdir -p ext/zlib-src
+                  curl -L -o /tmp/zlib.tar.gz "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
+                  tar xzf /tmp/zlib.tar.gz --strip-components=1 -C ext/zlib-src
+
+                  python3 -c "
+import re
+with open('build.zig.zon', 'r') as f:
+    content = f.read()
+content = re.sub(
+    r'(\.zlib\s*=\s*\.\{)\s*\.url\s*=\s*\"[^\"]+\",\s*\.hash\s*=\s*\"[^\"]+\",',
+    r'\1\n            .path = \"./ext/zlib-src\",',
+    content
+)
+with open('build.zig.zon', 'w') as f:
+    f.write(content)
+print('Patched build.zig.zon')
+"
+                  echo "Retrying build with vendored zlib..."
+                  zig build || { echo "Build failed even with vendored zlib."; exit 1; }
+                else
+                  echo "zlib URL is reachable but build still failed."
+                  exit 1
+                fi
+              else
+                echo "Build failed on attempt $attempt, retrying in 15s..."
+                sleep 15
+              fi
+            fi
+          done
+
           echo "Build complete. Looking for binary..."
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
           if [ -n "$VERE_BIN" ]; then
