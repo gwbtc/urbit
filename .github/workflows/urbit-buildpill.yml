@@ -1,4 +1,4 @@
-name: Urbit Fakeship CI/CD - buildpill Desk
+name: Urbit Fakeship CI/CD - Groundwire
 on:
   push:
     branches:
@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       URBIT_SHIP: zod
-      DESK_NAME: buildpill
+      DESK_NAME: gw-base
       PIER: ./zod
       CONN_SOCK: ./zod/.urb/conn.sock
+      GW_VERE_URL: https://bootstrap.urbit.org/vere-v3.1-linux-x86_64 # placeholder - replace with gwbtc/vere hosted URL
     steps:
       # -------------------------------------------------------
       # 1. Checkout Repository
       # -------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
-
       # -------------------------------------------------------
       # 2. Install DigitalOcean CLI (doctl)
       # -------------------------------------------------------
@@ -28,7 +28,6 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
       # -------------------------------------------------------
       # 3. Install Urbit Binary
       # -------------------------------------------------------
@@ -38,24 +37,27 @@ jobs:
           tar zxvf ./linux-x86_64.tgz
           sudo mv vere-v* /usr/local/bin/urbit
           urbit --version
-
       # -------------------------------------------------------
       # 4. Install netcat
       # -------------------------------------------------------
       - name: Install netcat
         run: |
           sudo apt-get install -y netcat-openbsd
-
       # -------------------------------------------------------
-      # 5. Boot Urbit Fakeship (~zod)
+      # 5. Install peru (for groundwire dependency management)
+      # -------------------------------------------------------
+      - name: Install peru
+        run: |
+          pip3 install peru
+      # -------------------------------------------------------
+      # 6. Boot Urbit Fakeship (~zod)
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
           urbit -d -F zod -c zod
           echo "Fakeship boot initiated in daemon mode."
-
       # -------------------------------------------------------
-      # 6. Wait for fakeship to be fully idle
+      # 7. Wait for fakeship to be fully idle
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
@@ -71,33 +73,26 @@ jobs:
                     (pure:m !>('Success!'))
                     '''
                 =="
-
           echo "Polling ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-
             RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true)
-
             echo "Result: $RESULT"
-
             if echo "$RESULT" | grep -q "%avow"; then
               echo "Ship is idle and responsive after $((i * 10)) seconds."
               exit 0
             fi
-
             echo "Ship not ready yet, waiting 10s..."
             sleep 10
           done
-
           echo "ERROR: Ship never became idle after 600 seconds."
           exit 1
-
       # -------------------------------------------------------
-      # 7. Create new desk called 'buildpill'
+      # 8. Create new desk called 'gw-base'
       # -------------------------------------------------------
-      - name: Create buildpill desk
+      - name: Create gw-base desk
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -105,7 +100,6 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-
           NEW_DESK_FYRD=":*  0
                              %fyrd
                              %base
@@ -126,7 +120,7 @@ jobs:
                                    %poke   %helm-pass
                                    !>  ^-  note-arvo
                                    %^    new-desk:cloy
-                                       %buildpill
+                                       %gw-base
                                      ~
                                    %-  ~(gas by *(map path page:clay))
                                    |^  =-  (turn - mage)
@@ -168,12 +162,14 @@ jobs:
                              (pure:m !>('Created desk!'))
                              '''
                          =="
-          echo "Creating buildpill desk..."
+          echo "Creating gw-base desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "Result: $RESULT"
           sleep 5
-
-      - name: Mount buildpill desk
+      # -------------------------------------------------------
+      # 9. Mount gw-base desk
+      # -------------------------------------------------------
+      - name: Mount gw-base desk
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -181,7 +177,6 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-
           MOUNT_FYRD=":*  0
                           %fyrd
                           %base
@@ -200,70 +195,531 @@ jobs:
                             %:  poke-our
                                 %hood
                                 %kiln-mount
-                                !>([(en-beam [[our %buildpill [%da now]] /]) %buildpill])
+                                !>([(en-beam [[our %gw-base [%da now]] /]) %gw-base])
                             ==
                           (pure:m !>(~))
                           '''
                       =="
-
-          echo "Mounting buildpill desk..."
+          echo "Mounting gw-base desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
-
           sleep 5
-          if [ -e "./zod/buildpill/sys.kelvin" ]; then
+          if [ -e "./zod/gw-base/sys.kelvin" ]; then
             echo "Desk mounted successfully."
-            cat ./zod/buildpill/sys.kelvin
+            cat ./zod/gw-base/sys.kelvin
           else
             echo "ERROR: Failed to mount desk - $RESULT"
           fi
-
       # -------------------------------------------------------
-      # 8. Validate buildpill desk structure
+      # 10. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
       # -------------------------------------------------------
-      - name: Validate buildpill desk structure
+      - name: Checkout gwbtc/urbit
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urbit
+          ref: gw/next/kelvin/408
+          path: gwbtc-urbit
+          token: ${{ secrets.GH_PAT }}
+      - name: Copy pkg/arvo into gw-base desk
         run: |
-          echo "Validating buildpill desk contents..."
-          ls -la ./zod/buildpill/
-          echo "Desk validation complete."
-
+          echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk..."
+          cp -rv gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
+          echo "Contents of gw-base after copy:"
+          find ./zod/gw-base/ -type f | head -50
+          echo "..."
+          find ./zod/gw-base/ -type f | wc -l
+          echo "total files"
       # -------------------------------------------------------
-      # 9. Build & Push Docker Image to DO Registry
+      # 11. Commit gw-base desk
       # -------------------------------------------------------
-      - name: Build Docker image
+      - name: Commit gw-base desk
         run: |
-          docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }} .
-
-      - name: Log in to DigitalOcean Container Registry
-        run: doctl registry login --expiry-seconds 600
-
-      - name: Push image to DigitalOcean Container Registry
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+          COMMIT_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  ~
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  ~  bind:m
+                            (poke-our %hood %kiln-commit !>([%gw-base %.n]))
+                          (pure:m !>('Commit successful!'))
+                          '''
+                      =="
+          echo "Committing gw-base desk..."
+          RESULT=$(send_fyrd "$COMMIT_FYRD")
+          echo "Result: $RESULT"
+          sleep 10
+      # -------------------------------------------------------
+      # 12. Build brass pill from gw-base
+      # -------------------------------------------------------
+      - name: Build brass pill
         run: |
-          docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
-
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+          BUILD_PILL_FYRD=":*  0
+                            %fyrd
+                            %base
+                            %khan-eval
+                            %noun
+                            %ted-eval
+                            :_  :~  /sur/spider/hoon
+                                    /lib/strandio/hoon
+                                    /lib/pill/hoon
+                                ==
+                            '''
+                            =/  m  (strand ,vase)
+                            ^-  form:m
+                            ;<  our=@p   bind:m  get-our
+                            ;<  now=@da  bind:m  get-time
+                            =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
+                            =/  =pill:pill  (brass:pill sys ~ & | | ~)
+                            ;<  ~  bind:m
+                              %:  send-raw-card
+                                  %pass  /build
+                                  %arvo  %c  %info
+                                  [%gw-base %& [/build/pill %ins %pill !>(pill)]~]
+                              ==
+                            (pure:m !>('Built pill!'))
+                            '''
+                        =="
+          echo "Building brass pill..."
+          RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
+          echo "Result: $RESULT"
+          echo "Waiting for pill build to complete (this may take a while)..."
+          sleep 60
       # -------------------------------------------------------
-      # 10. Deploy to DigitalOcean Kubernetes
+      # 13. Extract pill from gw-base desk
       # -------------------------------------------------------
-      - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
-
-      - name: Deploy to Kubernetes
+      - name: Extract pill from gw-base desk
         run: |
-          kubectl set image deployment/urbit-buildpill \
-            urbit-buildpill=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-buildpill:${{ github.sha }}
-
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+          # Re-commit to make sure the pill file is synced to unix
+          COMMIT_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  ~
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  ~  bind:m
+                            (poke-our %hood %kiln-commit !>([%gw-base %.n]))
+                          (pure:m !>('Commit successful!'))
+                          '''
+                      =="
+          RESULT=$(send_fyrd "$COMMIT_FYRD")
+          sleep 10
+          echo "Looking for pill file..."
+          find ./zod/gw-base/ -name "*.pill" -o -name "pill" | head -20
+          if [ -f "./zod/gw-base/build.pill" ]; then
+            cp ./zod/gw-base/build.pill ./gw-base.pill
+            echo "Pill extracted successfully."
+            ls -la ./gw-base.pill
+          else
+            echo "Pill not found at expected location, searching..."
+            find ./zod/ -name "*.pill" 2>/dev/null | head -20
+            echo "WARNING: Pill may not have been written to unix mount. Attempting scry export..."
+          fi
       # -------------------------------------------------------
-      # 11. Cleanup - shut down fakeship
+      # 14. Shutdown first fakeship
       # -------------------------------------------------------
-      - name: Shutdown fakeship
-        if: always()
+      - name: Shutdown first fakeship
         run: |
-          echo "Shutting down fakeship..."
+          echo "Shutting down first fakeship..."
           URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
           if [ -n "$URBIT_PID" ]; then
             kill $URBIT_PID || true
             echo "Killed fakeship PID $URBIT_PID"
+            sleep 5
           else
             echo "No PID file found, trying pkill..."
             pkill -f "urbit" || true
+            sleep 5
           fi
+      # -------------------------------------------------------
+      # 15. Download gwbtc/vere executable
+      # -------------------------------------------------------
+      - name: Download gwbtc/vere executable
+        run: |
+          echo "Downloading gwbtc/vere..."
+          curl -JLO ${{ env.GW_VERE_URL }} || {
+            echo "WARNING: Could not download gwbtc/vere from ${{ env.GW_VERE_URL }}"
+            echo "Falling back to standard urbit binary for now."
+            cp /usr/local/bin/urbit ./gw-vere
+          }
+          if [ -f ./gw-vere ]; then
+            chmod +x ./gw-vere
+          else
+            # Handle if curl downloaded with a different name
+            DOWNLOADED=$(ls -t vere-* 2>/dev/null | head -1)
+            if [ -n "$DOWNLOADED" ]; then
+              mv "$DOWNLOADED" ./gw-vere
+              chmod +x ./gw-vere
+            else
+              echo "Using standard urbit as fallback."
+              cp /usr/local/bin/urbit ./gw-vere
+            fi
+          fi
+          echo "gwbtc/vere binary ready:"
+          ls -la ./gw-vere
+      # -------------------------------------------------------
+      # 16. Boot new fakeship with gw-base pill using gwbtc/vere
+      # -------------------------------------------------------
+      - name: Boot new fakeship with gw-base pill
+        env:
+          PIER: ./zod2
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          echo "Booting new fakeship with gw-base pill..."
+          if [ -f ./gw-base.pill ]; then
+            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+          else
+            echo "WARNING: No pill found, booting with default pill."
+            ./gw-vere -d -F zod -c zod2
+          fi
+          echo "Second fakeship boot initiated."
+      # -------------------------------------------------------
+      # 17. Wait for second fakeship to be idle
+      # -------------------------------------------------------
+      - name: Wait for second fakeship to be idle
+        env:
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          FYRD=":*  0
+                    %fyrd
+                    %base
+                    %khan-eval
+                    %noun
+                    %ted-eval
+                    :_  ~
+                    '''
+                    =/  m  (strand ,vase)
+                    (pure:m !>('Success!'))
+                    '''
+                =="
+          echo "Polling second ship until idle..."
+          for i in $(seq 1 60); do
+            echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
+            RESULT=$(echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              ./gw-vere eval -cn 2>/dev/null || true)
+            echo "Result: $RESULT"
+            if echo "$RESULT" | grep -q "%avow"; then
+              echo "Second ship is idle and responsive after $((i * 10)) seconds."
+              exit 0
+            fi
+            echo "Ship not ready yet, waiting 10s..."
+            sleep 10
+          done
+          echo "ERROR: Second ship never became idle after 600 seconds."
+          exit 1
+      # -------------------------------------------------------
+      # 18. Create %groundwire desk on new ship
+      # -------------------------------------------------------
+      - name: Create groundwire desk
+        env:
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              ./gw-vere eval -cn 2>/dev/null || true
+          }
+          NEW_DESK_FYRD=":*  0
+                             %fyrd
+                             %base
+                             %khan-eval
+                             %noun
+                             %ted-eval
+                             :_  :~  /sur/spider/hoon
+                                     /lib/strandio/hoon
+                                 ==
+                             '''
+                             =/  m  (strand ,vase)
+                             ^-  form:m
+                             ;<  =beak  bind:m  get-beak
+                             ;<  ~  bind:m
+                               %:  send-raw-card
+                                   %pass   /make-new-desk
+                                   %agent  [p.beak %hood]
+                                   %poke   %helm-pass
+                                   !>  ^-  note-arvo
+                                   %^    new-desk:cloy
+                                       %groundwire
+                                     ~
+                                   %-  ~(gas by *(map path page:clay))
+                                   |^  =-  (turn - mage)
+                                       ^-  (list path)
+                                       =/  common-files=(list path)
+                                         :~
+                                           /mar/noun/hoon
+                                           /mar/hoon/hoon
+                                           /mar/txt/hoon
+                                           /mar/kelvin/hoon
+                                           /sys/kelvin
+                                         ==
+                                       =/  extra-files=(list path)
+                                         :~
+                                           /mar/bill/hoon
+                                           /mar/mime/hoon
+                                           /mar/json/hoon
+                                           /lib/skeleton/hoon
+                                           /lib/default-agent/hoon
+                                           /lib/dbug/hoon
+                                         ==
+                                       (weld common-files extra-files)
+                                   ::
+                                   ++  mage
+                                     |=  =path
+                                     :-  path
+                                     ^-  page:clay
+                                     :-  (rear path)
+                                     ~|  [%missing-source-file %base path]
+                                     .^  *
+                                       %cx
+                                       (scot %p p.beak)
+                                       %base
+                                       (scot %da p.r.beak)
+                                       path
+                                     ==
+                                   --
+                               ==
+                             (pure:m !>('Created desk!'))
+                             '''
+                         =="
+          echo "Creating groundwire desk..."
+          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
+          echo "Result: $RESULT"
+          sleep 5
+      # -------------------------------------------------------
+      # 19. Mount %groundwire desk
+      # -------------------------------------------------------
+      - name: Mount groundwire desk
+        env:
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              ./gw-vere eval -cn 2>/dev/null || true
+          }
+          MOUNT_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  :~  /sur/spider/hoon
+                                  /lib/strandio/hoon
+                              ==
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  our=@p   bind:m  get-our
+                          ;<  now=@da  bind:m  get-time
+                          ;<  ~  bind:m
+                            %:  poke-our
+                                %hood
+                                %kiln-mount
+                                !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])
+                            ==
+                          (pure:m !>(~))
+                          '''
+                      =="
+          echo "Mounting groundwire desk..."
+          RESULT=$(send_fyrd "$MOUNT_FYRD")
+          sleep 5
+          if [ -e "./zod2/groundwire/sys.kelvin" ]; then
+            echo "Desk mounted successfully."
+            cat ./zod2/groundwire/sys.kelvin
+          else
+            echo "ERROR: Failed to mount groundwire desk - $RESULT"
+          fi
+      # -------------------------------------------------------
+      # 20. Checkout gwbtc/groundwire and build dependencies
+      # -------------------------------------------------------
+      - name: Checkout gwbtc/groundwire
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/groundwire
+          ref: gw/next/kelvin/408
+          path: gwbtc-groundwire
+          token: ${{ secrets.GH_PAT }}
+      - name: Build groundwire dependencies with peru
+        run: |
+          cd gwbtc-groundwire
+          if [ -f build.sh ]; then
+            chmod +x build.sh
+            bash build.sh
+            echo "Build script completed."
+          else
+            echo "WARNING: No build.sh found. Checking for peru.yaml..."
+            if [ -f peru.yaml ]; then
+              peru sync
+            fi
+          fi
+          if [ -d dist ]; then
+            echo "dist/ directory contents:"
+            find dist/ -type f | head -50
+            echo "..."
+            find dist/ -type f | wc -l
+            echo "total files in dist/"
+          else
+            echo "WARNING: No dist/ directory found after build."
+          fi
+          cd ..
+      # -------------------------------------------------------
+      # 21. Copy groundwire dist into mounted desk
+      # -------------------------------------------------------
+      - name: Copy groundwire dist into mounted desk
+        run: |
+          if [ -d gwbtc-groundwire/dist ]; then
+            echo "Copying groundwire dist/* into mounted groundwire desk..."
+            cp -rv gwbtc-groundwire/dist/* ./zod2/groundwire/
+            echo "Contents of groundwire desk after copy:"
+            find ./zod2/groundwire/ -type f | head -50
+            echo "..."
+            find ./zod2/groundwire/ -type f | wc -l
+            echo "total files"
+          else
+            echo "ERROR: No dist/ directory to copy from."
+            exit 1
+          fi
+      # -------------------------------------------------------
+      # 22. Commit %groundwire desk
+      # -------------------------------------------------------
+      - name: Commit groundwire desk
+        env:
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              ./gw-vere eval -cn 2>/dev/null || true
+          }
+          COMMIT_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  ~
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  ~  bind:m
+                            (poke-our %hood %kiln-commit !>([%groundwire %.n]))
+                          (pure:m !>('Commit successful!'))
+                          '''
+                      =="
+          echo "Committing groundwire desk..."
+          RESULT=$(send_fyrd "$COMMIT_FYRD")
+          echo "Result: $RESULT"
+          sleep 10
+      # -------------------------------------------------------
+      # 23. Install %groundwire desk
+      # -------------------------------------------------------
+      - name: Install groundwire desk
+        env:
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              ./gw-vere eval -cn 2>/dev/null || true
+          }
+          INSTALL_FYRD=":*  0
+                            %fyrd
+                            %base
+                            %khan-eval
+                            %noun
+                            %ted-eval
+                            :_  ~
+                            '''
+                            =/  m  (strand ,vase)
+                            ^-  form:m
+                            ;<  our=@p  bind:m  get-our
+                            ;<  ~  bind:m
+                              (poke-our %hood %kiln-install !>([%groundwire our %groundwire]))
+                            (pure:m !>('Install successful!'))
+                            '''
+                        =="
+          echo "Installing groundwire desk..."
+          RESULT=$(send_fyrd "$INSTALL_FYRD")
+          echo "Result: $RESULT"
+          sleep 10
+      # -------------------------------------------------------
+      # 24. Validate groundwire desk
+      # -------------------------------------------------------
+      - name: Validate groundwire desk structure
+        run: |
+          echo "Validating groundwire desk contents..."
+          ls -la ./zod2/groundwire/
+          echo "Desk validation complete."
+      # -------------------------------------------------------
+      # 25. Build & Push Docker Image to DO Registry
+      # -------------------------------------------------------
+      - name: Build Docker image
+        run: |
+          docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }} .
+      - name: Log in to DigitalOcean Container Registry
+        run: doctl registry login --expiry-seconds 600
+      - name: Push image to DigitalOcean Container Registry
+        run: |
+          docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
+      # -------------------------------------------------------
+      # 26. Deploy to DigitalOcean Kubernetes
+      # -------------------------------------------------------
+      - name: Save DigitalOcean kubeconfig
+        run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/urbit-groundwire \
+            urbit-groundwire=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
+      # -------------------------------------------------------
+      # 27. Cleanup - shut down fakeships
+      # -------------------------------------------------------
+      - name: Shutdown fakeships
+        if: always()
+        run: |
+          echo "Shutting down fakeships..."
+          # Shutdown second fakeship
+          URBIT_PID2=$(cat ./zod2/.urb/pid 2>/dev/null || true)
+          if [ -n "$URBIT_PID2" ]; then
+            kill $URBIT_PID2 || true
+            echo "Killed second fakeship PID $URBIT_PID2"
+          fi
+          # Shutdown first fakeship (if still running)
+          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
+          if [ -n "$URBIT_PID" ]; then
+            kill $URBIT_PID || true
+            echo "Killed first fakeship PID $URBIT_PID"
+          fi
+          # Catch-all
+          pkill -f "urbit" || true
+          pkill -f "gw-vere" || true
           echo "Done."
