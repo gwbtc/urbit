@@ -340,7 +340,7 @@ jobs:
             find ./zod/ -name "*.pill" 2>/dev/null | head -20
             echo "WARNING: Pill may not have been written to unix mount. Attempting scry export..."
           fi
-      # -------------------------------------------------------
+            # -------------------------------------------------------
       # 14. Shutdown first fakeship
       # -------------------------------------------------------
       - name: Shutdown first fakeship
@@ -352,38 +352,65 @@ jobs:
             echo "Killed fakeship PID $URBIT_PID"
             sleep 5
           else
-            echo "No PID file found, trying pkill..."
             pkill -f "urbit" || true
             sleep 5
           fi
       # -------------------------------------------------------
-      # 15. Download gwbtc/vere executable
+      # 15. Install Zig
       # -------------------------------------------------------
-      - name: Download gwbtc/vere executable
+      - name: Install Zig
         run: |
-          echo "Downloading gwbtc/vere..."
-          curl -JLO ${{ env.GW_VERE_URL }} || {
-            echo "WARNING: Could not download gwbtc/vere from ${{ env.GW_VERE_URL }}"
-            echo "Falling back to standard urbit binary for now."
-            cp /usr/local/bin/urbit ./gw-vere
-          }
-          if [ -f ./gw-vere ]; then
-            chmod +x ./gw-vere
-          else
-            # Handle if curl downloaded with a different name
-            DOWNLOADED=$(ls -t vere-* 2>/dev/null | head -1)
-            if [ -n "$DOWNLOADED" ]; then
-              mv "$DOWNLOADED" ./gw-vere
-              chmod +x ./gw-vere
-            else
-              echo "Using standard urbit as fallback."
-              cp /usr/local/bin/urbit ./gw-vere
-            fi
-          fi
-          echo "gwbtc/vere binary ready:"
-          ls -la ./gw-vere
+          curl -LO https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
+          tar xf zig-linux-x86_64-0.13.0.tar.xz
+          sudo mv zig-linux-x86_64-0.13.0/zig /usr/local/bin/
+          sudo mv zig-linux-x86_64-0.13.0/lib /usr/local/lib/zig
+          zig version
       # -------------------------------------------------------
-      # 16. Boot new fakeship with gw-base pill using gwbtc/vere
+      # 16. Checkout gwbtc/urcrypt
+      # -------------------------------------------------------
+      - name: Checkout gwbtc/urcrypt
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urcrypt
+          ref: gw/next/kelvin/408
+          path: gwbtc-urcrypt
+          token: ${{ secrets.GH_PAT || github.token }}
+      # -------------------------------------------------------
+      # 17. Checkout gwbtc/vere
+      # -------------------------------------------------------
+      - name: Checkout gwbtc/vere
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/vere
+          ref: gw/next/kelvin/408
+          path: gwbtc-vere
+          token: ${{ secrets.GH_PAT || github.token }}
+      # -------------------------------------------------------
+      # 18. Build gwbtc/vere with zig build
+      # -------------------------------------------------------
+      - name: Build gwbtc/vere
+        run: |
+          cd gwbtc-vere
+          echo "Building gwbtc/vere with zig build..."
+          ls -la
+          zig build
+          echo "Build complete. Looking for binary..."
+          VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
+          if [ -n "$VERE_BIN" ]; then
+            cp "$VERE_BIN" ../gw-vere
+          else
+            echo "Binary not found in zig-out, searching..."
+            find . -name "urbit" -o -name "vere" -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          cd ..
+          chmod +x ./gw-vere
+          echo "gwbtc/vere built successfully:"
+          ls -la ./gw-vere
+          file ./gw-vere
+          ./gw-vere --version || true
+      # -------------------------------------------------------
+      # 19. Boot new fakeship with gw-base pill using gwbtc/vere
       # -------------------------------------------------------
       - name: Boot new fakeship with gw-base pill
         env:
@@ -399,7 +426,7 @@ jobs:
           fi
           echo "Second fakeship boot initiated."
       # -------------------------------------------------------
-      # 17. Wait for second fakeship to be idle
+      # 20. Wait for second fakeship to be idle
       # -------------------------------------------------------
       - name: Wait for second fakeship to be idle
         env:
@@ -434,7 +461,7 @@ jobs:
           echo "ERROR: Second ship never became idle after 600 seconds."
           exit 1
       # -------------------------------------------------------
-      # 18. Create %groundwire desk on new ship
+      # 21. Create %groundwire desk on new ship
       # -------------------------------------------------------
       - name: Create groundwire desk
         env:
@@ -513,7 +540,7 @@ jobs:
           echo "Result: $RESULT"
           sleep 5
       # -------------------------------------------------------
-      # 19. Mount %groundwire desk
+      # 22. Mount %groundwire desk
       # -------------------------------------------------------
       - name: Mount groundwire desk
         env:
@@ -558,7 +585,7 @@ jobs:
             echo "ERROR: Failed to mount groundwire desk - $RESULT"
           fi
       # -------------------------------------------------------
-      # 20. Checkout gwbtc/groundwire and build dependencies
+      # 23. Checkout gwbtc/groundwire and build dependencies
       # -------------------------------------------------------
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
@@ -591,7 +618,7 @@ jobs:
           fi
           cd ..
       # -------------------------------------------------------
-      # 21. Copy groundwire dist into mounted desk
+      # 24. Copy groundwire dist into mounted desk
       # -------------------------------------------------------
       - name: Copy groundwire dist into mounted desk
         run: |
@@ -608,7 +635,7 @@ jobs:
             exit 1
           fi
       # -------------------------------------------------------
-      # 22. Commit %groundwire desk
+      # 25. Commit %groundwire desk
       # -------------------------------------------------------
       - name: Commit groundwire desk
         env:
@@ -640,7 +667,7 @@ jobs:
           echo "Result: $RESULT"
           sleep 10
       # -------------------------------------------------------
-      # 23. Install %groundwire desk
+      # 26. Install %groundwire desk
       # -------------------------------------------------------
       - name: Install groundwire desk
         env:
@@ -673,7 +700,7 @@ jobs:
           echo "Result: $RESULT"
           sleep 10
       # -------------------------------------------------------
-      # 24. Validate groundwire desk
+      # 27. Validate groundwire desk
       # -------------------------------------------------------
       - name: Validate groundwire desk structure
         run: |
@@ -681,7 +708,7 @@ jobs:
           ls -la ./zod2/groundwire/
           echo "Desk validation complete."
       # -------------------------------------------------------
-      # 25. Build & Push Docker Image to DO Registry
+      # 28. Build & Push Docker Image to DO Registry
       # -------------------------------------------------------
       - name: Build Docker image
         run: |
@@ -692,7 +719,7 @@ jobs:
         run: |
           docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
       # -------------------------------------------------------
-      # 26. Deploy to DigitalOcean Kubernetes
+      # 29. Deploy to DigitalOcean Kubernetes
       # -------------------------------------------------------
       - name: Save DigitalOcean kubeconfig
         run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
@@ -701,7 +728,7 @@ jobs:
           kubectl set image deployment/urbit-groundwire \
             urbit-groundwire=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
       # -------------------------------------------------------
-      # 27. Cleanup - shut down fakeships
+      # 30. Cleanup - shut down fakeships
       # -------------------------------------------------------
       - name: Shutdown fakeships
         if: always()
