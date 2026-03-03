@@ -360,7 +360,7 @@ jobs:
       # -------------------------------------------------------
       - name: Install Zig
         run: |
-          curl -LO https://ziglang.org/download/0.14.1/zig-linux-x86_64-0.14.1.tar.xz
+          curl -LO https://ziglang.org/download/0.14.1/zig-x86_64-linux-0.14.1.tar.xz
           tar xf zig-linux-x86_64-0.14.1.tar.xz
           sudo mv zig-linux-x86_64-0.14.1/zig /usr/local/bin/
           sudo mv zig-linux-x86_64-0.14.1/lib /usr/local/lib/zig
