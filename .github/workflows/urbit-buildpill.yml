@@ -264,10 +264,12 @@ jobs:
         run: |
           send_fyrd() {
             local FYRD="$1"
+            local TIMEOUT="${2:-3}"
             echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              nc -U -W "$TIMEOUT" $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+          # Use .urbit/put to save the pill to unix
           BUILD_PILL_FYRD=":*  0
                             %fyrd
                             %base
@@ -288,26 +290,22 @@ jobs:
                             ;<  ~  bind:m
                               %:  send-raw-card
                                   %pass  /build
-                                  %arvo  %c  %info
-                                  [%gw-base %& [/build/pill %ins %pill !>(pill)]~]
+                                  %arvo  %c
+                                  %info  %gw-base  %&
+                                  :~  [/pill/pill %ins %pill !>(pill)]
+                                  ==
                               ==
                             (pure:m !>('Built pill!'))
                             '''
                         =="
-          echo "Building brass pill (this may take 5-10 minutes)..."
-          RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
-          echo "Fyrd result: $RESULT"
-          if echo "$RESULT" | grep -q "%avow"; then
-            echo "Pill build fyrd accepted."
-          else
-            echo "WARNING: Pill build fyrd may not have been accepted."
-            echo "Checking ship logs..."
-            tail -50 ./zod/.urb/log 2>/dev/null || true
-          fi
+          echo "Sending pill build command (fire and forget)..."
+          # Send with short timeout - we don't wait for completion
+          send_fyrd "$BUILD_PILL_FYRD" 5
+          echo "Pill build initiated. Polling for completion..."
       # -------------------------------------------------------
-      # 13. Extract pill from gw-base desk
+      # 13. Wait for pill and extract
       # -------------------------------------------------------
-      - name: Extract pill from gw-base desk
+      - name: Wait for pill build and extract
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -330,25 +328,33 @@ jobs:
                           (pure:m !>('Commit successful!'))
                           '''
                       =="
-          # Poll for pill to appear
-          for i in $(seq 1 30); do
-            echo "Checking for pill... attempt $i of 30"
+          echo "Polling for pill file (may take 5-10 minutes)..."
+          for i in $(seq 1 60); do
+            echo "Attempt $i of 60 ($((i * 10))s elapsed)"
             send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1
             sleep 10
-            echo "All files in gw-base desk:"
-            find ./zod/gw-base/ -type f
             PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
               cp "$PILL_FILE" ./gw-base.pill
               ls -la ./gw-base.pill
-              break
+              exit 0
+            fi
+            # Also check .urb/put
+            PILL_PUT=$(find ./zod/.urb/put/ -name "*.pill" -type f 2>/dev/null | head -1)
+            if [ -n "$PILL_PUT" ]; then
+              echo "Found pill in .urb/put at: $PILL_PUT"
+              cp "$PILL_PUT" ./gw-base.pill
+              ls -la ./gw-base.pill
+              exit 0
             fi
           done
-          if [ ! -f ./gw-base.pill ]; then
-            echo "ERROR: Pill was never written after 300 seconds."
-            exit 1
-          fi
+          echo "ERROR: Pill was never written after 600 seconds."
+          echo "Checking if ship is still running..."
+          cat ./zod/.urb/pid 2>/dev/null && echo "Ship is running" || echo "Ship may have crashed"
+          echo "Ship log tail:"
+          find ./zod/.urb/ -name "*.log" -exec tail -100 {} \; 2>/dev/null || true
+          exit 1
       # -------------------------------------------------------
       # 14. Shutdown first fakeship
       # -------------------------------------------------------
