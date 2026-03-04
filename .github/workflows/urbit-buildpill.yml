@@ -276,7 +276,7 @@ jobs:
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
           sleep 10
-            # -------------------------------------------------------
+      # -------------------------------------------------------
       # 12. Build brass pill from gw-base
       # -------------------------------------------------------
       - name: Build brass pill
