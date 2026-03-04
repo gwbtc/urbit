@@ -250,6 +250,19 @@ jobs:
                   ==
               '''
               =/  m  (strand:spider ,vase)
+              =>  |%
+                  ++  print-tang-to-wain
+                    |=  =tang
+                    ^-  wain
+                    %-  zing
+                    %+  turn
+                      tang
+                    |=  =tank
+                    %+  turn
+                      (wash [0 80] tank)
+                    |=  =tape
+                    (crip tape)
+                  --
               ^-  form:m
               ;<  ~  bind:m
                 (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
@@ -263,10 +276,10 @@ jobs:
               =/  [%dill %logs =told:dill]  sign-arvo
               ?-  told
                 [%crud *]
-                (strand-fail:strand:spider %crud ~)
+                (strand-fail:strand:spider %crud [p.told]~)
               ::
                 [%talk *]
-                (pure:m !>(~))
+                (pure:m !>((crip "%talk: {<(print-tang-to-wain p.told)>}")))
               ::
                 [%text *]
                 (pure:m !>('Commit successful!'))
