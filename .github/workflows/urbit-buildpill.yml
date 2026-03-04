@@ -74,7 +74,7 @@ jobs:
       - name: Boot fake ~zod ship
         run: |
           tmux -S $TMUX_SOCK new-session -d -s urbit-zod -x 220 -y 50
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
+          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -t -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
           echo "Fakeship booting in tmux session 'urbit-zod'."
 
       - name: Fix pier permissions
@@ -572,17 +572,13 @@ jobs:
       # 20. Boot new fakeship with gw-base pill using gwbtc/vere
       # -------------------------------------------------------
       - name: Boot new fakeship with gw-base pill
-        env:
-          PIER: ./zod2
-          CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          echo "Booting new fakeship with gw-base pill..."
           tmux -S $TMUX_SOCK new-session -d -s urbit-zod2 -x 220 -y 50
           if [ -f ./gw-base.pill ]; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -t -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           else
             echo "WARNING: No pill found, booting with default pill."
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -t -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           fi
           echo "Second fakeship booting in tmux session 'urbit-zod2'."
 
