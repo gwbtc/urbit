@@ -48,7 +48,7 @@ jobs:
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
-          sudo mv vere-v*/urbit /usr/local/bin/urbit
+          sudo mv vere-v* /usr/local/bin/urbit
           urbit --version
 
       # -------------------------------------------------------
