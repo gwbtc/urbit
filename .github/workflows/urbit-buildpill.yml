@@ -37,18 +37,6 @@ jobs:
           sudo mv vere-v* /usr/local/bin/urbit
           urbit --version
       # -------------------------------------------------------
-      # 4. Install netcat
-      # -------------------------------------------------------
-      - name: Install netcat
-        run: |
-          sudo apt-get install -y netcat-openbsd
-      # -------------------------------------------------------
-      # 5. Install peru (for groundwire dependency management)
-      # -------------------------------------------------------
-      - name: Install peru
-        run: |
-          pip3 install peru
-      # -------------------------------------------------------
       # 6. Boot Urbit Fakeship (~zod)
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
