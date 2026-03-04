@@ -274,19 +274,11 @@ jobs:
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
           sleep 10
-      # -------------------------------------------------------
+            # -------------------------------------------------------
       # 12. Build brass pill from gw-base
       # -------------------------------------------------------
       - name: Build brass pill
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            local TIMEOUT="${2:-3}"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W "$TIMEOUT" $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-          # Use .urbit/put to save the pill to unix
           BUILD_PILL_FYRD=":*  0
                             %fyrd
                             %base
@@ -315,14 +307,16 @@ jobs:
                             (pure:m !>('Built pill!'))
                             '''
                         =="
-          echo "Sending pill build command (fire and forget)..."
-          # Send with short timeout - we don't wait for completion
-          send_fyrd "$BUILD_PILL_FYRD" 5
-          echo "Pill build initiated. Polling for completion..."
+          echo "Sending pill build command..."
+          echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/dev/null | \
+            nc -U -W 1 $CONN_SOCK 2>/dev/null > /dev/null &
+          echo "Pill build fyrd sent (running in background)."
+          echo "This will take several minutes to complete."
       # -------------------------------------------------------
-      # 13. Wait for pill and extract
+      # 13. Wait for pill build and extract
       # -------------------------------------------------------
       - name: Wait for pill build and extract
+        timeout-minutes: 15
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -330,6 +324,18 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+          IDLE_FYRD=":*  0
+                        %fyrd
+                        %base
+                        %khan-eval
+                        %noun
+                        %ted-eval
+                        :_  ~
+                        '''
+                        =/  m  (strand ,vase)
+                        (pure:m !>('alive'))
+                        '''
+                    =="
           COMMIT_FYRD=":*  0
                           %fyrd
                           %base
@@ -345,11 +351,21 @@ jobs:
                           (pure:m !>('Commit successful!'))
                           '''
                       =="
-          echo "Polling for pill file (may take 5-10 minutes)..."
-          for i in $(seq 1 60); do
-            echo "Attempt $i of 60 ($((i * 10))s elapsed)"
+          echo "Polling for pill file in gw-base desk (may take 5-10 minutes)..."
+          for i in $(seq 1 90); do
+            echo "--- Attempt $i of 90 ($((i * 10))s elapsed) ---"
+            # Check if ship is still alive
+            ALIVE=$(send_fyrd "$IDLE_FYRD")
+            if echo "$ALIVE" | grep -q "%avow"; then
+              echo "Ship is responsive."
+            else
+              echo "Ship not responding, it may be busy building the pill..."
+            fi
+            # Trigger commit to sync clay to unix
             send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1
-            sleep 10
+            # Check for pill
+            echo "Searching for pill files:"
+            find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null
             PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
@@ -357,20 +373,13 @@ jobs:
               ls -la ./gw-base.pill
               exit 0
             fi
-            # Also check .urb/put
-            PILL_PUT=$(find ./zod/.urb/put/ -name "*.pill" -type f 2>/dev/null | head -1)
-            if [ -n "$PILL_PUT" ]; then
-              echo "Found pill in .urb/put at: $PILL_PUT"
-              cp "$PILL_PUT" ./gw-base.pill
-              ls -la ./gw-base.pill
-              exit 0
-            fi
+            sleep 10
           done
-          echo "ERROR: Pill was never written after 600 seconds."
-          echo "Checking if ship is still running..."
-          cat ./zod/.urb/pid 2>/dev/null && echo "Ship is running" || echo "Ship may have crashed"
-          echo "Ship log tail:"
-          find ./zod/.urb/ -name "*.log" -exec tail -100 {} \; 2>/dev/null || true
+          echo "ERROR: Pill was never written after 900 seconds."
+          echo "All files in gw-base:"
+          find ./zod/gw-base/ -type f
+          echo "Checking ship status:"
+          cat ./zod/.urb/pid 2>/dev/null && echo "Ship PID exists" || echo "No PID file"
           exit 1
       # -------------------------------------------------------
       # 14. Shutdown first fakeship
