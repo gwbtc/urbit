@@ -238,7 +238,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-          read -r -d '' COMMIT_FYRD << 'HOON'
+          read -r -d '' COMMIT_FYRD << 'HOON' || true
           :*  0
               %fyrd
               %base
