@@ -8,7 +8,7 @@ on:
       - gw/next/kelvin/408
 jobs:
   boot-fakeship-and-create-desk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     env:
       URBIT_SHIP: zod
       DESK_NAME: gw-base
