@@ -14,6 +14,7 @@ jobs:
       DESK_NAME: gw-base
       PIER: ./zod
       CONN_SOCK: ./zod/.urb/conn.sock
+      TMUX_SOCK: /tmp/tmux-runner
     steps:
       # -------------------------------------------------------
       # 0. Clean up any leftover piers from previous runs
@@ -22,6 +23,8 @@ jobs:
         run: |
           echo "Cleaning up any leftover piers..."
           sudo rm -rf ./zod ./zod2 || true
+          # Clean up stale tmux sockets
+          sudo rm -rf /tmp/tmux-* || true
           echo "Done."
 
       # -------------------------------------------------------
@@ -45,7 +48,7 @@ jobs:
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
-          sudo mv vere-v* /usr/local/bin/urbit
+          sudo mv vere-v*/urbit /usr/local/bin/urbit
           urbit --version
 
       # -------------------------------------------------------
@@ -70,8 +73,8 @@ jobs:
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
-          tmux new-session -d -s urbit-zod -x 220 -y 50
-          tmux send-keys -t urbit-zod "urbit -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
+          tmux -S $TMUX_SOCK new-session -d -s urbit-zod -x 220 -y 50
+          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
           echo "Fakeship booting in tmux session 'urbit-zod'."
 
       - name: Fix pier permissions
@@ -448,10 +451,10 @@ jobs:
       - name: Shutdown first fakeship
         run: |
           echo "Shutting down first fakeship..."
-          if tmux has-session -t urbit-zod 2>/dev/null; then
-            tmux send-keys -t urbit-zod "" Enter
+          if tmux -S $TMUX_SOCK has-session -t urbit-zod 2>/dev/null; then
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod "" Enter
             sleep 3
-            tmux kill-session -t urbit-zod || true
+            tmux -S $TMUX_SOCK kill-session -t urbit-zod || true
             echo "Killed tmux session urbit-zod"
           fi
           pkill -f "urbit" || true
@@ -574,12 +577,12 @@ jobs:
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
           echo "Booting new fakeship with gw-base pill..."
-          tmux new-session -d -s urbit-zod2 -x 220 -y 50
+          tmux -S $TMUX_SOCK new-session -d -s urbit-zod2 -x 220 -y 50
           if [ -f ./gw-base.pill ]; then
-            tmux send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           else
             echo "WARNING: No pill found, booting with default pill."
-            tmux send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           fi
           echo "Second fakeship booting in tmux session 'urbit-zod2'."
 
@@ -924,18 +927,19 @@ jobs:
         if: always()
         run: |
           echo "Shutting down fakeships..."
-          if tmux has-session -t urbit-zod2 2>/dev/null; then
-            tmux send-keys -t urbit-zod2 "" Enter
+          if tmux -S $TMUX_SOCK has-session -t urbit-zod2 2>/dev/null; then
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "" Enter
             sleep 3
-            tmux kill-session -t urbit-zod2 || true
+            tmux -S $TMUX_SOCK kill-session -t urbit-zod2 || true
             echo "Killed tmux session urbit-zod2"
           fi
-          if tmux has-session -t urbit-zod 2>/dev/null; then
-            tmux send-keys -t urbit-zod "" Enter
+          if tmux -S $TMUX_SOCK has-session -t urbit-zod 2>/dev/null; then
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod "" Enter
             sleep 3
-            tmux kill-session -t urbit-zod || true
+            tmux -S $TMUX_SOCK kill-session -t urbit-zod || true
             echo "Killed tmux session urbit-zod"
           fi
           pkill -f "urbit" || true
           pkill -f "gw-vere" || true
+          sudo rm -rf $TMUX_SOCK || true
           echo "Done."
