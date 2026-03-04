@@ -23,6 +23,7 @@ jobs:
           echo "Cleaning up any leftover piers..."
           sudo rm -rf ./zod ./zod2 || true
           echo "Done."
+
       # -------------------------------------------------------
       # 1. Checkout Repository
       # -------------------------------------------------------
@@ -75,9 +76,7 @@ jobs:
 
       - name: Fix pier permissions
         run: |
-          # Wait briefly for pier directory to be created
           sleep 5
-          # Make sure the runner user owns everything in the pier
           sudo chown -R $(whoami):$(whoami) ./zod || true
           echo "Pier permissions fixed."
 
@@ -569,11 +568,12 @@ jobs:
       # -------------------------------------------------------
       # 20. Boot new fakeship with gw-base pill using gwbtc/vere
       # -------------------------------------------------------
-            - name: Boot new fakeship with gw-base pill
+      - name: Boot new fakeship with gw-base pill
         env:
           PIER: ./zod2
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
+          echo "Booting new fakeship with gw-base pill..."
           tmux new-session -d -s urbit-zod2 -x 220 -y 50
           if [ -f ./gw-base.pill ]; then
             tmux send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
@@ -924,21 +924,18 @@ jobs:
         if: always()
         run: |
           echo "Shutting down fakeships..."
-
           if tmux has-session -t urbit-zod2 2>/dev/null; then
             tmux send-keys -t urbit-zod2 "" Enter
             sleep 3
             tmux kill-session -t urbit-zod2 || true
             echo "Killed tmux session urbit-zod2"
           fi
-
           if tmux has-session -t urbit-zod 2>/dev/null; then
             tmux send-keys -t urbit-zod "" Enter
             sleep 3
             tmux kill-session -t urbit-zod || true
             echo "Killed tmux session urbit-zod"
           fi
-
           pkill -f "urbit" || true
           pkill -f "gw-vere" || true
           echo "Done."
