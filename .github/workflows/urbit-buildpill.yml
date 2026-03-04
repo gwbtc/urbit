@@ -16,6 +16,14 @@ jobs:
       CONN_SOCK: ./zod/.urb/conn.sock
     steps:
       # -------------------------------------------------------
+      # 0. Clean up any leftover piers from previous runs
+      # -------------------------------------------------------
+      - name: Clean up leftover piers
+        run: |
+          echo "Cleaning up any leftover piers..."
+          sudo rm -rf ./zod ./zod2 || true
+          echo "Done."
+      # -------------------------------------------------------
       # 1. Checkout Repository
       # -------------------------------------------------------
       - name: Checkout repository
@@ -64,6 +72,14 @@ jobs:
           tmux new-session -d -s urbit-zod -x 220 -y 50
           tmux send-keys -t urbit-zod "urbit -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
           echo "Fakeship booting in tmux session 'urbit-zod'."
+
+      - name: Fix pier permissions
+        run: |
+          # Wait briefly for pier directory to be created
+          sleep 5
+          # Make sure the runner user owns everything in the pier
+          sudo chown -R $(whoami):$(whoami) ./zod || true
+          echo "Pier permissions fixed."
 
       # -------------------------------------------------------
       # 7. Wait for fakeship to be fully idle
@@ -553,12 +569,11 @@ jobs:
       # -------------------------------------------------------
       # 20. Boot new fakeship with gw-base pill using gwbtc/vere
       # -------------------------------------------------------
-      - name: Boot new fakeship with gw-base pill
+            - name: Boot new fakeship with gw-base pill
         env:
           PIER: ./zod2
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          echo "Booting new fakeship with gw-base pill..."
           tmux new-session -d -s urbit-zod2 -x 220 -y 50
           if [ -f ./gw-base.pill ]; then
             tmux send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
@@ -567,6 +582,12 @@ jobs:
             tmux send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           fi
           echo "Second fakeship booting in tmux session 'urbit-zod2'."
+
+      - name: Fix zod2 pier permissions
+        run: |
+          sleep 5
+          sudo chown -R $(whoami):$(whoami) ./zod2 || true
+          echo "zod2 pier permissions fixed."
 
       # -------------------------------------------------------
       # 21. Wait for second fakeship to be idle
