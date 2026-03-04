@@ -238,40 +238,42 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-          COMMIT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand:spider ,vase)
-                          ^-  form:m
-                          ;<  ~  bind:m
-                            (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
-                          ;<  ~  bind:m
-                            (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-                          ;<  [wire =sign-arvo]  bind:m
-                            ((set-timeout ,[wire sign-arvo]) ~s10 take-sign-arvo)
-                          ?>  ?=([%dill %logs *] sign-arvo)
-                          ;<  ~  bind:m
-                            (send-raw-card [%pass /dill-logs %arvo %d %logs ~])
-                          =/  [%dill %logs =told:dill]  sign-arvo
-                          ?-  told
-                            [%crud *]
-                            (strand-fail:strand:spider %crud ~)
-                          ::
-                            [%talk *]
-                            (pure:m !>(~))
-                          ::
-                            [%text *]
-                            (pure:m !>('Commit successful!'))
-                          ==
-                          '''
-                      =="
+          read -r -d '' COMMIT_FYRD << 'HOON'
+          :*  0
+              %fyrd
+              %base
+              %khan-eval
+              %noun
+              %ted-eval
+              :_  :~  /sur/spider/hoon
+                      /lib/strandio/hoon
+                  ==
+              '''
+              =/  m  (strand:spider ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-commit !>([%gw-base %.n]))
+              ;<  [wire =sign-arvo]  bind:m
+                ((set-timeout ,[wire sign-arvo]) ~s10 take-sign-arvo)
+              ?>  ?=([%dill %logs *] sign-arvo)
+              ;<  ~  bind:m
+                (send-raw-card [%pass /dill-logs %arvo %d %logs ~])
+              =/  [%dill %logs =told:dill]  sign-arvo
+              ?-  told
+                [%crud *]
+                (strand-fail:strand:spider %crud ~)
+              ::
+                [%talk *]
+                (pure:m !>(~))
+              ::
+                [%text *]
+                (pure:m !>('Commit successful!'))
+              ==
+              '''
+          ==
+          HOON
           echo "Committing gw-base desk..."
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
