@@ -246,11 +246,28 @@ jobs:
                           %ted-eval
                           :_  ~
                           '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  ~  bind:m
+                          =/ m (strand:spider ,vase)
+                          ^- form:m
+                          ;< ~ bind:m
+                            (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
+                          ;< ~ bind:m
                             (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-                          (pure:m !>('Commit successful!'))
+                          ;< [wire =sign-arvo] bind:m
+                            ((set-timeout ,[wire sign-arvo]) ~s10 take-sign-arvo)
+                          ?> ?=([%dill %logs *] sign-arvo)
+                          ;< ~ bind:m
+                            (send-raw-card [%pass /dill-logs %arvo %d %logs ~])
+                          =/ [%dill %logs =told:dill] sign-arvo
+                          ?- told
+                            [%crud *]
+                            (strand-fail:strand:spider %crud ~)
+                          ::
+                            [%talk *]
+                            (pure:m !>(~))
+                          ::
+                            [%text *]
+                            (pure:m !>('Commit successful!'))
+                          ==
                           '''
                       =="
           echo "Committing gw-base desk..."
