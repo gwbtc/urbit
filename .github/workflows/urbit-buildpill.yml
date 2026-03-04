@@ -356,8 +356,8 @@ jobs:
                           '''
                       =="
           echo "Polling for pill file in gw-base desk (may take 20 minutes)..."
-          for i in $(seq 1 180); do
-            echo "--- Attempt $i of 180 ($((i * 10))s elapsed) ---"
+          for i in $(seq 1 300); do
+            echo "--- Attempt $i of 300 ($((i * 10))s elapsed) ---"
             # Check if ship is still alive
             ALIVE=$(send_fyrd "$IDLE_FYRD")
             if echo "$ALIVE" | grep -q "%avow"; then
@@ -379,7 +379,7 @@ jobs:
             fi
             sleep 30
           done
-          echo "ERROR: Pill was never written after 1800 seconds."
+          echo "ERROR: Pill was never written after 3000 seconds."
           echo "All files in gw-base:"
           find ./zod/gw-base/ -type f
           echo "Checking ship status:"
