@@ -20,6 +20,7 @@ jobs:
       # -------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
+
       # -------------------------------------------------------
       # 2. Install DigitalOcean CLI (doctl)
       # -------------------------------------------------------
@@ -27,6 +28,7 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
       # -------------------------------------------------------
       # 3. Install Urbit Binary
       # -------------------------------------------------------
@@ -34,15 +36,35 @@ jobs:
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
-          sudo mv vere-v* /usr/local/bin/urbit
+          sudo mv vere-v*/urbit /usr/local/bin/urbit
           urbit --version
+
+      # -------------------------------------------------------
+      # 4. Install netcat and tmux
+      # -------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y netcat-openbsd tmux
+
+      # -------------------------------------------------------
+      # 5. Install peru
+      # -------------------------------------------------------
+      - name: Install peru
+        run: |
+          sudo apt-get install -y pipx
+          pipx ensurepath
+          pipx install peru
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       # -------------------------------------------------------
       # 6. Boot Urbit Fakeship (~zod)
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
-          urbit -d -F zod -c zod
-          echo "Fakeship boot initiated in daemon mode."
+          tmux new-session -d -s urbit-zod -x 220 -y 50
+          tmux send-keys -t urbit-zod "urbit -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
+          echo "Fakeship booting in tmux session 'urbit-zod'."
+
       # -------------------------------------------------------
       # 7. Wait for fakeship to be fully idle
       # -------------------------------------------------------
@@ -60,9 +82,11 @@ jobs:
                     (pure:m !>('Success!'))
                     '''
                 =="
+
           echo "Polling ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
+            tail -1 ./urbit-boot.log 2>/dev/null || true
             RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true)
@@ -75,7 +99,10 @@ jobs:
             sleep 10
           done
           echo "ERROR: Ship never became idle after 600 seconds."
+          echo "=== Last 20 lines of boot log ==="
+          tail -20 ./urbit-boot.log 2>/dev/null || true
           exit 1
+
       # -------------------------------------------------------
       # 8. Create new desk called 'gw-base'
       # -------------------------------------------------------
@@ -87,6 +114,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+
           NEW_DESK_FYRD=":*  0
                              %fyrd
                              %base
@@ -149,10 +177,12 @@ jobs:
                              (pure:m !>('Created desk!'))
                              '''
                          =="
+
           echo "Creating gw-base desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "Result: $RESULT"
           sleep 5
+
       # -------------------------------------------------------
       # 9. Mount gw-base desk
       # -------------------------------------------------------
@@ -164,6 +194,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+
           MOUNT_FYRD=":*  0
                           %fyrd
                           %base
@@ -187,6 +218,7 @@ jobs:
                           (pure:m !>(~))
                           '''
                       =="
+
           echo "Mounting gw-base desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
           sleep 5
@@ -196,6 +228,7 @@ jobs:
           else
             echo "ERROR: Failed to mount desk - $RESULT"
           fi
+
       # -------------------------------------------------------
       # 10. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
       # -------------------------------------------------------
@@ -206,6 +239,7 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
+
       - name: Copy pkg/arvo into gw-base desk
         run: |
           echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk..."
@@ -215,6 +249,7 @@ jobs:
           echo "..."
           find ./zod/gw-base/ -type f | wc -l
           echo "total files"
+
       # -------------------------------------------------------
       # 11. Commit gw-base desk
       # -------------------------------------------------------
@@ -226,6 +261,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+
           read -r -d '' COMMIT_FYRD << 'HOON' || true
           :*  0
               %fyrd
@@ -275,10 +311,12 @@ jobs:
               '''
           ==
           HOON
+
           echo "Committing gw-base desk..."
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
           sleep 10
+
       # -------------------------------------------------------
       # 12. Build brass pill from gw-base
       # -------------------------------------------------------
@@ -312,11 +350,12 @@ jobs:
                             (pure:m !>('Built pill!'))
                             '''
                         =="
+
           echo "Sending pill build command..."
           echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/dev/null | \
             nc -U -W 1 $CONN_SOCK 2>/dev/null > /dev/null &
           echo "Pill build fyrd sent (running in background)."
-          echo "This will take several minutes to complete."
+
       # -------------------------------------------------------
       # 13. Wait for pill build and extract
       # -------------------------------------------------------
@@ -329,6 +368,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
+
           IDLE_FYRD=":*  0
                         %fyrd
                         %base
@@ -341,6 +381,7 @@ jobs:
                         (pure:m !>('alive'))
                         '''
                     =="
+
           COMMIT_FYRD=":*  0
                           %fyrd
                           %base
@@ -356,21 +397,21 @@ jobs:
                           (pure:m !>('Commit successful!'))
                           '''
                       =="
-          echo "Polling for pill file in gw-base desk (may take 20 minutes)..."
+
+          echo "Polling for pill file in gw-base desk..."
           for i in $(seq 1 600); do
-            echo "--- Attempt $i of 600 ($((i * 10))s elapsed) ---"
-            # Check if ship is still alive
+            echo "--- Attempt $i of 600 ($((i * 30))s elapsed) ---"
+            tail -1 ./urbit-boot.log 2>/dev/null || true
+
             ALIVE=$(send_fyrd "$IDLE_FYRD")
             if echo "$ALIVE" | grep -q "%avow"; then
               echo "Ship is responsive."
             else
-              echo "Ship not responding, it may be busy building the pill..."
+              echo "Ship not responding, may be busy building..."
             fi
-            # Trigger commit to sync clay to unix
+
             send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1
-            # Check for pill
-            echo "Searching for pill files:"
-            find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null
+
             PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
@@ -378,29 +419,29 @@ jobs:
               ls -la ./gw-base.pill
               exit 0
             fi
+
             sleep 30
           done
-          echo "ERROR: Pill was never written after 6000 seconds."
-          echo "All files in gw-base:"
+
+          echo "ERROR: Pill never written."
           find ./zod/gw-base/ -type f
-          echo "Checking ship status:"
-          cat ./zod/.urb/pid 2>/dev/null && echo "Ship PID exists" || echo "No PID file"
           exit 1
+
       # -------------------------------------------------------
       # 14. Shutdown first fakeship
       # -------------------------------------------------------
       - name: Shutdown first fakeship
         run: |
           echo "Shutting down first fakeship..."
-          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
-          if [ -n "$URBIT_PID" ]; then
-            kill $URBIT_PID || true
-            echo "Killed fakeship PID $URBIT_PID"
-            sleep 5
-          else
-            pkill -f "urbit" || true
-            sleep 5
+          if tmux has-session -t urbit-zod 2>/dev/null; then
+            tmux send-keys -t urbit-zod "" Enter
+            sleep 3
+            tmux kill-session -t urbit-zod || true
+            echo "Killed tmux session urbit-zod"
           fi
+          pkill -f "urbit" || true
+          sleep 5
+
       # -------------------------------------------------------
       # 15. Install Zig
       # -------------------------------------------------------
@@ -411,6 +452,7 @@ jobs:
           sudo mv zig-x86_64-linux-0.15.2/zig /usr/local/bin/
           sudo mv zig-x86_64-linux-0.15.2/lib /usr/local/lib/zig
           zig version
+
       # -------------------------------------------------------
       # 16. Checkout gwbtc/urcrypt
       # -------------------------------------------------------
@@ -421,10 +463,12 @@ jobs:
           ref: gw/cmp-pub
           path: gwbtc-urcrypt
           token: ${{ secrets.GH_PAT || github.token }}
+
       - name: Remove urcrypt zig build files
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           echo "Removed build.zig and build.zig.zon from urcrypt"
+
       # -------------------------------------------------------
       # 17. Checkout gwbtc/vere
       # -------------------------------------------------------
@@ -435,6 +479,7 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
+
       # -------------------------------------------------------
       # 18. Setup urcrypt as sibling to vere
       # -------------------------------------------------------
@@ -442,6 +487,7 @@ jobs:
         run: |
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
           ls -la $(pwd)/gwbtc-vere/../urcrypt/
+
       # -------------------------------------------------------
       # 19. Build gwbtc/vere with zig build
       # -------------------------------------------------------
@@ -461,7 +507,7 @@ jobs:
                 HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$ZLIB_URL")
                 echo "zlib URL returned HTTP $HTTP_CODE"
                 if [ "$HTTP_CODE" != "200" ]; then
-                  echo "zlib URL is not reachable. Patching build.zig.zon to use vendored zlib..."
+                  echo "Patching build.zig.zon to use vendored zlib..."
                   mkdir -p ext/zlib-src
                   curl -L -o /tmp/zlib.tar.gz "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
                   tar xzf /tmp/zlib.tar.gz --strip-components=1 -C ext/zlib-src
@@ -478,7 +524,6 @@ jobs:
               f.write(content)
           print('Patched build.zig.zon')
           PYEOF
-                  echo "Retrying build with vendored zlib..."
                   zig build || { echo "Build failed even with vendored zlib."; exit 1; }
                 else
                   echo "zlib URL is reachable but build still failed."
@@ -490,7 +535,7 @@ jobs:
               fi
             fi
           done
-          echo "Build complete. Looking for binary..."
+
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
           if [ -n "$VERE_BIN" ]; then
             cp "$VERE_BIN" ../gw-vere
@@ -503,8 +548,8 @@ jobs:
           chmod +x ./gw-vere
           echo "gwbtc/vere built successfully:"
           ls -la ./gw-vere
-          file ./gw-vere
           ./gw-vere --version || true
+
       # -------------------------------------------------------
       # 20. Boot new fakeship with gw-base pill using gwbtc/vere
       # -------------------------------------------------------
@@ -514,13 +559,15 @@ jobs:
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
           echo "Booting new fakeship with gw-base pill..."
+          tmux new-session -d -s urbit-zod2 -x 220 -y 50
           if [ -f ./gw-base.pill ]; then
-            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+            tmux send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           else
             echo "WARNING: No pill found, booting with default pill."
-            ./gw-vere -d -F zod -c zod2
+            tmux send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
           fi
-          echo "Second fakeship boot initiated."
+          echo "Second fakeship booting in tmux session 'urbit-zod2'."
+
       # -------------------------------------------------------
       # 21. Wait for second fakeship to be idle
       # -------------------------------------------------------
@@ -540,9 +587,11 @@ jobs:
                     (pure:m !>('Success!'))
                     '''
                 =="
+
           echo "Polling second ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
+            tail -1 ./urbit-zod2-boot.log 2>/dev/null || true
             RESULT=$(echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true)
@@ -555,7 +604,10 @@ jobs:
             sleep 10
           done
           echo "ERROR: Second ship never became idle after 600 seconds."
+          echo "=== Last 20 lines of zod2 boot log ==="
+          tail -20 ./urbit-zod2-boot.log 2>/dev/null || true
           exit 1
+
       # -------------------------------------------------------
       # 22. Create %groundwire desk on new ship
       # -------------------------------------------------------
@@ -569,6 +621,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true
           }
+
           NEW_DESK_FYRD=":*  0
                              %fyrd
                              %base
@@ -631,10 +684,12 @@ jobs:
                              (pure:m !>('Created desk!'))
                              '''
                          =="
+
           echo "Creating groundwire desk..."
           RESULT=$(send_fyrd "$NEW_DESK_FYRD")
           echo "Result: $RESULT"
           sleep 5
+
       # -------------------------------------------------------
       # 23. Mount %groundwire desk
       # -------------------------------------------------------
@@ -648,6 +703,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true
           }
+
           MOUNT_FYRD=":*  0
                           %fyrd
                           %base
@@ -671,6 +727,7 @@ jobs:
                           (pure:m !>(~))
                           '''
                       =="
+
           echo "Mounting groundwire desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
           sleep 5
@@ -680,6 +737,7 @@ jobs:
           else
             echo "ERROR: Failed to mount groundwire desk - $RESULT"
           fi
+
       # -------------------------------------------------------
       # 24. Checkout gwbtc/groundwire and build dependencies
       # -------------------------------------------------------
@@ -690,6 +748,7 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT }}
+
       - name: Build groundwire dependencies with peru
         run: |
           cd gwbtc-groundwire
@@ -713,6 +772,7 @@ jobs:
             echo "WARNING: No dist/ directory found after build."
           fi
           cd ..
+
       # -------------------------------------------------------
       # 25. Copy groundwire dist into mounted desk
       # -------------------------------------------------------
@@ -730,6 +790,7 @@ jobs:
             echo "ERROR: No dist/ directory to copy from."
             exit 1
           fi
+
       # -------------------------------------------------------
       # 26. Commit %groundwire desk
       # -------------------------------------------------------
@@ -743,6 +804,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true
           }
+
           COMMIT_FYRD=":*  0
                           %fyrd
                           %base
@@ -758,10 +820,12 @@ jobs:
                           (pure:m !>('Commit successful!'))
                           '''
                       =="
+
           echo "Committing groundwire desk..."
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
           sleep 10
+
       # -------------------------------------------------------
       # 27. Install %groundwire desk
       # -------------------------------------------------------
@@ -775,6 +839,7 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true
           }
+
           INSTALL_FYRD=":*  0
                             %fyrd
                             %base
@@ -791,10 +856,12 @@ jobs:
                             (pure:m !>('Install successful!'))
                             '''
                         =="
+
           echo "Installing groundwire desk..."
           RESULT=$(send_fyrd "$INSTALL_FYRD")
           echo "Result: $RESULT"
           sleep 10
+
       # -------------------------------------------------------
       # 28. Validate groundwire desk
       # -------------------------------------------------------
@@ -803,26 +870,32 @@ jobs:
           echo "Validating groundwire desk contents..."
           ls -la ./zod2/groundwire/
           echo "Desk validation complete."
+
       # -------------------------------------------------------
       # 29. Build & Push Docker Image to DO Registry
       # -------------------------------------------------------
       - name: Build Docker image
         run: |
           docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }} .
+
       - name: Log in to DigitalOcean Container Registry
         run: doctl registry login --expiry-seconds 600
+
       - name: Push image to DigitalOcean Container Registry
         run: |
           docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
+
       # -------------------------------------------------------
       # 30. Deploy to DigitalOcean Kubernetes
       # -------------------------------------------------------
       - name: Save DigitalOcean kubeconfig
         run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
+
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/urbit-groundwire \
             urbit-groundwire=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
+
       # -------------------------------------------------------
       # 31. Cleanup - shut down fakeships
       # -------------------------------------------------------
@@ -830,16 +903,21 @@ jobs:
         if: always()
         run: |
           echo "Shutting down fakeships..."
-          URBIT_PID2=$(cat ./zod2/.urb/pid 2>/dev/null || true)
-          if [ -n "$URBIT_PID2" ]; then
-            kill $URBIT_PID2 || true
-            echo "Killed second fakeship PID $URBIT_PID2"
+
+          if tmux has-session -t urbit-zod2 2>/dev/null; then
+            tmux send-keys -t urbit-zod2 "" Enter
+            sleep 3
+            tmux kill-session -t urbit-zod2 || true
+            echo "Killed tmux session urbit-zod2"
           fi
-          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
-          if [ -n "$URBIT_PID" ]; then
-            kill $URBIT_PID || true
-            echo "Killed first fakeship PID $URBIT_PID"
+
+          if tmux has-session -t urbit-zod 2>/dev/null; then
+            tmux send-keys -t urbit-zod "" Enter
+            sleep 3
+            tmux kill-session -t urbit-zod || true
+            echo "Killed tmux session urbit-zod"
           fi
+
           pkill -f "urbit" || true
           pkill -f "gw-vere" || true
           echo "Done."
