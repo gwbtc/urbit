@@ -226,6 +226,12 @@ jobs:
       - name: Copy pkg/arvo into gw-base desk
         run: |
           echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk (overlaying on base)..."
+          # Remove destination directories that conflict with source files
+          find gwbtc-urbit/pkg/arvo -type f | while read src; do
+            rel="${src#gwbtc-urbit/pkg/arvo/}"
+            dest="./zod/gw-base/$rel"
+            [ -d "$dest" ] && rm -rf "$dest" || true
+          done
           cp -rv gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
           echo "Contents of gw-base after copy:"
           find ./zod/gw-base/ -type f | wc -l
