@@ -373,10 +373,15 @@ jobs:
       # -------------------------------------------------------
       - name: Install Zig
         run: |
-          curl -LO https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
-          tar xf zig-x86_64-linux-0.15.2.tar.xz
-          sudo mv zig-x86_64-linux-0.15.2/zig /usr/local/bin/
-          sudo mv zig-x86_64-linux-0.15.2/lib /usr/local/lib/zig
+          if zig version 2>/dev/null | grep -q "0.15.2"; then
+            echo "zig 0.15.2 already installed, skipping."
+          else
+            curl -LO https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+            tar xf zig-x86_64-linux-0.15.2.tar.xz
+            sudo mv zig-x86_64-linux-0.15.2/zig /usr/local/bin/
+            sudo rm -rf /usr/local/lib/zig
+            sudo mv zig-x86_64-linux-0.15.2/lib /usr/local/lib/zig
+          fi
           zig version
 
       # -------------------------------------------------------
