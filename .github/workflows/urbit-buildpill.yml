@@ -121,8 +121,53 @@ jobs:
           tail -20 ./urbit-boot.log 2>/dev/null || true
           exit 1
 
+            # -------------------------------------------------------
+      # 8. Mount base desk
       # -------------------------------------------------------
-      # 8. Create new desk called 'gw-base'
+      - name: Mount base desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+          MOUNT_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  :~  /sur/spider/hoon
+                                  /lib/strandio/hoon
+                              ==
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  our=@p   bind:m  get-our
+                          ;<  now=@da  bind:m  get-time
+                          ;<  ~  bind:m
+                            %:  poke-our
+                                %hood
+                                %kiln-mount
+                                !>([(en-beam [[our %base [%da now]] /]) %base])
+                            ==
+                          (pure:m !>(~))
+                          '''
+                      =="
+          echo "Mounting base desk..."
+          RESULT=$(send_fyrd "$MOUNT_FYRD")
+          sleep 5
+          if [ -d "./zod/base" ]; then
+            echo "Base desk mounted successfully."
+            find ./zod/base/ -type f | wc -l
+            echo "files in base"
+          else
+            echo "ERROR: Failed to mount base desk"
+            exit 1
+          fi
+      # -------------------------------------------------------
+      # 9. Create gw-base as full copy of base
       # -------------------------------------------------------
       - name: Create gw-base desk
         run: |
@@ -132,77 +177,36 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-
-          NEW_DESK_FYRD=":*  0
-                             %fyrd
-                             %base
-                             %khan-eval
-                             %noun
-                             %ted-eval
-                             :_  :~  /sur/spider/hoon
-                                     /lib/strandio/hoon
-                                 ==
-                             '''
-                             =/  m  (strand ,vase)
-                             ^-  form:m
-                             ;<  =beak  bind:m  get-beak
-                             ;<  ~  bind:m
-                               %:  send-raw-card
-                                   %pass   /make-new-desk
-                                   %agent  [p.beak %hood]
-                                   %poke   %helm-pass
-                                   !>  ^-  note-arvo
-                                   %^    new-desk:cloy
-                                       %gw-base
-                                     ~
-                                   %-  ~(gas by *(map path page:clay))
-                                   |^  =-  (turn - mage)
-                                       ^-  (list path)
-                                       =/  common-files=(list path)
-                                         :~
-                                           /mar/noun/hoon
-                                           /mar/hoon/hoon
-                                           /mar/txt/hoon
-                                           /mar/kelvin/hoon
-                                           /sys/kelvin
-                                         ==
-                                       =/  extra-files=(list path)
-                                         :~
-                                           /mar/bill/hoon
-                                           /mar/mime/hoon
-                                           /mar/json/hoon
-                                           /lib/skeleton/hoon
-                                           /lib/default-agent/hoon
-                                           /lib/dbug/hoon
-                                         ==
-                                       (weld common-files extra-files)
-                                   ::
-                                   ++  mage
-                                     |=  =path
-                                     :-  path
-                                     ^-  page:clay
-                                     :-  (rear path)
-                                     ~|  [%missing-source-file %base path]
-                                     .^  *
-                                       %cx
-                                       (scot %p p.beak)
-                                       %base
-                                       (scot %da p.r.beak)
-                                       path
-                                     ==
-                                   --
-                               ==
-                             (pure:m !>('Created desk!'))
-                             '''
-                         =="
-
-          echo "Creating gw-base desk..."
-          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
+          MERGE_FYRD=":*  0
+                          %fyrd
+                          %base
+                          %khan-eval
+                          %noun
+                          %ted-eval
+                          :_  :~  /sur/spider/hoon
+                                  /lib/strandio/hoon
+                              ==
+                          '''
+                          =/  m  (strand ,vase)
+                          ^-  form:m
+                          ;<  =beak  bind:m  get-beak
+                          ;<  ~  bind:m
+                            %:  send-raw-card
+                                %pass   /make-new-desk
+                                %agent  [p.beak %hood]
+                                %poke   %helm-pass
+                                !>  ^-  note-arvo
+                                [%c %merg %gw-base [p.beak %base q.r.beak] %init ~]
+                            ==
+                          (pure:m !>('Created desk!'))
+                          '''
+                      =="
+          echo "Creating gw-base desk as full copy of base..."
+          RESULT=$(send_fyrd "$MERGE_FYRD")
           echo "Result: $RESULT"
-          sleep 5
-
+          sleep 10
       # -------------------------------------------------------
-      # 9. Mount gw-base desk
+      # 10. Mount gw-base desk
       # -------------------------------------------------------
       - name: Mount gw-base desk
         run: |
@@ -212,7 +216,6 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-
           MOUNT_FYRD=":*  0
                           %fyrd
                           %base
@@ -236,19 +239,18 @@ jobs:
                           (pure:m !>(~))
                           '''
                       =="
-
           echo "Mounting gw-base desk..."
           RESULT=$(send_fyrd "$MOUNT_FYRD")
           sleep 5
           if [ -e "./zod/gw-base/sys.kelvin" ]; then
             echo "Desk mounted successfully."
-            cat ./zod/gw-base/sys.kelvin
+            find ./zod/gw-base/ -type f | wc -l
+            echo "files in gw-base"
           else
             echo "ERROR: Failed to mount desk - $RESULT"
           fi
-
       # -------------------------------------------------------
-      # 10. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
+      # 11. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
       # -------------------------------------------------------
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
@@ -257,83 +259,13 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
-
       - name: Copy pkg/arvo into gw-base desk
         run: |
-          echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk..."
+          echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk (overlaying on base)..."
           cp -rv gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
           echo "Contents of gw-base after copy:"
-          find ./zod/gw-base/ -type f | head -50
-          echo "..."
           find ./zod/gw-base/ -type f | wc -l
           echo "total files"
-
-      # -------------------------------------------------------
-      # 11. Commit gw-base desk
-      # -------------------------------------------------------
-      - name: Commit gw-base desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' COMMIT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd
-              %base
-              %khan-eval
-              %noun
-              %ted-eval
-              :_  :~  /sur/spider/hoon
-                      /lib/strandio/hoon
-                  ==
-              '''
-              =/  m  (strand:spider ,vase)
-              =>  |%
-                  ++  print-tang-to-wain
-                    |=  =tang
-                    ^-  wain
-                    %-  zing
-                    %+  turn
-                      tang
-                    |=  =tank
-                    %+  turn
-                      (wash [0 80] tank)
-                    |=  =tape
-                    (crip tape)
-                  --
-              ^-  form:m
-              ;<  ~  bind:m
-                (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-              ;<  [wire =sign-arvo]  bind:m
-                ((set-timeout ,[wire sign-arvo]) ~s10 take-sign-arvo)
-              ?>  ?=([%dill %logs *] sign-arvo)
-              ;<  ~  bind:m
-                (send-raw-card [%pass /dill-logs %arvo %d %logs ~])
-              =/  [%dill %logs =told:dill]  sign-arvo
-              ?-  told
-                [%crud *]
-                (strand-fail:strand:spider %crud [p.told]~)
-              ::
-                [%talk *]
-                (pure:m !>((crip "%talk: {<(print-tang-to-wain p.told)>}")))
-              ::
-                [%text *]
-                (pure:m !>('Commit successful!'))
-              ==
-              '''
-          ==
-          HOON
-
-          echo "Committing gw-base desk..."
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
 
       # -------------------------------------------------------
       # 12. Build brass pill from gw-base
