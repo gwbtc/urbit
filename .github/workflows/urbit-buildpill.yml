@@ -540,75 +540,27 @@ jobs:
               ./gw-vere eval -cn 2>/dev/null || true
           }
 
-          NEW_DESK_FYRD=":*  0
-                             %fyrd
-                             %base
-                             %khan-eval
-                             %noun
-                             %ted-eval
-                             :_  :~  /sur/spider/hoon
-                                     /lib/strandio/hoon
-                                 ==
-                             '''
-                             =/  m  (strand ,vase)
-                             ^-  form:m
-                             ;<  =beak  bind:m  get-beak
-                             ;<  ~  bind:m
-                               %:  send-raw-card
-                                   %pass   /make-new-desk
-                                   %agent  [p.beak %hood]
-                                   %poke   %helm-pass
-                                   !>  ^-  note-arvo
-                                   %^    new-desk:cloy
-                                       %groundwire ~
-                                   %-  ~(gas by *(map path page:clay))
-                                   |^  =-  (turn - mage)
-                                       ^-  (list path)
-                                       =/  common-files=(list path)
-                                         :~
-                                           /mar/noun/hoon
-                                           /mar/hoon/hoon
-                                           /mar/txt/hoon
-                                           /mar/kelvin/hoon
-                                           /sys/kelvin
-                                         ==
-                                       =/  extra-files=(list path)
-                                         :~
-                                           /mar/bill/hoon
-                                           /mar/mime/hoon
-                                           /mar/json/hoon
-                                           /lib/skeleton/hoon
-                                           /lib/default-agent/hoon
-                                           /lib/dbug/hoon
-                                         ==
-                                       (weld common-files extra-files)
-                                   ::
-                                   ++  mage
-                                     |=  =path
-                                     :-  path
-                                     ^-  page:clay
-                                     :-  (rear path)
-                                     ~|  [%missing-source-file %base path]
-                                     .^  *
-                                       %cx
-                                       (scot %p p.beak)
-                                       %base
-                                       (scot %da p.r.beak)
-                                       path
-                                     ==
-                                   --
-                               ==
-                             (pure:m !>('Created desk!'))
-                             '''
-                         =="
+          read -r -d '' MERGE_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p  bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-merge !>([%groundwire our %base [%da now] %init]))
+              (pure:m !>('Merge sent!'))
+              '''
+          ==
+          HOON
 
-          echo "Creating groundwire desk..."
-          RESULT=$(send_fyrd "$NEW_DESK_FYRD")
+          echo "Creating groundwire desk via merge..."
+          RESULT=$(send_fyrd "$MERGE_FYRD")
           echo "Result: $RESULT"
-          sleep 5
 
       # -------------------------------------------------------
-      # 23. Mount %groundwire desk
+      # 23. Mount %groundwire desk (poll until merge completes)
       # -------------------------------------------------------
       - name: Mount groundwire desk
         env:
@@ -621,39 +573,38 @@ jobs:
               ./gw-vere eval -cn 2>/dev/null || true
           }
 
-          MOUNT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  our=@p   bind:m  get-our
-                          ;<  now=@da  bind:m  get-time
-                          ;<  ~  bind:m
-                            %:  poke-our
-                                %hood
-                                %kiln-mount
-                                !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])
-                            ==
-                          (pure:m !>(~))
-                          '''
-                      =="
+          read -r -d '' MOUNT_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                %:  poke-our  %hood  %kiln-mount
+                    !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])  ==
+              (pure:m !>(~))
+              '''
+          ==
+          HOON
 
-          echo "Mounting groundwire desk..."
-          RESULT=$(send_fyrd "$MOUNT_FYRD")
-          sleep 5
-          if [ -e "./zod2/groundwire/sys.kelvin" ]; then
-            echo "Desk mounted successfully."
-            cat ./zod2/groundwire/sys.kelvin
-          else
-            echo "ERROR: Failed to mount groundwire desk - $RESULT"
-          fi
+          echo "Polling to mount groundwire (up to 3 min for merge to complete)..."
+          for i in $(seq 1 18); do
+            RESULT=$(send_fyrd "$MOUNT_FYRD")
+            sleep 5
+            if [ -e "./zod2/groundwire/sys.kelvin" ]; then
+              echo "groundwire mounted successfully (attempt $i)."
+              cat ./zod2/groundwire/sys.kelvin
+              break
+            fi
+            if [ $i -eq 18 ]; then
+              echo "ERROR: groundwire never mounted after 18 attempts"
+              exit 1
+            fi
+            echo "  attempt $i: not yet, waiting 10s..."
+            sleep 10
+          done
 
       # -------------------------------------------------------
       # 24. Checkout gwbtc/groundwire and build dependencies
