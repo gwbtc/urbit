@@ -1,4 +1,4 @@
-name: Urbit Fakeship CI/CD - Groundwire
+name: Build Groundwire
 on:
   push:
     branches:
