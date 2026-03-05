@@ -618,7 +618,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: gwbtc/groundwire
-          ref: gw/next/kelvin/408
+          ref: hd/consolidate-urb
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT }}
 
