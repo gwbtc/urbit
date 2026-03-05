@@ -277,7 +277,194 @@ jobs:
           sleep 10
 
       # -------------------------------------------------------
-      # 12. Build brass pill from gw-base (fire and forget)
+      # 12. Checkout gwbtc/groundwire and build dependencies
+      # -------------------------------------------------------
+      - name: Checkout gwbtc/groundwire
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/groundwire
+          ref: hd/consolidate-urb
+          path: gwbtc-groundwire
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Build groundwire dependencies with peru
+        run: |
+          cd gwbtc-groundwire
+          if [ -f build.sh ]; then
+            chmod +x build.sh
+            bash build.sh
+            echo "Build script completed."
+          else
+            echo "WARNING: No build.sh found. Checking for peru.yaml..."
+            if [ -f peru.yaml ]; then
+              peru sync
+            fi
+          fi
+          if [ -d dist ]; then
+            echo "dist/ directory contents:"
+            find dist/ -type f | head -50
+            echo "..."
+            find dist/ -type f | wc -l
+            echo "total files in dist/"
+          else
+            echo "WARNING: No dist/ directory found after build."
+          fi
+          cd ..
+
+      # -------------------------------------------------------
+      # 13. Create %groundwire desk on build ship
+      # -------------------------------------------------------
+      - name: Create groundwire desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+
+          read -r -d '' MERGE_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p  bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-merge !>([%groundwire our %base [%da now] %init]))
+              (pure:m !>('Merge sent!'))
+              '''
+          ==
+          HOON
+
+          echo "Creating groundwire desk via merge..."
+          RESULT=$(send_fyrd "$MERGE_FYRD")
+          echo "Result: $RESULT"
+
+      # -------------------------------------------------------
+      # 14. Mount %groundwire desk (poll until merge completes)
+      # -------------------------------------------------------
+      - name: Mount groundwire desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+
+          read -r -d '' MOUNT_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                %:  poke-our  %hood  %kiln-mount
+                    !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])  ==
+              (pure:m !>(~))
+              '''
+          ==
+          HOON
+
+          echo "Polling to mount groundwire (up to 3 min for merge to complete)..."
+          for i in $(seq 1 18); do
+            RESULT=$(send_fyrd "$MOUNT_FYRD")
+            sleep 5
+            if [ -e "./zod/groundwire/sys.kelvin" ]; then
+              echo "groundwire mounted successfully (attempt $i)."
+              break
+            fi
+            if [ $i -eq 18 ]; then
+              echo "ERROR: groundwire never mounted after 18 attempts"
+              exit 1
+            fi
+            echo "  attempt $i: not yet, waiting 10s..."
+            sleep 10
+          done
+
+      # -------------------------------------------------------
+      # 15. Copy groundwire dist into mounted desk
+      # -------------------------------------------------------
+      - name: Copy groundwire dist into mounted desk
+        run: |
+          if [ -d gwbtc-groundwire/dist ]; then
+            echo "Copying groundwire dist/* into mounted groundwire desk..."
+            cp -rv gwbtc-groundwire/dist/* ./zod/groundwire/
+            echo "Done."
+          else
+            echo "ERROR: No dist/ directory to copy from."
+            exit 1
+          fi
+
+      # -------------------------------------------------------
+      # 16. Commit %groundwire desk
+      # -------------------------------------------------------
+      - name: Commit groundwire desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+
+          read -r -d '' COMMIT_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-commit !>([%groundwire %.n]))
+              (pure:m !>('Commit sent!'))
+              '''
+          ==
+          HOON
+
+          echo "Committing groundwire desk..."
+          RESULT=$(send_fyrd "$COMMIT_FYRD")
+          echo "Result: $RESULT"
+          sleep 10
+
+      # -------------------------------------------------------
+      # 17. Install %groundwire desk
+      # -------------------------------------------------------
+      - name: Install groundwire desk
+        run: |
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+
+          read -r -d '' INSTALL_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p  bind:m  get-our
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-install !>([%groundwire our %groundwire]))
+              (pure:m !>('Install sent!'))
+              '''
+          ==
+          HOON
+
+          echo "Installing groundwire desk..."
+          RESULT=$(send_fyrd "$INSTALL_FYRD")
+          echo "Result: $RESULT"
+          sleep 10
+
+      # -------------------------------------------------------
+      # 18. Build brass pill from gw-base (fire and forget)
       # -------------------------------------------------------
       - name: Trigger brass pill build
         run: |
@@ -532,217 +719,12 @@ jobs:
           exit 1
 
       # -------------------------------------------------------
-      # 22. Create %groundwire desk on new ship
+      # 22. Validate second ship booted successfully
       # -------------------------------------------------------
-      - name: Create groundwire desk
-        env:
-          CONN_SOCK: ./zod2/.urb/conn.sock
+      - name: Validate second ship
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              ./gw-vere eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MERGE_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p  bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-merge !>([%groundwire our %base [%da now] %init]))
-              (pure:m !>('Merge sent!'))
-              '''
-          ==
-          HOON
-
-          echo "Creating groundwire desk via merge..."
-          RESULT=$(send_fyrd "$MERGE_FYRD")
-          echo "Result: $RESULT"
-
-      # -------------------------------------------------------
-      # 23. Mount %groundwire desk (poll until merge completes)
-      # -------------------------------------------------------
-      - name: Mount groundwire desk
-        env:
-          CONN_SOCK: ./zod2/.urb/conn.sock
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              ./gw-vere eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MOUNT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                %:  poke-our  %hood  %kiln-mount
-                    !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])  ==
-              (pure:m !>(~))
-              '''
-          ==
-          HOON
-
-          echo "Polling to mount groundwire (up to 3 min for merge to complete)..."
-          for i in $(seq 1 18); do
-            RESULT=$(send_fyrd "$MOUNT_FYRD")
-            sleep 5
-            if [ -e "./zod2/groundwire/sys.kelvin" ]; then
-              echo "groundwire mounted successfully (attempt $i)."
-              cat ./zod2/groundwire/sys.kelvin
-              break
-            fi
-            if [ $i -eq 18 ]; then
-              echo "ERROR: groundwire never mounted after 18 attempts"
-              exit 1
-            fi
-            echo "  attempt $i: not yet, waiting 10s..."
-            sleep 10
-          done
-
-      # -------------------------------------------------------
-      # 24. Checkout gwbtc/groundwire and build dependencies
-      # -------------------------------------------------------
-      - name: Checkout gwbtc/groundwire
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/groundwire
-          ref: hd/consolidate-urb
-          path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Build groundwire dependencies with peru
-        run: |
-          cd gwbtc-groundwire
-          if [ -f build.sh ]; then
-            chmod +x build.sh
-            bash build.sh
-            echo "Build script completed."
-          else
-            echo "WARNING: No build.sh found. Checking for peru.yaml..."
-            if [ -f peru.yaml ]; then
-              peru sync
-            fi
-          fi
-          if [ -d dist ]; then
-            echo "dist/ directory contents:"
-            find dist/ -type f | head -50
-            echo "..."
-            find dist/ -type f | wc -l
-            echo "total files in dist/"
-          else
-            echo "WARNING: No dist/ directory found after build."
-          fi
-          cd ..
-
-      # -------------------------------------------------------
-      # 25. Copy groundwire dist into mounted desk
-      # -------------------------------------------------------
-      - name: Copy groundwire dist into mounted desk
-        run: |
-          if [ -d gwbtc-groundwire/dist ]; then
-            echo "Copying groundwire dist/* into mounted groundwire desk..."
-            cp -rv gwbtc-groundwire/dist/* ./zod2/groundwire/
-            echo "Contents of groundwire desk after copy:"
-            find ./zod2/groundwire/ -type f | head -50
-            echo "..."
-            find ./zod2/groundwire/ -type f | wc -l
-            echo "total files"
-          else
-            echo "ERROR: No dist/ directory to copy from."
-            exit 1
-          fi
-
-      # -------------------------------------------------------
-      # 26. Commit %groundwire desk
-      # -------------------------------------------------------
-      - name: Commit groundwire desk
-        env:
-          CONN_SOCK: ./zod2/.urb/conn.sock
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              ./gw-vere eval -cn 2>/dev/null || true
-          }
-
-          COMMIT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  ~
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  ~  bind:m
-                            (poke-our %hood %kiln-commit !>([%groundwire %.n]))
-                          (pure:m !>('Commit successful!'))
-                          '''
-                      =="
-
-          echo "Committing groundwire desk..."
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
-
-      # -------------------------------------------------------
-      # 27. Install %groundwire desk
-      # -------------------------------------------------------
-      - name: Install groundwire desk
-        env:
-          CONN_SOCK: ./zod2/.urb/conn.sock
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              ./gw-vere eval -cn 2>/dev/null || true
-          }
-
-          INSTALL_FYRD=":*  0
-                            %fyrd
-                            %base
-                            %khan-eval
-                            %noun
-                            %ted-eval
-                            :_  ~
-                            '''
-                            =/  m  (strand ,vase)
-                            ^-  form:m
-                            ;<  our=@p  bind:m  get-our
-                            ;<  ~  bind:m
-                              (poke-our %hood %kiln-install !>([%groundwire our %groundwire]))
-                            (pure:m !>('Install successful!'))
-                            '''
-                        =="
-
-          echo "Installing groundwire desk..."
-          RESULT=$(send_fyrd "$INSTALL_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
-
-      # -------------------------------------------------------
-      # 28. Validate groundwire desk
-      # -------------------------------------------------------
-      - name: Validate groundwire desk structure
-        run: |
-          echo "Validating groundwire desk contents..."
-          ls -la ./zod2/groundwire/
-          echo "Desk validation complete."
+          echo "Second ship booted successfully with gw-base pill."
+          ls -la ./zod2/ || true
 
       # -------------------------------------------------------
       # 29. Package and publish pill + vere to gwbtc/urbit releases
