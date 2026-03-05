@@ -14,7 +14,6 @@ jobs:
       DESK_NAME: gw-base
       PIER: ./zod
       CONN_SOCK: ./zod/.urb/conn.sock
-      TMUX_SOCK: /tmp/tmux-runner
     steps:
       # -------------------------------------------------------
       # 0. Clean up any leftover piers from previous runs
@@ -23,8 +22,6 @@ jobs:
         run: |
           echo "Cleaning up any leftover piers..."
           sudo rm -rf ./zod ./zod2 || true
-          # Clean up stale tmux sockets
-          sudo rm -rf /tmp/tmux-* || true
           echo "Done."
 
       # -------------------------------------------------------
@@ -44,15 +41,15 @@ jobs:
           urbit --version
 
       # -------------------------------------------------------
-      # 4. Install netcat and tmux
+      # 3. Install dependencies
       # -------------------------------------------------------
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y netcat-openbsd tmux
+          sudo apt-get install -y netcat-openbsd
 
       # -------------------------------------------------------
-      # 5. Install peru
+      # 4. Install peru
       # -------------------------------------------------------
       - name: Install peru
         run: |
@@ -62,23 +59,15 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # -------------------------------------------------------
-      # 6. Boot Urbit Fakeship (~zod)
+      # 5. Boot Urbit Fakeship (~zod) in daemon mode
       # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
-          tmux -S $TMUX_SOCK new-session -d -s urbit-zod -x 220 -y 50
-          tmux -S $TMUX_SOCK pipe-pane -t urbit-zod "cat >> $(pwd)/urbit-boot.log"
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -F zod -c zod" Enter
-          echo "Fakeship booting in tmux session 'urbit-zod'."
-
-      - name: Fix pier permissions
-        run: |
-          sleep 5
-          sudo chown -R $(whoami):$(whoami) ./zod || true
-          echo "Pier permissions fixed."
+          urbit -d -F zod -c zod
+          echo "Fakeship boot initiated in daemon mode."
 
       # -------------------------------------------------------
-      # 7. Wait for fakeship to be fully idle
+      # 6. Wait for fakeship to be fully idle
       # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
@@ -98,7 +87,6 @@ jobs:
           echo "Polling ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-            tail -1 ./urbit-boot.log 2>/dev/null || true
             RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true)
@@ -111,12 +99,10 @@ jobs:
             sleep 10
           done
           echo "ERROR: Ship never became idle after 600 seconds."
-          echo "=== Last 20 lines of boot log ==="
-          tail -20 ./urbit-boot.log 2>/dev/null || true
           exit 1
 
-            # -------------------------------------------------------
-      # 8. Mount base desk
+      # -------------------------------------------------------
+      # 7. Mount base desk
       # -------------------------------------------------------
       - name: Mount base desk
         run: |
@@ -154,22 +140,44 @@ jobs:
           sleep 5
           if [ -d "./zod/base" ]; then
             echo "Base desk mounted successfully."
-            find ./zod/base/ -type f | wc -l
-            echo "files in base"
           else
             echo "ERROR: Failed to mount base desk"
             exit 1
           fi
+
       # -------------------------------------------------------
-      # 9. Create gw-base as full copy of base
+      # 8. Create gw-base as full copy of base
       # -------------------------------------------------------
       - name: Create gw-base desk
         run: |
-          echo "Merging gw-base from base via dojo..."
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "|merge %gw-base our %base" Enter
-          echo "Merge command sent."
+          send_fyrd() {
+            local FYRD="$1"
+            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
+              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
+              urbit eval -cn 2>/dev/null || true
+          }
+
+          read -r -d '' MERGE_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p  bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-merge !>([%gw-base our %base [%da now] %init]))
+              (pure:m !>('Merge sent!'))
+              '''
+          ==
+          HOON
+
+          echo "Creating gw-base desk via merge..."
+          RESULT=$(send_fyrd "$MERGE_FYRD")
+          echo "Result: $RESULT"
+
       # -------------------------------------------------------
-      # 10. Mount gw-base desk (poll until merge completes)
+      # 9. Mount gw-base desk (poll until merge completes)
       # -------------------------------------------------------
       - name: Mount gw-base desk
         run: |
@@ -202,8 +210,6 @@ jobs:
             sleep 5
             if [ -e "./zod/gw-base/sys.kelvin" ]; then
               echo "gw-base mounted successfully (attempt $i)."
-              find ./zod/gw-base/ -type f | wc -l
-              echo "files in gw-base"
               break
             fi
             if [ $i -eq 18 ]; then
@@ -213,8 +219,9 @@ jobs:
             echo "  attempt $i: not yet, waiting 10s..."
             sleep 10
           done
+
       # -------------------------------------------------------
-      # 11. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
+      # 10. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
       # -------------------------------------------------------
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
@@ -225,21 +232,12 @@ jobs:
           token: ${{ secrets.GH_PAT }}
       - name: Copy pkg/arvo into gw-base desk
         run: |
-          echo "Copying gwbtc/urbit pkg/arvo/* into gw-base desk (overlaying on base)..."
-          # Remove destination directories that conflict with source files
-          # (clay mounts create dirs for namespaces; source repo may have files at same paths)
-          while IFS= read -r -d $'\0' src; do
-            rel="${src#gwbtc-urbit/pkg/arvo/}"
-            dest="./zod/gw-base/$rel"
-            if [ -d "$dest" ]; then
-              echo "Removing conflicting dir: $dest"
-              rm -rf "$dest"
-            fi
-          done < <(find gwbtc-urbit/pkg/arvo -type f -print0)
-          cp -rv gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
-          echo "Contents of gw-base after copy:"
-          find ./zod/gw-base/ -type f | wc -l
-          echo "total files"
+          echo "Copying gwbtc/urbit pkg/arvo changes into gw-base desk..."
+          # Only copy files that differ from base; skip symlinks (dangling base-dev refs)
+          rsync -av --no-links --checksum \
+            --exclude='.git*' --exclude='.ignore' \
+            gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
+          echo "Done."
 
       # -------------------------------------------------------
       # 11. Commit gw-base desk
@@ -264,41 +262,11 @@ jobs:
                       /lib/strandio/hoon
                   ==
               '''
-              =/  m  (strand:spider ,vase)
-              =>  |%
-                  ++  print-tang-to-wain
-                    |=  =tang
-                    ^-  wain
-                    %-  zing
-                    %+  turn
-                      tang
-                    |=  =tank
-                    %+  turn
-                      (wash [0 80] tank)
-                    |=  =tape
-                    (crip tape)
-                  --
+              =/  m  (strand ,vase)
               ^-  form:m
               ;<  ~  bind:m
-                (send-raw-card [%pass /dill-logs %arvo %d %logs `~])
-              ;<  ~  bind:m
                 (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-              ;<  [wire =sign-arvo]  bind:m
-                ((set-timeout ,[wire sign-arvo]) ~s10 take-sign-arvo)
-              ?>  ?=([%dill %logs *] sign-arvo)
-              ;<  ~  bind:m
-                (send-raw-card [%pass /dill-logs %arvo %d %logs ~])
-              =/  [%dill %logs =told:dill]  sign-arvo
-              ?-  told
-                [%crud *]
-                (strand-fail:strand:spider %crud [p.told]~)
-              ::
-                [%talk *]
-                (pure:m !>((crip "%talk: {<(print-tang-to-wain p.told)>}")))
-              ::
-                [%text *]
-                (pure:m !>('Commit successful!'))
-              ==
+              (pure:m !>('Commit sent!'))
               '''
           ==
           HOON
@@ -309,61 +277,44 @@ jobs:
           sleep 10
 
       # -------------------------------------------------------
-      # 11a. Create %autoprop desk merged from base
-      #      (base desk has lib/pill.hoon, lib/shoe.hoon, etc.)
+      # 12. Build brass pill from gw-base (fire and forget)
       # -------------------------------------------------------
-      - name: Create autoprop desk from base
+      - name: Trigger brass pill build
         run: |
-          echo "Creating autoprop desk via dojo merge..."
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "|merge %autoprop our %base" Enter
-
-      # -------------------------------------------------------
-      # 11b. Mount %autoprop desk
-      # -------------------------------------------------------
-      - name: Mount autoprop desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MOUNT_AP_FYRD << 'HOON' || true
+          read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  /lib/pill/hoon  ==
               '''
-              =/  m  (strand ,vase)  ^-  form:m
+              =/  m  (strand ,vase)
+              ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
+              =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
+              =/  =pill:pill  (brass:pill sys ~ & | | ~)
               ;<  ~  bind:m
-                %:  poke-our  %hood  %kiln-mount
-                    !>([(en-beam [[our %autoprop [%da now]] /]) %autoprop])  ==
-              (pure:m !>(~))
+                %:  send-raw-card
+                    %pass  /build
+                    %arvo  %c
+                    %info  %gw-base  %&
+                    :~  [/pill/pill %ins %pill !>(pill)]
+                    ==
+                ==
+              (pure:m !>('Built pill!'))
               '''
           ==
           HOON
 
-          for i in $(seq 1 12); do
-            RESULT=$(send_fyrd "$MOUNT_AP_FYRD")
-            sleep 5
-            if [ -d "./zod/autoprop" ]; then
-              echo "Autoprop desk mounted (attempt $i)."
-              ls ./zod/autoprop/app/ 2>/dev/null || echo "(app/ not yet visible)"
-              break
-            fi
-            if [ $i -eq 12 ]; then
-              echo "ERROR: autoprop desk never mounted"
-              exit 1
-            fi
-            echo "  attempt $i: not yet, waiting 5s..."
-          done
+          echo "Triggering brass pill build (fire-and-forget, build may take up to 15 min)..."
+          echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/dev/null | \
+            nc -U -W 1 $CONN_SOCK 2>/dev/null > /dev/null &
+          echo "Pill build triggered."
 
       # -------------------------------------------------------
-      # 11c. Overlay autoprop app file and commit
+      # 13. Wait for pill to appear in ./zod/gw-base/
       # -------------------------------------------------------
-      - name: Copy autoprop app into desk and commit
+      - name: Wait for pill build output
+        timeout-minutes: 30
         run: |
           send_fyrd() {
             local FYRD="$1"
@@ -372,77 +323,36 @@ jobs:
               urbit eval -cn 2>/dev/null || true
           }
 
-          echo "Copying autoprop app files..."
-          mkdir -p ./zod/autoprop/app
-          cp gwbtc-urbit/pkg/autoprop/app/autoprop.hoon ./zod/autoprop/app/autoprop.hoon
-          cp gwbtc-urbit/pkg/autoprop/desk.bill ./zod/autoprop/desk.bill
-          echo "Files copied."
+          read -r -d '' COMMIT_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-commit !>([%gw-base %.n]))
+              (pure:m !>('Commit sent!'))
+              '''
+          ==
+          HOON
 
-          COMMIT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  ~  bind:m
-                            (poke-our %hood %kiln-commit !>([%autoprop %.n]))
-                          (pure:m !>('Committed autoprop!'))
-                          '''
-                      =="
-
-          echo "Committing autoprop desk..."
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          echo "Result: $RESULT"
-
-      # -------------------------------------------------------
-      # 12. Link autoprop and trigger solid pill build from gw-base
-      # -------------------------------------------------------
-      - name: Link autoprop and trigger pill build
-        run: |
-          echo "Linking autoprop agent via dojo..."
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "|link %autoprop" Enter
-          sleep 20
-
-          echo "Configuring gw-base-pill build task (shoe interface)..."
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "+gw-base-pill solid %gw-base" Enter
-          sleep 5
-
-          echo "Triggering build immediately..."
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "!gw-base-pill" Enter
-          echo "Pill build triggered."
-
-      # -------------------------------------------------------
-      # 13. Wait for pill to appear in .urb/put/autoprop/
-      # -------------------------------------------------------
-      - name: Wait for pill build output
-        timeout-minutes: 30
-        run: |
-          echo "Polling for pill in ./zod/.urb/put/autoprop/..."
-          for i in $(seq 1 60); do
-            echo "--- Attempt $i of 60 ($((i * 30))s elapsed) ---"
-            tail -1 ./urbit-boot.log 2>/dev/null || true
-
-            PILL_FILE=$(find ./zod/.urb/put/autoprop/ -name "*.pill" -type f 2>/dev/null | head -1)
+          echo "Polling for pill in ./zod/gw-base/ (up to 30 min)..."
+          for i in $(seq 1 600); do
+            send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1 || true
+            PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
               cp "$PILL_FILE" ./gw-base.pill
               ls -la ./gw-base.pill
               exit 0
             fi
-
-            echo "No pill yet, waiting 30s..."
-            sleep 30
+            if [ $((i % 60)) -eq 0 ]; then
+              echo "--- $i iterations elapsed, no pill yet ---"
+            fi
           done
-
-          echo "ERROR: Pill never appeared in .urb/put/autoprop/."
-          echo "=== .urb/put/ contents ==="
-          find ./zod/.urb/put/ -type f 2>/dev/null || echo "(empty or missing)"
+          echo "ERROR: Pill never appeared in ./zod/gw-base/."
+          find ./zod/gw-base/ -type f 2>/dev/null | head -20 || echo "(empty)"
           exit 1
 
       # -------------------------------------------------------
@@ -451,13 +361,11 @@ jobs:
       - name: Shutdown first fakeship
         run: |
           echo "Shutting down first fakeship..."
-          if tmux -S $TMUX_SOCK has-session -t urbit-zod 2>/dev/null; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod "" Enter
-            sleep 3
-            tmux -S $TMUX_SOCK kill-session -t urbit-zod || true
-            echo "Killed tmux session urbit-zod"
+          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
+          if [ -n "$URBIT_PID" ]; then
+            kill "$URBIT_PID" || true
+            echo "Sent kill to PID $URBIT_PID"
           fi
-          pkill -f "urbit" || true
           sleep 5
 
       # -------------------------------------------------------
@@ -573,21 +481,13 @@ jobs:
       # -------------------------------------------------------
       - name: Boot new fakeship with gw-base pill
         run: |
-          tmux -S $TMUX_SOCK new-session -d -s urbit-zod2 -x 220 -y 50
-          tmux -S $TMUX_SOCK pipe-pane -t urbit-zod2 "cat >> $(pwd)/urbit-zod2-boot.log"
           if [ -f ./gw-base.pill ]; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2" Enter
+            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           else
             echo "WARNING: No pill found, booting with default pill."
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2" Enter
+            ./gw-vere -d -F zod -c zod2
           fi
-          echo "Second fakeship booting in tmux session 'urbit-zod2'."
-
-      - name: Fix zod2 pier permissions
-        run: |
-          sleep 5
-          sudo chown -R $(whoami):$(whoami) ./zod2 || true
-          echo "zod2 pier permissions fixed."
+          echo "Second fakeship boot initiated in daemon mode."
 
       # -------------------------------------------------------
       # 21. Wait for second fakeship to be idle
@@ -612,7 +512,6 @@ jobs:
           echo "Polling second ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-            tail -1 ./urbit-zod2-boot.log 2>/dev/null || true
             RESULT=$(echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               ./gw-vere eval -cn 2>/dev/null || true)
@@ -625,8 +524,6 @@ jobs:
             sleep 10
           done
           echo "ERROR: Second ship never became idle after 600 seconds."
-          echo "=== Last 20 lines of zod2 boot log ==="
-          tail -20 ./urbit-zod2-boot.log 2>/dev/null || true
           exit 1
 
       # -------------------------------------------------------
@@ -663,8 +560,7 @@ jobs:
                                    %poke   %helm-pass
                                    !>  ^-  note-arvo
                                    %^    new-desk:cloy
-                                       %groundwire
-                                     ~
+                                       %groundwire ~
                                    %-  ~(gas by *(map path page:clay))
                                    |^  =-  (turn - mage)
                                        ^-  (list path)
@@ -929,19 +825,17 @@ jobs:
         if: always()
         run: |
           echo "Shutting down fakeships..."
-          if tmux -S $TMUX_SOCK has-session -t urbit-zod2 2>/dev/null; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "" Enter
-            sleep 3
-            tmux -S $TMUX_SOCK kill-session -t urbit-zod2 || true
-            echo "Killed tmux session urbit-zod2"
+          ZOD2_PID=$(cat ./zod2/.urb/pid 2>/dev/null || true)
+          if [ -n "$ZOD2_PID" ]; then
+            kill "$ZOD2_PID" || true
+            echo "Sent kill to zod2 PID $ZOD2_PID"
           fi
-          if tmux -S $TMUX_SOCK has-session -t urbit-zod 2>/dev/null; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod "" Enter
-            sleep 3
-            tmux -S $TMUX_SOCK kill-session -t urbit-zod || true
-            echo "Killed tmux session urbit-zod"
+          ZOD_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
+          if [ -n "$ZOD_PID" ]; then
+            kill "$ZOD_PID" || true
+            echo "Sent kill to zod PID $ZOD_PID"
           fi
+          sleep 5
           pkill -f "urbit" || true
           pkill -f "gw-vere" || true
-          sudo rm -rf $TMUX_SOCK || true
           echo "Done."
