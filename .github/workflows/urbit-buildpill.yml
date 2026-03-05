@@ -240,43 +240,6 @@ jobs:
           echo "Done."
 
       # -------------------------------------------------------
-      # 11. Commit gw-base desk
-      # -------------------------------------------------------
-      - name: Commit gw-base desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' COMMIT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd
-              %base
-              %khan-eval
-              %noun
-              %ted-eval
-              :_  :~  /sur/spider/hoon
-                      /lib/strandio/hoon
-                  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-              (pure:m !>('Commit sent!'))
-              '''
-          ==
-          HOON
-
-          echo "Committing gw-base desk..."
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
-
-      # -------------------------------------------------------
       # 12. Checkout gwbtc/groundwire and build dependencies
       # -------------------------------------------------------
       - name: Checkout gwbtc/groundwire
@@ -401,70 +364,17 @@ jobs:
           fi
 
       # -------------------------------------------------------
-      # 16. Commit %groundwire desk
+      # 16. Validate both desks are in place before pill build
       # -------------------------------------------------------
-      - name: Commit groundwire desk
+      - name: Validate desk structure
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' COMMIT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-commit !>([%groundwire %.n]))
-              (pure:m !>('Commit sent!'))
-              '''
-          ==
-          HOON
-
-          echo "Committing groundwire desk..."
-          RESULT=$(send_fyrd "$COMMIT_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
+          echo "gw-base:"
+          ls ./zod/gw-base/ | head -10
+          echo "groundwire:"
+          ls ./zod/groundwire/ | head -10
 
       # -------------------------------------------------------
-      # 17. Install %groundwire desk
-      # -------------------------------------------------------
-      - name: Install groundwire desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' INSTALL_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p  bind:m  get-our
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-install !>([%groundwire our %groundwire]))
-              (pure:m !>('Install sent!'))
-              '''
-          ==
-          HOON
-
-          echo "Installing groundwire desk..."
-          RESULT=$(send_fyrd "$INSTALL_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
-
-      # -------------------------------------------------------
-      # 18. Build brass pill from gw-base (fire and forget)
+      # 17. Build brass pill from gw-base (fire and forget)
       # -------------------------------------------------------
       - name: Trigger brass pill build
         run: |
