@@ -34,15 +34,7 @@ jobs:
         uses: actions/checkout@v3
 
       # -------------------------------------------------------
-      # 2. Install DigitalOcean CLI (doctl)
-      # -------------------------------------------------------
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
-      # -------------------------------------------------------
-      # 3. Install Urbit Binary
+      # 2. Install Urbit Binary
       # -------------------------------------------------------
       - name: Install Urbit binary
         run: |
@@ -56,6 +48,7 @@ jobs:
       # -------------------------------------------------------
       - name: Install dependencies
         run: |
+          sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd tmux
 
       # -------------------------------------------------------
@@ -74,7 +67,8 @@ jobs:
       - name: Boot fake ~zod ship
         run: |
           tmux -S $TMUX_SOCK new-session -d -s urbit-zod -x 220 -y 50
-          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -t -F zod -c zod 2>&1 | tee ./urbit-boot.log" Enter
+          tmux -S $TMUX_SOCK pipe-pane -t urbit-zod "cat >> $(pwd)/urbit-boot.log"
+          tmux -S $TMUX_SOCK send-keys -t urbit-zod "urbit -F zod -c zod" Enter
           echo "Fakeship booting in tmux session 'urbit-zod'."
 
       - name: Fix pier permissions
@@ -171,42 +165,11 @@ jobs:
       # -------------------------------------------------------
       - name: Create gw-base desk
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-          MERGE_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  =beak  bind:m  get-beak
-                          ;<  ~  bind:m
-                            %:  send-raw-card
-                                %pass   /make-new-desk
-                                %agent  [p.beak %hood]
-                                %poke   %helm-pass
-                                !>  ^-  note-arvo
-                                [%c %merg %gw-base [p.beak %base q.r.beak] %init ~]
-                            ==
-                          (pure:m !>('Created desk!'))
-                          '''
-                      =="
-          echo "Creating gw-base desk as full copy of base..."
-          RESULT=$(send_fyrd "$MERGE_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
+          echo "Merging gw-base from base via dojo..."
+          tmux -S $TMUX_SOCK send-keys -t urbit-zod "|merge %gw-base our %base" Enter
+          echo "Merge command sent."
       # -------------------------------------------------------
-      # 10. Mount gw-base desk
+      # 10. Mount gw-base desk (poll until merge completes)
       # -------------------------------------------------------
       - name: Mount gw-base desk
         run: |
@@ -216,39 +179,40 @@ jobs:
               nc -U -W 3 $CONN_SOCK 2>/dev/null | \
               urbit eval -cn 2>/dev/null || true
           }
-          MOUNT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  our=@p   bind:m  get-our
-                          ;<  now=@da  bind:m  get-time
-                          ;<  ~  bind:m
-                            %:  poke-our
-                                %hood
-                                %kiln-mount
-                                !>([(en-beam [[our %gw-base [%da now]] /]) %gw-base])
-                            ==
-                          (pure:m !>(~))
-                          '''
-                      =="
-          echo "Mounting gw-base desk..."
-          RESULT=$(send_fyrd "$MOUNT_FYRD")
-          sleep 5
-          if [ -e "./zod/gw-base/sys.kelvin" ]; then
-            echo "Desk mounted successfully."
-            find ./zod/gw-base/ -type f | wc -l
-            echo "files in gw-base"
-          else
-            echo "ERROR: Failed to mount desk - $RESULT"
-          fi
+
+          read -r -d '' MOUNT_GW_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                %:  poke-our  %hood  %kiln-mount
+                    !>([(en-beam [[our %gw-base [%da now]] /]) %gw-base])  ==
+              (pure:m !>(~))
+              '''
+          ==
+          HOON
+
+          echo "Polling to mount gw-base (up to 3 min for merge to complete)..."
+          for i in $(seq 1 18); do
+            RESULT=$(send_fyrd "$MOUNT_GW_FYRD")
+            sleep 5
+            if [ -e "./zod/gw-base/sys.kelvin" ]; then
+              echo "gw-base mounted successfully (attempt $i)."
+              find ./zod/gw-base/ -type f | wc -l
+              echo "files in gw-base"
+              break
+            fi
+            if [ $i -eq 18 ]; then
+              echo "ERROR: gw-base never mounted after 18 attempts"
+              exit 1
+            fi
+            echo "  attempt $i: not yet, waiting 10s..."
+            sleep 10
+          done
       # -------------------------------------------------------
       # 11. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
       # -------------------------------------------------------
@@ -340,37 +304,8 @@ jobs:
       # -------------------------------------------------------
       - name: Create autoprop desk from base
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          CREATE_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  our=@p   bind:m  get-our
-                          ;<  now=@da  bind:m  get-time
-                          ;<  ~  bind:m
-                            (send-raw-card %pass /merg %arvo %c %merg %autoprop [our %base da+now] %meet)
-                          (pure:m !>('Created autoprop desk!'))
-                          '''
-                      =="
-
-          echo "Creating autoprop desk from base..."
-          RESULT=$(send_fyrd "$CREATE_FYRD")
-          echo "Result: $RESULT"
-          sleep 10
+          echo "Creating autoprop desk via dojo merge..."
+          tmux -S $TMUX_SOCK send-keys -t urbit-zod "|merge %autoprop our %base" Enter
 
       # -------------------------------------------------------
       # 11b. Mount %autoprop desk
@@ -384,40 +319,36 @@ jobs:
               urbit eval -cn 2>/dev/null || true
           }
 
-          MOUNT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  our=@p   bind:m  get-our
-                          ;<  now=@da  bind:m  get-time
-                          ;<  ~  bind:m
-                            %:  poke-our
-                                %hood
-                                %kiln-mount
-                                !>([(en-beam [[our %autoprop [%da now]] /]) %autoprop])
-                            ==
-                          (pure:m !>(~))
-                          '''
-                      =="
+          read -r -d '' MOUNT_AP_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                %:  poke-our  %hood  %kiln-mount
+                    !>([(en-beam [[our %autoprop [%da now]] /]) %autoprop])  ==
+              (pure:m !>(~))
+              '''
+          ==
+          HOON
 
-          echo "Mounting autoprop desk..."
-          RESULT=$(send_fyrd "$MOUNT_FYRD")
-          sleep 10
-          if [ -d "./zod/autoprop" ]; then
-            echo "Autoprop desk mounted."
-            ls ./zod/autoprop/app/ 2>/dev/null || echo "(app/ not yet visible)"
-          else
-            echo "ERROR: autoprop desk not mounted."
-            exit 1
-          fi
+          for i in $(seq 1 12); do
+            RESULT=$(send_fyrd "$MOUNT_AP_FYRD")
+            sleep 5
+            if [ -d "./zod/autoprop" ]; then
+              echo "Autoprop desk mounted (attempt $i)."
+              ls ./zod/autoprop/app/ 2>/dev/null || echo "(app/ not yet visible)"
+              break
+            fi
+            if [ $i -eq 12 ]; then
+              echo "ERROR: autoprop desk never mounted"
+              exit 1
+            fi
+            echo "  attempt $i: not yet, waiting 5s..."
+          done
 
       # -------------------------------------------------------
       # 11c. Overlay autoprop app file and commit
@@ -458,7 +389,6 @@ jobs:
           echo "Committing autoprop desk..."
           RESULT=$(send_fyrd "$COMMIT_FYRD")
           echo "Result: $RESULT"
-          sleep 15
 
       # -------------------------------------------------------
       # 12. Link autoprop and trigger solid pill build from gw-base
@@ -634,11 +564,12 @@ jobs:
       - name: Boot new fakeship with gw-base pill
         run: |
           tmux -S $TMUX_SOCK new-session -d -s urbit-zod2 -x 220 -y 50
+          tmux -S $TMUX_SOCK pipe-pane -t urbit-zod2 "cat >> $(pwd)/urbit-zod2-boot.log"
           if [ -f ./gw-base.pill ]; then
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -t -F zod -B ./gw-base.pill -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -B ./gw-base.pill -c zod2" Enter
           else
             echo "WARNING: No pill found, booting with default pill."
-            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -t -F zod -c zod2 2>&1 | tee ./urbit-zod2-boot.log" Enter
+            tmux -S $TMUX_SOCK send-keys -t urbit-zod2 "./gw-vere -F zod -c zod2" Enter
           fi
           echo "Second fakeship booting in tmux session 'urbit-zod2'."
 
@@ -954,6 +885,11 @@ jobs:
       # -------------------------------------------------------
       # 29. Build & Push Docker Image to DO Registry
       # -------------------------------------------------------
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
       - name: Build Docker image
         run: |
           docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }} .
