@@ -482,10 +482,10 @@ jobs:
       - name: Boot new fakeship with gw-base pill
         run: |
           if [ -f ./gw-base.pill ]; then
-            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2 -p 31338 --http-port 8081
           else
             echo "WARNING: No pill found, booting with default pill."
-            ./gw-vere -d -F zod -c zod2
+            ./gw-vere -d -F zod -c zod2 -p 31338 --http-port 8081
           fi
           echo "Second fakeship boot initiated in daemon mode."
 
@@ -789,37 +789,20 @@ jobs:
           echo "Desk validation complete."
 
       # -------------------------------------------------------
-      # 29. Build & Push Docker Image to DO Registry
+      # 29. Package and publish pill + vere to gwbtc/urbit releases
       # -------------------------------------------------------
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
-      - name: Build Docker image
+      - name: Publish release artifacts
         run: |
-          docker build -t registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }} .
-
-      - name: Log in to DigitalOcean Container Registry
-        run: doctl registry login --expiry-seconds 600
-
-      - name: Push image to DigitalOcean Container Registry
-        run: |
-          docker push registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
-
-      # -------------------------------------------------------
-      # 30. Deploy to DigitalOcean Kubernetes
-      # -------------------------------------------------------
-      - name: Save DigitalOcean kubeconfig
-        run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }}
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl set image deployment/urbit-groundwire \
-            urbit-groundwire=registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/urbit-groundwire:${{ github.sha }}
+          tar czf gw-base-release.tar.gz gw-base.pill gw-vere
+          gh release create "build-${GITHUB_SHA:0:8}" gw-base-release.tar.gz \
+            --repo gwbtc/urbit \
+            --title "Build ${GITHUB_SHA:0:8}" \
+            --notes "Automated build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
 
       # -------------------------------------------------------
-      # 31. Cleanup - shut down fakeships
+      # 30. Cleanup - shut down fakeships
       # -------------------------------------------------------
       - name: Shutdown fakeships
         if: always()
