@@ -215,27 +215,41 @@ jobs:
           - target: linux-x86_64
             runner: ubuntu-latest
             zig_archive: zig-x86_64-linux-0.15.2.tar.xz
+            zig_014_archive: zig-linux-x86_64-0.14.1.tar.xz
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
             zig_archive: zig-aarch64-linux-0.15.2.tar.xz
-          - target: macos-x86_64
-            runner: macos-13
-            zig_archive: zig-x86_64-macos-0.15.2.tar.xz
+            zig_014_archive: zig-linux-aarch64-0.14.1.tar.xz
           - target: macos-aarch64
             runner: macos-latest
             zig_archive: zig-aarch64-macos-0.15.2.tar.xz
+            zig_014_archive: zig-macos-aarch64-0.14.1.tar.xz
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig
+      - name: Install Zig 0.15.2 and 0.14.1
         run: |
+          # Zig 0.15.2 for vere
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
-          ZIG_DIR="${{ matrix.zig_archive }}"
-          ZIG_DIR="${ZIG_DIR%.tar.xz}"
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+          ZIG15_DIR="${{ matrix.zig_archive }}"
+          ZIG15_DIR="${ZIG15_DIR%.tar.xz}"
 
-      - name: Verify Zig
-        run: zig version
+          # Zig 0.14.1 for comet-miner
+          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_014_archive }}"
+          tar xf "${{ matrix.zig_014_archive }}"
+          ZIG14_DIR="${{ matrix.zig_014_archive }}"
+          ZIG14_DIR="${ZIG14_DIR%.tar.xz}"
+
+          # Put 0.15.2 on PATH by default (vere), save 0.14.1 path for comet-miner
+          echo "$(pwd)/$ZIG15_DIR" >> $GITHUB_PATH
+          echo "ZIG14=$(pwd)/$ZIG14_DIR/zig" >> $GITHUB_ENV
+
+      - name: Verify Zig versions
+        run: |
+          echo "Zig 0.15.2 (vere):"
+          zig version
+          echo "Zig 0.14.1 (comet-miner):"
+          $ZIG14 version
 
       - name: Checkout gwbtc/comet-miner
         uses: actions/checkout@v3
@@ -247,8 +261,8 @@ jobs:
       - name: Build comet-miner
         run: |
           cd gwbtc-comet-miner
-          echo "Building comet-miner for ${{ matrix.target }}..."
-          zig build -Doptimize=ReleaseFast -Dprogram=comet_miner
+          echo "Building comet-miner for ${{ matrix.target }} with Zig 0.14.1..."
+          $ZIG14 build -Doptimize=ReleaseFast -Dprogram=comet_miner
           MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
           if [ -z "$MINER_BIN" ]; then
             MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
@@ -454,7 +468,7 @@ jobs:
 
       - name: Publish release artifacts
         run: |
-          for target in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64; do
+          for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
             cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
@@ -468,7 +482,6 @@ jobs:
           gh release create "build-${GITHUB_SHA:0:8}" \
             groundwire-linux-x86_64.tar.gz \
             groundwire-linux-aarch64.tar.gz \
-            groundwire-macos-x86_64.tar.gz \
             groundwire-macos-aarch64.tar.gz \
             --repo gwbtc/urbit \
             --title "Build ${GITHUB_SHA:0:8}" \
@@ -484,7 +497,6 @@ jobs:
           Usage: \`tar xzf groundwire-<platform>.tar.gz && pip install -r requirements.txt && python3 gw-onboard.py\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
-          - \`groundwire-macos-x86_64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
