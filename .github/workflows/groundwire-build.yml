@@ -139,7 +139,7 @@ jobs:
 
       - name: Mount and patch stock desks
         run: |
-          for desk in groups landscape storage; do
+          for desk in groups landscape; do
             echo "Mounting and patching %${desk}..."
             ./automation/desk-mount.sh "$desk" ./zod "$CONN_SOCK"
             sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/${desk}/sys.kelvin"
@@ -148,7 +148,7 @@ jobs:
 
       - name: Validate all desks
         run: |
-          for desk in gw-base groundwire spv-wallet urbit-mcp groups landscape storage; do
+          for desk in gw-base groundwire spv-wallet urbit-mcp groups landscape; do
             echo "${desk}:"
             ls "./zod/${desk}/" | head -10
             echo ""
