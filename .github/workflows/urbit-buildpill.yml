@@ -262,7 +262,20 @@ jobs:
         run: |
           cd gwbtc-comet-miner
           echo "Building comet-miner for ${{ matrix.target }} with Zig 0.14.1..."
-          $ZIG14 build -Doptimize=ReleaseFast -Dprogram=comet_miner
+          for attempt in 1 2 3; do
+            echo "Build attempt $attempt of 3..."
+            if $ZIG14 build -Doptimize=ReleaseFast -Dprogram=comet_miner; then
+              echo "Build succeeded on attempt $attempt."
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "All 3 attempts failed."
+                exit 1
+              fi
+              echo "Build failed on attempt $attempt, retrying in 15s..."
+              sleep 15
+            fi
+          done
           MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
           if [ -z "$MINER_BIN" ]; then
             MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
