@@ -382,6 +382,33 @@ jobs:
           name: comet-miner-${{ matrix.target }}
           path: ./comet_miner
 
+      - name: Checkout gwbtc/booting
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/booting
+          path: gwbtc-booting
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Build gw-onboard
+        run: |
+          if [[ "$OSTYPE" == darwin* ]]; then
+            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
+            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+          else
+            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
+            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+          fi
+          pip install pyinstaller requests embit
+          pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
+          chmod +x dist/gw-onboard
+          ls -la dist/gw-onboard
+
+      - name: Upload gw-onboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-onboard-${{ matrix.target }}
+          path: dist/gw-onboard
+
   # =============================================================
   # Validate the pill boots, then publish release
   # =============================================================
@@ -411,12 +438,11 @@ jobs:
           pattern: comet-miner-*
           path: ./artifacts/comet-miner
 
-      - name: Checkout gwbtc/booting
-        uses: actions/checkout@v3
+      - name: Download gw-onboard binaries
+        uses: actions/download-artifact@v4
         with:
-          repository: gwbtc/booting
-          path: gwbtc-booting
-          token: ${{ secrets.GH_PAT }}
+          pattern: gw-onboard-*
+          path: ./artifacts/gw-onboard
 
       - name: Prepare release artifacts
         run: |
@@ -426,14 +452,10 @@ jobs:
           find ./artifacts/vere/ -type f -ls
           echo "Comet-miner binaries:"
           find ./artifacts/comet-miner/ -type f -ls
-
-          sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
-          sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+          echo "gw-onboard binaries:"
+          find ./artifacts/gw-onboard/ -type f -ls
 
           printf 'requests\nembit\n' > requirements.txt
-
-          pip install pyinstaller requests embit
-          pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
 
       - name: Install system dependencies
         run: |
@@ -481,7 +503,8 @@ jobs:
             cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
             cp "./artifacts/comet-miner/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
-            cp gwbtc-booting/gw-onboard "pkg-${target}/"
+            cp "./artifacts/gw-onboard/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
+            chmod +x "pkg-${target}/gw-onboard"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
