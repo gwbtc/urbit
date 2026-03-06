@@ -483,12 +483,12 @@ jobs:
 
           # Build date-based release tag with increment for same-day releases
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
-          TAG="groundwire-${DATE_BASE}"
-          TITLE="groundwire ${DATE_BASE}"
+          TAG="groundwire-alpha-${DATE_BASE}"
+          TITLE="groundwire-alpha ${DATE_BASE}"
           SUFFIX=2
           while gh release view "$TAG" --repo gwbtc/urbit &>/dev/null; do
-            TAG="groundwire-${DATE_BASE}_${SUFFIX}"
-            TITLE="groundwire ${DATE_BASE}_${SUFFIX}"
+            TAG="groundwire-alpha-${DATE_BASE}_${SUFFIX}"
+            TITLE="groundwire-alpha ${DATE_BASE}_${SUFFIX}"
             SUFFIX=$((SUFFIX + 1))
           done
 
