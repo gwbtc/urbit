@@ -47,146 +47,15 @@ jobs:
           echo "Fakeship boot initiated in daemon mode."
 
       - name: Wait for fakeship to be idle
-        run: |
-          FYRD=":*  0
-                    %fyrd
-                    %base
-                    %khan-eval
-                    %noun
-                    %ted-eval
-                    :_  ~
-                    '''
-                    =/  m  (strand ,vase)
-                    (pure:m !>('Success!'))
-                    '''
-                =="
-
-          echo "Polling ship until idle..."
-          for i in $(seq 1 60); do
-            echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-            RESULT=$(echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true)
-            echo "Result: $RESULT"
-            if echo "$RESULT" | grep -q "%avow"; then
-              echo "Ship is idle and responsive after $((i * 10)) seconds."
-              exit 0
-            fi
-            echo "Ship not ready yet, waiting 10s..."
-            sleep 10
-          done
-          echo "ERROR: Ship never became idle after 600 seconds."
-          exit 1
+        run: ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Mount base desk
+        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
+
+      - name: Create and mount gw-base desk
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-          MOUNT_FYRD=":*  0
-                          %fyrd
-                          %base
-                          %khan-eval
-                          %noun
-                          %ted-eval
-                          :_  :~  /sur/spider/hoon
-                                  /lib/strandio/hoon
-                              ==
-                          '''
-                          =/  m  (strand ,vase)
-                          ^-  form:m
-                          ;<  our=@p   bind:m  get-our
-                          ;<  now=@da  bind:m  get-time
-                          ;<  ~  bind:m
-                            %:  poke-our
-                                %hood
-                                %kiln-mount
-                                !>([(en-beam [[our %base [%da now]] /]) %base])
-                            ==
-                          (pure:m !>(~))
-                          '''
-                      =="
-          echo "Mounting base desk..."
-          RESULT=$(send_fyrd "$MOUNT_FYRD")
-          sleep 5
-          if [ -d "./zod/base" ]; then
-            echo "Base desk mounted successfully."
-          else
-            echo "ERROR: Failed to mount base desk"
-            exit 1
-          fi
-
-      - name: Create gw-base desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MERGE_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p  bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-merge !>([%gw-base our %base [%da now] %init]))
-              (pure:m !>('Merge sent!'))
-              '''
-          ==
-          HOON
-
-          echo "Creating gw-base desk via merge..."
-          RESULT=$(send_fyrd "$MERGE_FYRD")
-          echo "Result: $RESULT"
-
-      - name: Mount gw-base desk
-        run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MOUNT_GW_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                %:  poke-our  %hood  %kiln-mount
-                    !>([(en-beam [[our %gw-base [%da now]] /]) %gw-base])  ==
-              (pure:m !>(~))
-              '''
-          ==
-          HOON
-
-          echo "Polling to mount gw-base (up to 3 min for merge to complete)..."
-          for i in $(seq 1 18); do
-            RESULT=$(send_fyrd "$MOUNT_GW_FYRD")
-            sleep 5
-            if [ -e "./zod/gw-base/sys.kelvin" ]; then
-              echo "gw-base mounted successfully (attempt $i)."
-              break
-            fi
-            if [ $i -eq 18 ]; then
-              echo "ERROR: gw-base never mounted after 18 attempts"
-              exit 1
-            fi
-            echo "  attempt $i: not yet, waiting 10s..."
-            sleep 10
-          done
+          ./automation/desk-create.sh gw-base "$CONN_SOCK"
+          ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
@@ -236,85 +105,27 @@ jobs:
           fi
           cd ..
 
-      - name: Create groundwire desk
+      - name: Create, mount, and populate groundwire desk
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
+          ./automation/desk-create.sh groundwire "$CONN_SOCK"
+          ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
+          cp -rv gwbtc-groundwire/dist/* ./zod/groundwire/
 
-          read -r -d '' MERGE_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p  bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-merge !>([%groundwire our %base [%da now] %init]))
-              (pure:m !>('Merge sent!'))
-              '''
-          ==
-          HOON
+      - name: Checkout gwbtc/spv-wallet
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/spv-wallet
+          ref: develop
+          path: gwbtc-spv-wallet
+          token: ${{ secrets.GH_PAT }}
 
-          echo "Creating groundwire desk via merge..."
-          RESULT=$(send_fyrd "$MERGE_FYRD")
-          echo "Result: $RESULT"
-
-      - name: Mount groundwire desk
+      - name: Create, mount, and populate spv-wallet desk
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' MOUNT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)  ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              ;<  ~  bind:m
-                %:  poke-our  %hood  %kiln-mount
-                    !>([(en-beam [[our %groundwire [%da now]] /]) %groundwire])  ==
-              (pure:m !>(~))
-              '''
-          ==
-          HOON
-
-          echo "Polling to mount groundwire (up to 3 min for merge to complete)..."
-          for i in $(seq 1 18); do
-            RESULT=$(send_fyrd "$MOUNT_FYRD")
-            sleep 5
-            if [ -e "./zod/groundwire/sys.kelvin" ]; then
-              echo "groundwire mounted successfully (attempt $i)."
-              break
-            fi
-            if [ $i -eq 18 ]; then
-              echo "ERROR: groundwire never mounted after 18 attempts"
-              exit 1
-            fi
-            echo "  attempt $i: not yet, waiting 10s..."
-            sleep 10
-          done
-
-      - name: Copy groundwire dist into mounted desk
-        run: |
-          if [ -d gwbtc-groundwire/dist ]; then
-            echo "Copying groundwire dist/* into mounted groundwire desk..."
-            cp -rv gwbtc-groundwire/dist/* ./zod/groundwire/
-            echo "Done."
-          else
-            echo "ERROR: No dist/ directory to copy from."
-            exit 1
-          fi
+          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
+          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
+          rsync -av --no-links --checksum \
+            --exclude='.git*' --exclude='.ignore' \
+            gwbtc-spv-wallet/ ./zod/spv-wallet/
 
       - name: Validate desk structure
         run: |
@@ -322,9 +133,13 @@ jobs:
           ls ./zod/gw-base/ | head -10
           echo "groundwire:"
           ls ./zod/groundwire/ | head -10
+          echo "spv-wallet:"
+          ls ./zod/spv-wallet/ | head -10
 
       - name: Trigger brass pill build
         run: |
+          source ./automation/fyrd.sh
+
           read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -349,38 +164,16 @@ jobs:
           ==
           HOON
 
-          echo "Triggering brass pill build (fire-and-forget, build may take up to 15 min)..."
-          echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/dev/null | \
-            nc -U -W 1 $CONN_SOCK 2>/dev/null > /dev/null &
+          echo "Triggering brass pill build (fire-and-forget)..."
+          fire_and_forget_fyrd "$BUILD_PILL_FYRD"
           echo "Pill build triggered."
 
       - name: Wait for pill build output
         timeout-minutes: 30
         run: |
-          send_fyrd() {
-            local FYRD="$1"
-            echo "$FYRD" | urbit eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              urbit eval -cn 2>/dev/null || true
-          }
-
-          read -r -d '' COMMIT_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  ~  bind:m
-                (poke-our %hood %kiln-commit !>([%gw-base %.n]))
-              (pure:m !>('Commit sent!'))
-              '''
-          ==
-          HOON
-
           echo "Polling for pill in ./zod/gw-base/ (up to 30 min)..."
           for i in $(seq 1 600); do
-            send_fyrd "$COMMIT_FYRD" > /dev/null 2>&1 || true
+            ./automation/desk-commit.sh gw-base "$CONN_SOCK" > /dev/null 2>&1 || true
             PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
@@ -413,7 +206,7 @@ jobs:
           path: ./gw-base.pill
 
   # =============================================================
-  # Job 2: Build vere for each target (4 parallel jobs)
+  # Job 2: Build vere + comet-miner for each target (4 parallel)
   # =============================================================
   build-vere:
     strategy:
@@ -443,6 +236,34 @@ jobs:
 
       - name: Verify Zig
         run: zig version
+
+      - name: Checkout gwbtc/comet-miner
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/comet-miner
+          path: gwbtc-comet-miner
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Build comet-miner
+        run: |
+          cd gwbtc-comet-miner
+          echo "Building comet-miner for ${{ matrix.target }}..."
+          zig build -Doptimize=ReleaseFast -Dprogram=comet_miner
+          MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
+          if [ -z "$MINER_BIN" ]; then
+            MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
+          fi
+          if [ -n "$MINER_BIN" ]; then
+            cp "$MINER_BIN" ../comet_miner
+          else
+            echo "ERROR: comet_miner binary not found in zig-out"
+            find zig-out/ -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          cd ..
+          chmod +x ./comet_miner
+          echo "comet-miner built successfully for ${{ matrix.target }}:"
+          ls -la ./comet_miner
 
       - name: Checkout gwbtc/urcrypt
         uses: actions/checkout@v3
@@ -515,7 +336,6 @@ jobs:
 
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
           if [ -z "$VERE_BIN" ]; then
-            # macOS: executables may not have +x in find results
             VERE_BIN=$(find zig-out -type f -name "urbit" -o -type f -name "vere" 2>/dev/null | head -1)
           fi
           if [ -n "$VERE_BIN" ]; then
@@ -537,6 +357,12 @@ jobs:
           name: gw-vere-${{ matrix.target }}
           path: ./gw-vere
 
+      - name: Upload comet-miner artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: comet-miner-${{ matrix.target }}
+          path: ./comet_miner
+
   # =============================================================
   # Job 3: Validate pill + vere, then publish release
   # =============================================================
@@ -544,6 +370,9 @@ jobs:
     needs: [build-pill, build-vere]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Download pill
         uses: actions/download-artifact@v4
         with:
@@ -556,12 +385,34 @@ jobs:
           pattern: gw-vere-*
           path: ./artifacts/vere
 
+      - name: Download all comet-miner binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: comet-miner-*
+          path: ./artifacts/comet-miner
+
+      - name: Checkout gwbtc/booting
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/booting
+          path: gwbtc-booting
+          token: ${{ secrets.GH_PAT }}
+
       - name: Prepare artifacts
         run: |
           cp ./artifacts/pill/gw-base.pill ./gw-base.pill
           ls -la ./gw-base.pill
           echo "Vere binaries:"
           find ./artifacts/vere/ -type f -ls
+          echo "Comet-miner binaries:"
+          find ./artifacts/comet-miner/ -type f -ls
+
+          # Patch gw-onboard.py defaults to match release tarball layout
+          sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
+          sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+
+          # Create requirements.txt for onboarding script dependencies
+          printf 'requests\nembit\n' > requirements.txt
 
       - name: Install dependencies
         run: |
@@ -569,44 +420,14 @@ jobs:
           sudo apt-get install -y netcat-openbsd
 
       - name: Validate pill by booting with linux-x86_64 vere
+        env:
+          VERE_BIN: ./gw-vere
+          CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
           cp ./artifacts/vere/gw-vere-linux-x86_64/gw-vere ./gw-vere
           chmod +x ./gw-vere
           ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
-
-          CONN_SOCK=./zod2/.urb/conn.sock
-          FYRD=":*  0
-                    %fyrd
-                    %base
-                    %khan-eval
-                    %noun
-                    %ted-eval
-                    :_  ~
-                    '''
-                    =/  m  (strand ,vase)
-                    (pure:m !>('Success!'))
-                    '''
-                =="
-
-          echo "Polling ship until idle..."
-          for i in $(seq 1 60); do
-            echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
-            RESULT=$(echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
-              nc -U -W 3 $CONN_SOCK 2>/dev/null | \
-              ./gw-vere eval -cn 2>/dev/null || true)
-            echo "Result: $RESULT"
-            if echo "$RESULT" | grep -q "%avow"; then
-              echo "Ship is idle and responsive after $((i * 10)) seconds."
-              break
-            fi
-            if [ $i -eq 60 ]; then
-              echo "ERROR: Ship never became idle after 600 seconds."
-              exit 1
-            fi
-            echo "Ship not ready yet, waiting 10s..."
-            sleep 10
-          done
-
+          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Validation successful. Ship booted with pill + vere."
           ls -la ./zod2/
 
@@ -637,7 +458,10 @@ jobs:
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
             cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
-            chmod +x "pkg-${target}/gw-vere"
+            cp "./artifacts/comet-miner/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
+            chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
+            cp gwbtc-booting/gw-onboard.py "pkg-${target}/"
+            cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
 
@@ -650,7 +474,14 @@ jobs:
             --title "Build ${GITHUB_SHA:0:8}" \
             --notes "Automated build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
 
-          Each tarball contains \`gw-base.pill\` and \`gw-vere\` for the target platform.
+          Each tarball contains everything needed to onboard:
+          - \`gw-vere\` — Urbit runtime
+          - \`gw-base.pill\` — Brass pill
+          - \`comet_miner\` — Comet miner
+          - \`gw-onboard.py\` — Onboarding script
+          - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
+
+          Usage: \`tar xzf groundwire-<platform>.tar.gz && pip install -r requirements.txt && python3 gw-onboard.py\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-x86_64.tar.gz\`
