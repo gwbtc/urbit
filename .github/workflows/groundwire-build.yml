@@ -137,18 +137,18 @@ jobs:
           bash build.sh -p ../zod/urbit-mcp
           cd ..
 
-      - name: Mount and patch %groups desk
+      - name: Mount and patch stock desks
         run: |
-          # %groups should already exist on the stock ~zod
-          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-          # Change sys.kelvin from 409 to 408
-          echo "Patching %groups sys.kelvin from 409 to 408..."
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/groups/sys.kelvin
-          cat ./zod/groups/sys.kelvin
+          for desk in groups contacts landscape storage; do
+            echo "Mounting and patching %${desk}..."
+            ./automation/desk-mount.sh "$desk" ./zod "$CONN_SOCK"
+            sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/${desk}/sys.kelvin"
+            cat "./zod/${desk}/sys.kelvin"
+          done
 
       - name: Validate all desks
         run: |
-          for desk in gw-base groundwire spv-wallet urbit-mcp groups; do
+          for desk in gw-base groundwire spv-wallet urbit-mcp groups contacts landscape storage; do
             echo "${desk}:"
             ls "./zod/${desk}/" | head -10
             echo ""
