@@ -6,33 +6,22 @@ on:
   pull_request:
     branches:
       - gw/next/kelvin/408
+
 jobs:
-  boot-fakeship-and-create-desk:
+  # =============================================================
+  # Job 1: Build the brass pill (runs once on ubuntu)
+  # =============================================================
+  build-pill:
     runs-on: ubuntu-latest
     env:
-      URBIT_SHIP: zod
-      DESK_NAME: gw-base
-      PIER: ./zod
       CONN_SOCK: ./zod/.urb/conn.sock
     steps:
-      # -------------------------------------------------------
-      # 0. Clean up any leftover piers from previous runs
-      # -------------------------------------------------------
       - name: Clean up leftover piers
-        run: |
-          echo "Cleaning up any leftover piers..."
-          sudo rm -rf ./zod ./zod2 || true
-          echo "Done."
+        run: sudo rm -rf ./zod || true
 
-      # -------------------------------------------------------
-      # 1. Checkout Repository
-      # -------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # -------------------------------------------------------
-      # 2. Install Urbit Binary
-      # -------------------------------------------------------
       - name: Install Urbit binary
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
@@ -40,17 +29,11 @@ jobs:
           sudo mv vere-v* /usr/local/bin/urbit
           urbit --version
 
-      # -------------------------------------------------------
-      # 3. Install dependencies
-      # -------------------------------------------------------
       - name: Install dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      # -------------------------------------------------------
-      # 4. Install peru
-      # -------------------------------------------------------
       - name: Install peru
         run: |
           sudo apt-get install -y pipx
@@ -58,17 +41,11 @@ jobs:
           pipx install peru
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # -------------------------------------------------------
-      # 5. Boot Urbit Fakeship (~zod) in daemon mode
-      # -------------------------------------------------------
       - name: Boot fake ~zod ship
         run: |
           urbit -d -F zod -c zod
           echo "Fakeship boot initiated in daemon mode."
 
-      # -------------------------------------------------------
-      # 6. Wait for fakeship to be fully idle
-      # -------------------------------------------------------
       - name: Wait for fakeship to be idle
         run: |
           FYRD=":*  0
@@ -101,9 +78,6 @@ jobs:
           echo "ERROR: Ship never became idle after 600 seconds."
           exit 1
 
-      # -------------------------------------------------------
-      # 7. Mount base desk
-      # -------------------------------------------------------
       - name: Mount base desk
         run: |
           send_fyrd() {
@@ -145,9 +119,6 @@ jobs:
             exit 1
           fi
 
-      # -------------------------------------------------------
-      # 8. Create gw-base as full copy of base
-      # -------------------------------------------------------
       - name: Create gw-base desk
         run: |
           send_fyrd() {
@@ -176,9 +147,6 @@ jobs:
           RESULT=$(send_fyrd "$MERGE_FYRD")
           echo "Result: $RESULT"
 
-      # -------------------------------------------------------
-      # 9. Mount gw-base desk (poll until merge completes)
-      # -------------------------------------------------------
       - name: Mount gw-base desk
         run: |
           send_fyrd() {
@@ -220,9 +188,6 @@ jobs:
             sleep 10
           done
 
-      # -------------------------------------------------------
-      # 10. Checkout gwbtc/urbit and copy pkg/arvo/* into gw-base
-      # -------------------------------------------------------
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
         with:
@@ -230,18 +195,15 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
+
       - name: Copy pkg/arvo into gw-base desk
         run: |
           echo "Copying gwbtc/urbit pkg/arvo changes into gw-base desk..."
-          # Only copy files that differ from base; skip symlinks (dangling base-dev refs)
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
           echo "Done."
 
-      # -------------------------------------------------------
-      # 12. Checkout gwbtc/groundwire and build dependencies
-      # -------------------------------------------------------
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
         with:
@@ -274,9 +236,6 @@ jobs:
           fi
           cd ..
 
-      # -------------------------------------------------------
-      # 13. Create %groundwire desk on build ship
-      # -------------------------------------------------------
       - name: Create groundwire desk
         run: |
           send_fyrd() {
@@ -305,9 +264,6 @@ jobs:
           RESULT=$(send_fyrd "$MERGE_FYRD")
           echo "Result: $RESULT"
 
-      # -------------------------------------------------------
-      # 14. Mount %groundwire desk (poll until merge completes)
-      # -------------------------------------------------------
       - name: Mount groundwire desk
         run: |
           send_fyrd() {
@@ -349,9 +305,6 @@ jobs:
             sleep 10
           done
 
-      # -------------------------------------------------------
-      # 15. Copy groundwire dist into mounted desk
-      # -------------------------------------------------------
       - name: Copy groundwire dist into mounted desk
         run: |
           if [ -d gwbtc-groundwire/dist ]; then
@@ -363,9 +316,6 @@ jobs:
             exit 1
           fi
 
-      # -------------------------------------------------------
-      # 16. Validate both desks are in place before pill build
-      # -------------------------------------------------------
       - name: Validate desk structure
         run: |
           echo "gw-base:"
@@ -373,9 +323,6 @@ jobs:
           echo "groundwire:"
           ls ./zod/groundwire/ | head -10
 
-      # -------------------------------------------------------
-      # 17. Build brass pill from gw-base (fire and forget)
-      # -------------------------------------------------------
       - name: Trigger brass pill build
         run: |
           read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
@@ -407,9 +354,6 @@ jobs:
             nc -U -W 1 $CONN_SOCK 2>/dev/null > /dev/null &
           echo "Pill build triggered."
 
-      # -------------------------------------------------------
-      # 13. Wait for pill to appear in ./zod/gw-base/
-      # -------------------------------------------------------
       - name: Wait for pill build output
         timeout-minutes: 30
         run: |
@@ -452,38 +396,54 @@ jobs:
           find ./zod/gw-base/ -type f 2>/dev/null | head -20 || echo "(empty)"
           exit 1
 
-      # -------------------------------------------------------
-      # 14. Shutdown first fakeship
-      # -------------------------------------------------------
-      - name: Shutdown first fakeship
+      - name: Shutdown fakeship
+        if: always()
         run: |
-          echo "Shutting down first fakeship..."
           URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
           if [ -n "$URBIT_PID" ]; then
             kill "$URBIT_PID" || true
-            echo "Sent kill to PID $URBIT_PID"
           fi
-          sleep 5
+          sleep 3
+          pkill -f "urbit" || true
 
-      # -------------------------------------------------------
-      # 15. Install Zig
-      # -------------------------------------------------------
+      - name: Upload pill artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-base-pill
+          path: ./gw-base.pill
+
+  # =============================================================
+  # Job 2: Build vere for each target (4 parallel jobs)
+  # =============================================================
+  build-vere:
+    strategy:
+      matrix:
+        include:
+          - target: linux-x86_64
+            runner: ubuntu-latest
+            zig_archive: zig-x86_64-linux-0.15.2.tar.xz
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+            zig_archive: zig-aarch64-linux-0.15.2.tar.xz
+          - target: macos-x86_64
+            runner: macos-13
+            zig_archive: zig-x86_64-macos-0.15.2.tar.xz
+          - target: macos-aarch64
+            runner: macos-latest
+            zig_archive: zig-aarch64-macos-0.15.2.tar.xz
+    runs-on: ${{ matrix.runner }}
+    steps:
       - name: Install Zig
         run: |
-          if zig version 2>/dev/null | grep -q "0.15.2"; then
-            echo "zig 0.15.2 already installed, skipping."
-          else
-            curl -LO https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
-            tar xf zig-x86_64-linux-0.15.2.tar.xz
-            sudo mv zig-x86_64-linux-0.15.2/zig /usr/local/bin/
-            sudo rm -rf /usr/local/lib/zig
-            sudo mv zig-x86_64-linux-0.15.2/lib /usr/local/lib/zig
-          fi
-          zig version
+          curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
+          tar xf "${{ matrix.zig_archive }}"
+          ZIG_DIR="${{ matrix.zig_archive }}"
+          ZIG_DIR="${ZIG_DIR%.tar.xz}"
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
-      # -------------------------------------------------------
-      # 16. Checkout gwbtc/urcrypt
-      # -------------------------------------------------------
+      - name: Verify Zig
+        run: zig version
+
       - name: Checkout gwbtc/urcrypt
         uses: actions/checkout@v3
         with:
@@ -493,13 +453,8 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Remove urcrypt zig build files
-        run: |
-          rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
-          echo "Removed build.zig and build.zig.zon from urcrypt"
+        run: rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
 
-      # -------------------------------------------------------
-      # 17. Checkout gwbtc/vere
-      # -------------------------------------------------------
       - name: Checkout gwbtc/vere
         uses: actions/checkout@v3
         with:
@@ -508,21 +463,15 @@ jobs:
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
 
-      # -------------------------------------------------------
-      # 18. Setup urcrypt as sibling to vere
-      # -------------------------------------------------------
       - name: Setup urcrypt for vere build
         run: |
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
           ls -la $(pwd)/gwbtc-vere/../urcrypt/
 
-      # -------------------------------------------------------
-      # 19. Build gwbtc/vere with zig build
-      # -------------------------------------------------------
       - name: Build gwbtc/vere
         run: |
           cd gwbtc-vere
-          echo "Building gwbtc/vere with zig build..."
+          echo "Building gwbtc/vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
             if zig build; then
@@ -565,39 +514,67 @@ jobs:
           done
 
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
+          if [ -z "$VERE_BIN" ]; then
+            # macOS: executables may not have +x in find results
+            VERE_BIN=$(find zig-out -type f -name "urbit" -o -type f -name "vere" 2>/dev/null | head -1)
+          fi
           if [ -n "$VERE_BIN" ]; then
             cp "$VERE_BIN" ../gw-vere
           else
-            echo "Binary not found in zig-out, searching..."
-            find . -name "urbit" -o -name "vere" -type f 2>/dev/null | head -20
+            echo "ERROR: Binary not found in zig-out"
+            find zig-out/ -type f 2>/dev/null | head -20
             exit 1
           fi
           cd ..
           chmod +x ./gw-vere
-          echo "gwbtc/vere built successfully:"
+          echo "gwbtc/vere built successfully for ${{ matrix.target }}:"
           ls -la ./gw-vere
           ./gw-vere --version || true
 
-      # -------------------------------------------------------
-      # 20. Boot new fakeship with gw-base pill using gwbtc/vere
-      # -------------------------------------------------------
-      - name: Boot new fakeship with gw-base pill
-        run: |
-          if [ -f ./gw-base.pill ]; then
-            ./gw-vere -d -F zod -B ./gw-base.pill -c zod2 -p 31338 --http-port 8081
-          else
-            echo "WARNING: No pill found, booting with default pill."
-            ./gw-vere -d -F zod -c zod2 -p 31338 --http-port 8081
-          fi
-          echo "Second fakeship boot initiated in daemon mode."
+      - name: Upload vere artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-vere-${{ matrix.target }}
+          path: ./gw-vere
 
-      # -------------------------------------------------------
-      # 21. Wait for second fakeship to be idle
-      # -------------------------------------------------------
-      - name: Wait for second fakeship to be idle
-        env:
-          CONN_SOCK: ./zod2/.urb/conn.sock
+  # =============================================================
+  # Job 3: Validate pill + vere, then publish release
+  # =============================================================
+  validate-and-release:
+    needs: [build-pill, build-vere]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download pill
+        uses: actions/download-artifact@v4
+        with:
+          name: gw-base-pill
+          path: ./artifacts/pill
+
+      - name: Download all vere binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gw-vere-*
+          path: ./artifacts/vere
+
+      - name: Prepare artifacts
         run: |
+          cp ./artifacts/pill/gw-base.pill ./gw-base.pill
+          ls -la ./gw-base.pill
+          echo "Vere binaries:"
+          find ./artifacts/vere/ -type f -ls
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y netcat-openbsd
+
+      - name: Validate pill by booting with linux-x86_64 vere
+        run: |
+          cp ./artifacts/vere/gw-vere-linux-x86_64/gw-vere ./gw-vere
+          chmod +x ./gw-vere
+          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+
+          CONN_SOCK=./zod2/.urb/conn.sock
           FYRD=":*  0
                     %fyrd
                     %base
@@ -611,7 +588,7 @@ jobs:
                     '''
                 =="
 
-          echo "Polling second ship until idle..."
+          echo "Polling ship until idle..."
           for i in $(seq 1 60); do
             echo "Attempt $i of 60 ($((i * 10))s elapsed)..."
             RESULT=$(echo "$FYRD" | ./gw-vere eval -jn 2>/dev/null | \
@@ -619,26 +596,30 @@ jobs:
               ./gw-vere eval -cn 2>/dev/null || true)
             echo "Result: $RESULT"
             if echo "$RESULT" | grep -q "%avow"; then
-              echo "Second ship is idle and responsive after $((i * 10)) seconds."
-              exit 0
+              echo "Ship is idle and responsive after $((i * 10)) seconds."
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "ERROR: Ship never became idle after 600 seconds."
+              exit 1
             fi
             echo "Ship not ready yet, waiting 10s..."
             sleep 10
           done
-          echo "ERROR: Second ship never became idle after 600 seconds."
-          exit 1
 
-      # -------------------------------------------------------
-      # 22. Validate second ship booted successfully
-      # -------------------------------------------------------
-      - name: Validate second ship
+          echo "Validation successful. Ship booted with pill + vere."
+          ls -la ./zod2/
+
+      - name: Shutdown validation ship
+        if: always()
         run: |
-          echo "Second ship booted successfully with gw-base pill."
-          ls -la ./zod2/ || true
+          ZOD2_PID=$(cat ./zod2/.urb/pid 2>/dev/null || true)
+          if [ -n "$ZOD2_PID" ]; then
+            kill "$ZOD2_PID" || true
+          fi
+          sleep 3
+          pkill -f "gw-vere" || true
 
-      # -------------------------------------------------------
-      # 29. Package and publish pill + vere to gwbtc/urbit releases
-      # -------------------------------------------------------
       - name: Install gh CLI
         run: |
           if ! command -v gh &>/dev/null; then
@@ -652,32 +633,27 @@ jobs:
 
       - name: Publish release artifacts
         run: |
-          tar czf gw-base-release.tar.gz gw-base.pill gw-vere
-          gh release create "build-${GITHUB_SHA:0:8}" gw-base-release.tar.gz \
+          for target in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64; do
+            mkdir -p "pkg-${target}"
+            cp ./gw-base.pill "pkg-${target}/"
+            cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
+            chmod +x "pkg-${target}/gw-vere"
+            tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
+          done
+
+          gh release create "build-${GITHUB_SHA:0:8}" \
+            groundwire-linux-x86_64.tar.gz \
+            groundwire-linux-aarch64.tar.gz \
+            groundwire-macos-x86_64.tar.gz \
+            groundwire-macos-aarch64.tar.gz \
             --repo gwbtc/urbit \
             --title "Build ${GITHUB_SHA:0:8}" \
-            --notes "Automated build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})"
+            --notes "Automated build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
+
+          Each tarball contains \`gw-base.pill\` and \`gw-vere\` for the target platform.
+          - \`groundwire-linux-x86_64.tar.gz\`
+          - \`groundwire-linux-aarch64.tar.gz\`
+          - \`groundwire-macos-x86_64.tar.gz\`
+          - \`groundwire-macos-aarch64.tar.gz\`"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
-
-      # -------------------------------------------------------
-      # 30. Cleanup - shut down fakeships
-      # -------------------------------------------------------
-      - name: Shutdown fakeships
-        if: always()
-        run: |
-          echo "Shutting down fakeships..."
-          ZOD2_PID=$(cat ./zod2/.urb/pid 2>/dev/null || true)
-          if [ -n "$ZOD2_PID" ]; then
-            kill "$ZOD2_PID" || true
-            echo "Sent kill to zod2 PID $ZOD2_PID"
-          fi
-          ZOD_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
-          if [ -n "$ZOD_PID" ]; then
-            kill "$ZOD_PID" || true
-            echo "Sent kill to zod PID $ZOD_PID"
-          fi
-          sleep 5
-          pkill -f "urbit" || true
-          pkill -f "gw-vere" || true
-          echo "Done."
