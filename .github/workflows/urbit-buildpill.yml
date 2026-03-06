@@ -277,6 +277,11 @@ jobs:
       - name: Build comet-miner
         run: |
           cd gwbtc-comet-miner
+          # Fix uint64_t format specifiers for portability (upstream bug)
+          sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
+          if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
+            sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
+          fi
           echo "Building comet-miner for ${{ matrix.target }} with Zig 0.14.1..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
