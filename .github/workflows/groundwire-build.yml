@@ -312,7 +312,7 @@ jobs:
           echo "Building vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
-            if zig build; then
+            if $ZIG14 build; then
               echo "Build succeeded on attempt $attempt."
               break
             else
@@ -339,7 +339,7 @@ jobs:
               f.write(content)
           print('Patched build.zig.zon')
           PYEOF
-                  zig build || { echo "Build failed even with vendored zlib."; exit 1; }
+                  $ZIG14 build || { echo "Build failed even with vendored zlib."; exit 1; }
                 else
                   echo "zlib URL is reachable but build still failed."
                   exit 1
