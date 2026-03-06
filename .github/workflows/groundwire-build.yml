@@ -430,7 +430,7 @@ jobs:
           printf 'requests\nembit\n' > requirements.txt
 
           pip install pyinstaller requests embit
-          pyinstaller --onefile --name gw-onboard gw-onboard.py
+          pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
 
       - name: Install system dependencies
         run: |
