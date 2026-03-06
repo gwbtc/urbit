@@ -251,6 +251,22 @@ jobs:
           echo "Zig 0.14.1 (comet-miner):"
           $ZIG14 version
 
+      - name: Checkout gwbtc/urcrypt
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urcrypt
+          ref: gw/cmp-pub
+          path: gwbtc-urcrypt
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Remove urcrypt zig build files
+        run: rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
+
+      - name: Setup urcrypt symlink
+        run: |
+          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
+          ls -la $(pwd)/urcrypt/
+
       - name: Checkout gwbtc/comet-miner
         uses: actions/checkout@v3
         with:
@@ -292,17 +308,6 @@ jobs:
           echo "comet-miner built successfully for ${{ matrix.target }}:"
           ls -la ./comet_miner
 
-      - name: Checkout gwbtc/urcrypt
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/urcrypt
-          ref: gw/cmp-pub
-          path: gwbtc-urcrypt
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Remove urcrypt zig build files
-        run: rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
-
       - name: Checkout gwbtc/vere
         uses: actions/checkout@v3
         with:
@@ -310,11 +315,6 @@ jobs:
           ref: gw/next/kelvin/408
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Setup urcrypt for vere build
-        run: |
-          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/gwbtc-vere/../urcrypt
-          ls -la $(pwd)/gwbtc-vere/../urcrypt/
 
       - name: Build gwbtc/vere
         run: |
