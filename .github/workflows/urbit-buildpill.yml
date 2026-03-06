@@ -9,9 +9,10 @@ on:
 
 jobs:
   # =============================================================
-  # Job 1: Build the brass pill (runs once on ubuntu)
+  # Build the brass pill on a fake ~zod
   # =============================================================
   build-pill:
+    name: Build pill
     runs-on: ubuntu-latest
     env:
       CONN_SOCK: ./zod/.urb/conn.sock
@@ -22,14 +23,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Urbit binary
+      - name: Install stock Urbit binary
         run: |
           curl -JLO https://urbit.org/install/linux-x86_64/latest
           tar zxvf ./linux-x86_64.tgz
           sudo mv vere-v* /usr/local/bin/urbit
           urbit --version
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
@@ -41,18 +42,18 @@ jobs:
           pipx install peru
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Boot fake ~zod ship
+      - name: Boot fake ~zod
         run: |
           urbit -d -F zod -c zod
           echo "Fakeship boot initiated in daemon mode."
 
-      - name: Wait for fakeship to be idle
+      - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
-      - name: Mount base desk
+      - name: Mount %base desk
         run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
 
-      - name: Create and mount gw-base desk
+      - name: Create and mount %gw-base desk
         run: |
           ./automation/desk-create.sh gw-base "$CONN_SOCK"
           ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
@@ -65,13 +66,11 @@ jobs:
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
 
-      - name: Copy pkg/arvo into gw-base desk
+      - name: Populate %gw-base with pkg/arvo
         run: |
-          echo "Copying gwbtc/urbit pkg/arvo changes into gw-base desk..."
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
-          echo "Done."
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
@@ -81,31 +80,23 @@ jobs:
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT }}
 
-      - name: Build groundwire dependencies with peru
+      - name: Build groundwire desk dependencies
         run: |
           cd gwbtc-groundwire
           if [ -f build.sh ]; then
             chmod +x build.sh
             bash build.sh
-            echo "Build script completed."
-          else
-            echo "WARNING: No build.sh found. Checking for peru.yaml..."
-            if [ -f peru.yaml ]; then
-              peru sync
-            fi
+          elif [ -f peru.yaml ]; then
+            peru sync
           fi
           if [ -d dist ]; then
-            echo "dist/ directory contents:"
-            find dist/ -type f | head -50
-            echo "..."
-            find dist/ -type f | wc -l
-            echo "total files in dist/"
+            echo "$(find dist/ -type f | wc -l) files in dist/"
           else
             echo "WARNING: No dist/ directory found after build."
           fi
           cd ..
 
-      - name: Create, mount, and populate groundwire desk
+      - name: Create, mount, and populate %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
@@ -119,7 +110,7 @@ jobs:
           path: gwbtc-spv-wallet
           token: ${{ secrets.GH_PAT }}
 
-      - name: Create, mount, and populate spv-wallet desk
+      - name: Create, mount, and populate %spv-wallet desk
         run: |
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
@@ -127,7 +118,7 @@ jobs:
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/ ./zod/spv-wallet/
 
-      - name: Validate desk structure
+      - name: Validate all desks
         run: |
           echo "gw-base:"
           ls ./zod/gw-base/ | head -10
@@ -136,7 +127,7 @@ jobs:
           echo "spv-wallet:"
           ls ./zod/spv-wallet/ | head -10
 
-      - name: Trigger brass pill build
+      - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
 
@@ -168,7 +159,7 @@ jobs:
           fire_and_forget_fyrd "$BUILD_PILL_FYRD"
           echo "Pill build triggered."
 
-      - name: Wait for pill build output
+      - name: Wait for pill to appear
         timeout-minutes: 30
         run: |
           echo "Polling for pill in ./zod/gw-base/ (up to 30 min)..."
@@ -189,7 +180,7 @@ jobs:
           find ./zod/gw-base/ -type f 2>/dev/null | head -20 || echo "(empty)"
           exit 1
 
-      - name: Shutdown fakeship
+      - name: Shutdown ~zod
         if: always()
         run: |
           URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
@@ -199,16 +190,17 @@ jobs:
           sleep 3
           pkill -f "urbit" || true
 
-      - name: Upload pill artifact
+      - name: Upload pill
         uses: actions/upload-artifact@v4
         with:
           name: gw-base-pill
           path: ./gw-base.pill
 
   # =============================================================
-  # Job 2: Build vere + comet-miner for each target (4 parallel)
+  # Build vere + comet-miner for each platform
   # =============================================================
-  build-vere:
+  build-binaries:
+    name: "Build: ${{ matrix.target }}"
     strategy:
       matrix:
         include:
@@ -226,21 +218,18 @@ jobs:
             zig_014_archive: zig-aarch64-macos-0.14.1.tar.xz
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig 0.15.2 and 0.14.1
+      - name: Install Zig (0.15.2 for vere, 0.14.1 for comet-miner)
         run: |
-          # Zig 0.15.2 for vere
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
           ZIG15_DIR="${{ matrix.zig_archive }}"
           ZIG15_DIR="${ZIG15_DIR%.tar.xz}"
 
-          # Zig 0.14.1 for comet-miner
           curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_014_archive }}"
           tar xf "${{ matrix.zig_014_archive }}"
           ZIG14_DIR="${{ matrix.zig_014_archive }}"
           ZIG14_DIR="${ZIG14_DIR%.tar.xz}"
 
-          # Put 0.15.2 on PATH by default (vere), save 0.14.1 path for comet-miner
           echo "$(pwd)/$ZIG15_DIR" >> $GITHUB_PATH
           echo "ZIG14=$(pwd)/$ZIG14_DIR/zig" >> $GITHUB_ENV
 
@@ -259,11 +248,9 @@ jobs:
           path: gwbtc-urcrypt
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Remove urcrypt zig build files
-        run: rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
-
-      - name: Setup urcrypt symlink
+      - name: Prepare urcrypt
         run: |
+          rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
           ls -la $(pwd)/urcrypt/
 
@@ -274,7 +261,7 @@ jobs:
           path: gwbtc-comet-miner
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Build comet-miner
+      - name: Build comet-miner (Zig 0.14.1)
         run: |
           cd gwbtc-comet-miner
           # Fix uint64_t format specifiers for portability (upstream bug)
@@ -282,7 +269,7 @@ jobs:
           if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
             sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
           fi
-          echo "Building comet-miner for ${{ matrix.target }} with Zig 0.14.1..."
+          echo "Building comet-miner for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
             if $ZIG14 build -Doptimize=ReleaseFast -Dprogram=comet_miner; then
@@ -310,7 +297,6 @@ jobs:
           fi
           cd ..
           chmod +x ./comet_miner
-          echo "comet-miner built successfully for ${{ matrix.target }}:"
           ls -la ./comet_miner
 
       - name: Checkout gwbtc/vere
@@ -321,10 +307,10 @@ jobs:
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Build gwbtc/vere
+      - name: Build vere (Zig 0.15.2)
         run: |
           cd gwbtc-vere
-          echo "Building gwbtc/vere for ${{ matrix.target }}..."
+          echo "Building vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
             if zig build; then
@@ -379,27 +365,27 @@ jobs:
           fi
           cd ..
           chmod +x ./gw-vere
-          echo "gwbtc/vere built successfully for ${{ matrix.target }}:"
           ls -la ./gw-vere
           ./gw-vere --version || true
 
-      - name: Upload vere artifact
+      - name: Upload vere
         uses: actions/upload-artifact@v4
         with:
           name: gw-vere-${{ matrix.target }}
           path: ./gw-vere
 
-      - name: Upload comet-miner artifact
+      - name: Upload comet-miner
         uses: actions/upload-artifact@v4
         with:
           name: comet-miner-${{ matrix.target }}
           path: ./comet_miner
 
   # =============================================================
-  # Job 3: Validate pill + vere, then publish release
+  # Validate the pill boots, then publish release
   # =============================================================
   validate-and-release:
-    needs: [build-pill, build-vere]
+    name: Validate and release
+    needs: [build-pill, build-binaries]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -411,13 +397,13 @@ jobs:
           name: gw-base-pill
           path: ./artifacts/pill
 
-      - name: Download all vere binaries
+      - name: Download vere binaries
         uses: actions/download-artifact@v4
         with:
           pattern: gw-vere-*
           path: ./artifacts/vere
 
-      - name: Download all comet-miner binaries
+      - name: Download comet-miner binaries
         uses: actions/download-artifact@v4
         with:
           pattern: comet-miner-*
@@ -430,7 +416,7 @@ jobs:
           path: gwbtc-booting
           token: ${{ secrets.GH_PAT }}
 
-      - name: Prepare artifacts
+      - name: Prepare release artifacts
         run: |
           cp ./artifacts/pill/gw-base.pill ./gw-base.pill
           ls -la ./gw-base.pill
@@ -439,19 +425,17 @@ jobs:
           echo "Comet-miner binaries:"
           find ./artifacts/comet-miner/ -type f -ls
 
-          # Patch gw-onboard.py defaults to match release tarball layout
           sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
           sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
 
-          # Create requirements.txt for onboarding script dependencies
           printf 'requests\nembit\n' > requirements.txt
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      - name: Validate pill by booting with linux-x86_64 vere
+      - name: Boot test ship with pill
         env:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
@@ -460,10 +444,10 @@ jobs:
           chmod +x ./gw-vere
           ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
-          echo "Validation successful. Ship booted with pill + vere."
+          echo "Validation successful — ship booted with pill + vere."
           ls -la ./zod2/
 
-      - name: Shutdown validation ship
+      - name: Shutdown test ship
         if: always()
         run: |
           ZOD2_PID=$(cat ./zod2/.urb/pid 2>/dev/null || true)
@@ -473,7 +457,7 @@ jobs:
           sleep 3
           pkill -f "gw-vere" || true
 
-      - name: Install gh CLI
+      - name: Install GitHub CLI
         run: |
           if ! command -v gh &>/dev/null; then
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -484,7 +468,7 @@ jobs:
           fi
           gh --version
 
-      - name: Publish release artifacts
+      - name: Package and publish release
         run: |
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
@@ -497,12 +481,23 @@ jobs:
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
 
-          gh release create "build-${GITHUB_SHA:0:8}" \
+          # Build date-based release tag with increment for same-day releases
+          DATE_BASE=$(date -u +"%Y.%-m.%-d")
+          TAG="groundwire-${DATE_BASE}"
+          TITLE="groundwire ${DATE_BASE}"
+          SUFFIX=2
+          while gh release view "$TAG" --repo gwbtc/urbit &>/dev/null; do
+            TAG="groundwire-${DATE_BASE}_${SUFFIX}"
+            TITLE="groundwire ${DATE_BASE}_${SUFFIX}"
+            SUFFIX=$((SUFFIX + 1))
+          done
+
+          gh release create "$TAG" \
             groundwire-linux-x86_64.tar.gz \
             groundwire-linux-aarch64.tar.gz \
             groundwire-macos-aarch64.tar.gz \
             --repo gwbtc/urbit \
-            --title "Build ${GITHUB_SHA:0:8}" \
+            --title "$TITLE" \
             --notes "Automated build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
 
           Each tarball contains everything needed to onboard:
