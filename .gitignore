@@ -13,6 +13,9 @@
 s/*
 cscope.*
 
+# AI
+.claude/
+
 # Tags
 .tags
 .etags
@@ -84,3 +87,4 @@ pkg/interface/link-webext/web-ext-artifacts
 *.log
 
 .vercel
+.secrets
