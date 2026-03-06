@@ -12,7 +12,7 @@ env:
   GROUNDWIRE_BRANCH: hd/consolidate-urb
   SPV_WALLET_BRANCH: develop
   URCRYPT_BRANCH: gw/cmp-pub
-  VERE_BRANCH: gw/next/kelvin/408
+  VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
 
 jobs:
@@ -88,27 +88,17 @@ jobs:
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT }}
 
-      - name: Build groundwire desk dependencies
-        run: |
-          cd gwbtc-groundwire
-          if [ -f build.sh ]; then
-            chmod +x build.sh
-            bash build.sh
-          elif [ -f peru.yaml ]; then
-            peru sync
-          fi
-          if [ -d dist ]; then
-            echo "$(find dist/ -type f | wc -l) files in dist/"
-          else
-            echo "WARNING: No dist/ directory found after build."
-          fi
-          cd ..
-
-      - name: Create, mount, and populate %groundwire desk
+      - name: Create and mount %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
-          cp -rv gwbtc-groundwire/dist/* ./zod/groundwire/
+
+      - name: Build groundwire desk dependencies and populate desk
+        run: |
+          cd gwbtc-groundwire
+          chmod +x build.sh
+          bash build.sh -p ./zod/groundwire
+          cd ..
 
       - name: Checkout gwbtc/spv-wallet
         uses: actions/checkout@v3
