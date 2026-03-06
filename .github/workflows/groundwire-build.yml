@@ -429,6 +429,9 @@ jobs:
 
           printf 'requests\nembit\n' > requirements.txt
 
+          pipx install pyinstaller requests embit
+          pyinstaller --onefile --name gw-onboard gw-onboard.py
+
       - name: Install system dependencies
         run: |
           sudo apt-get update -y
@@ -475,7 +478,7 @@ jobs:
             cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
             cp "./artifacts/comet-miner/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
-            cp gwbtc-booting/gw-onboard.py "pkg-${target}/"
+            cp gwbtc-booting/gw-onboard "pkg-${target}/"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
@@ -503,10 +506,10 @@ jobs:
           - \`gw-vere\` — Urbit runtime
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
-          - \`gw-onboard.py\` — Onboarding script
+          - \`gw-onboard\` — Onboarding script
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
 
-          Usage: \`tar xzf groundwire-<platform>.tar.gz && pip install -r requirements.txt && python3 gw-onboard.py\`
+          Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
