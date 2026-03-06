@@ -206,14 +206,17 @@ jobs:
             runner: ubuntu-latest
             zig_archive: zig-x86_64-linux-0.15.2.tar.xz
             zig_014_archive: zig-x86_64-linux-0.14.1.tar.xz
+            zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
             zig_archive: zig-aarch64-linux-0.15.2.tar.xz
             zig_014_archive: zig-aarch64-linux-0.14.1.tar.xz
+            zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-latest
             zig_archive: zig-aarch64-macos-0.15.2.tar.xz
             zig_014_archive: zig-aarch64-macos-0.14.1.tar.xz
+            zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Install Zig (0.15.2 for vere, 0.14.1 for comet-miner)
@@ -312,7 +315,7 @@ jobs:
           echo "Building vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
-            if $ZIG14 build; then
+            if $ZIG14 build -Dtarget=${{ matrix.zig_target }}; then
               echo "Build succeeded on attempt $attempt."
               break
             else
@@ -339,7 +342,7 @@ jobs:
               f.write(content)
           print('Patched build.zig.zon')
           PYEOF
-                  $ZIG14 build || { echo "Build failed even with vendored zlib."; exit 1; }
+                  $ZIG14 build -Dtarget=${{ matrix.zig_target }} || { echo "Build failed even with vendored zlib."; exit 1; }
                 else
                   echo "zlib URL is reachable but build still failed."
                   exit 1
