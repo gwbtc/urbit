@@ -429,7 +429,7 @@ jobs:
 
           printf 'requests\nembit\n' > requirements.txt
 
-          pipx install pyinstaller requests embit
+          pip install pyinstaller requests embit
           pyinstaller --onefile --name gw-onboard gw-onboard.py
 
       - name: Install system dependencies
