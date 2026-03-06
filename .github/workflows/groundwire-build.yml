@@ -14,6 +14,7 @@ env:
   URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
+  URBIT_MCP_BRANCH: main
 
 jobs:
   # =============================================================
@@ -116,14 +117,42 @@ jobs:
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/ ./zod/spv-wallet/
 
+      - name: Checkout gwbtc/urbit-mcp
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urbit-mcp
+          ref: ${{ env.URBIT_MCP_BRANCH }}
+          path: gwbtc-urbit-mcp
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Create and mount %urbit-mcp desk
+        run: |
+          ./automation/desk-create.sh urbit-mcp "$CONN_SOCK"
+          ./automation/desk-mount.sh urbit-mcp ./zod "$CONN_SOCK"
+
+      - name: Build and populate %urbit-mcp desk
+        run: |
+          cd gwbtc-urbit-mcp
+          chmod +x build.sh
+          bash build.sh -p ../zod/urbit-mcp
+          cd ..
+
+      - name: Mount and patch %groups desk
+        run: |
+          # %groups should already exist on the stock ~zod
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          # Change sys.kelvin from 409 to 408
+          echo "Patching %groups sys.kelvin from 409 to 408..."
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/groups/sys.kelvin
+          cat ./zod/groups/sys.kelvin
+
       - name: Validate all desks
         run: |
-          echo "gw-base:"
-          ls ./zod/gw-base/ | head -10
-          echo "groundwire:"
-          ls ./zod/groundwire/ | head -10
-          echo "spv-wallet:"
-          ls ./zod/spv-wallet/ | head -10
+          for desk in gw-base groundwire spv-wallet urbit-mcp groups; do
+            echo "${desk}:"
+            ls "./zod/${desk}/" | head -10
+            echo ""
+          done
 
       - name: Build brass pill
         run: |
