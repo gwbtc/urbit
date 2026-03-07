@@ -72,13 +72,27 @@ jobs:
 
       - name: Populate %base with modified arvo and commit (triggers kelvin upgrade)
         run: |
+          echo "=== Before rsync: stock sys.kelvin ==="
+          cat ./zod/base/sys.kelvin
+          head -7 ./zod/base/sys/zuse.hoon
+
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-urbit/pkg/arvo/ ./zod/base/
+
+          echo "=== After rsync: should be kelvin 408 ==="
+          cat ./zod/base/sys.kelvin
+          head -7 ./zod/base/sys/zuse.hoon
+
+          echo "=== Committing %base (should trigger sys-update) ==="
           ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
 
       - name: Wait for kelvin upgrade to complete
-        run: ./automation/wait-idle.sh "$CONN_SOCK"
+        run: |
+          ./automation/wait-idle.sh "$CONN_SOCK"
+          echo "=== Post-upgrade: checking mounted desk ==="
+          cat ./zod/base/sys.kelvin
+          head -7 ./zod/base/sys/zuse.hoon
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3

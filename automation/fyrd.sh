@@ -13,9 +13,15 @@ VERE_BIN="${VERE_BIN:-urbit}"
 send_fyrd() {
   local fyrd="$1"
   local sock="${2:-$CONN_SOCK}"
-  echo "$fyrd" | "$VERE_BIN" eval -jn 2>/dev/null | \
-    nc -U -W 3 "$sock" 2>/dev/null | \
-    "$VERE_BIN" eval -cn 2>/dev/null || true
+  echo "$fyrd" | "$VERE_BIN" eval -jn 2>/tmp/fyrd-eval-err | \
+    nc -U -W 3 "$sock" 2>/tmp/fyrd-nc-err | \
+    "$VERE_BIN" eval -cn 2>/tmp/fyrd-decode-err || true
+  # Show any errors that occurred
+  for f in /tmp/fyrd-eval-err /tmp/fyrd-nc-err /tmp/fyrd-decode-err; do
+    if [ -s "$f" ]; then
+      echo "FYRD DIAG ($(basename $f)): $(cat $f)" >&2
+    fi
+  done
 }
 
 fire_and_forget_fyrd() {
