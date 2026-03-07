@@ -90,9 +90,68 @@ jobs:
       - name: Wait for kelvin upgrade to complete
         run: |
           ./automation/wait-idle.sh "$CONN_SOCK"
-          echo "=== Post-upgrade: checking mounted desk ==="
+          echo "=== Post-upgrade: checking mounted desk (filesystem) ==="
           cat ./zod/base/sys.kelvin
           head -7 ./zod/base/sys/zuse.hoon
+
+      - name: Diagnose Clay state
+        run: |
+          source ./automation/fyrd.sh
+
+          echo "=== Scrying Clay for %base kelvin ==="
+          read -r -d '' SCRY_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  kel  .^(@t %cx /(scot %p our)/base/(scot %da now)/sys/kelvin)
+              (pure:m !>(kel))
+              '''
+          ==
+          HOON
+          RESULT=$(send_fyrd "$SCRY_FYRD")
+          echo "Clay kelvin: $RESULT"
+
+          echo "=== Scrying Clay for zuse version line ==="
+          read -r -d '' ZUSE_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  zus  .^(@t %cx /(scot %p our)/base/(scot %da now)/sys/zuse/hoon)
+              =/  first-80  (end [3 80] zus)
+              (pure:m !>(first-80))
+              '''
+          ==
+          HOON
+          RESULT=$(send_fyrd "$ZUSE_FYRD")
+          echo "Clay zuse (first 80 bytes): $RESULT"
+
+          echo "=== Listing all desks ==="
+          read -r -d '' DESKS_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  desks  .^((set desk) %cd /(scot %p our)/(scot %da now))
+              (pure:m !>(desks))
+              '''
+          ==
+          HOON
+          RESULT=$(send_fyrd "$DESKS_FYRD")
+          echo "Desks on ship: $RESULT"
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
