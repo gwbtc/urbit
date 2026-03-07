@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - gw/next/kelvin/408
+  workflow_dispatch:
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
