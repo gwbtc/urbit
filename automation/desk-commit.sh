@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # desk-commit.sh — commit a mounted desk to clay
 #
-# Usage: ./desk-commit.sh <desk-name> <conn-sock> [vere-bin]
+# Usage: ./desk-commit.sh <desk-name> <pier-path> <conn-sock> [vere-bin]
 
 set -euo pipefail
 
-DESK="${1:?Usage: desk-commit.sh <desk-name> <conn-sock> [vere-bin]}"
-CONN_SOCK="${2:?Usage: desk-commit.sh <desk-name> <conn-sock> [vere-bin]}"
-export VERE_BIN="${3:-urbit}"
+DESK="${1:?Usage: desk-commit.sh <desk-name> <pier-path> <conn-sock> [vere-bin]}"
+PIER="${2:?Usage: desk-commit.sh <desk-name> <pier-path> <conn-sock> [vere-bin]}"
+CONN_SOCK="${3:?Usage: desk-commit.sh <desk-name> <pier-path> <conn-sock> [vere-bin]}"
+export VERE_BIN="${4:-urbit}"
 
 export CONN_SOCK
 source "$(dirname "$0")/fyrd.sh"

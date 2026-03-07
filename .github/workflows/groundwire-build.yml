@@ -173,7 +173,14 @@ jobs:
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
-              =/  =pill:pill  (brass:pill sys ~ & | | ~)
+              =/  dez=(list [desk path])
+                :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
+                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+                    [%mcp /(scot %p our)/mcp/(scot %da now)]
+                    [%groups /(scot %p our)/groups/(scot %da now)]
+                    [%landscape /(scot %p our)/landscape/(scot %da now)]
+                ==
+              =/  =pill:pill  (brass:pill sys dez & | | ~)
               ;<  ~  bind:m
                 %:  send-raw-card
                     %pass  /build
@@ -196,7 +203,7 @@ jobs:
         run: |
           echo "Polling for pill in ./zod/gw-base/ (up to 30 min)..."
           for i in $(seq 1 600); do
-            ./automation/desk-commit.sh gw-base "$CONN_SOCK" > /dev/null 2>&1 || true
+            ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK" > /dev/null 2>&1 || true
             PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
