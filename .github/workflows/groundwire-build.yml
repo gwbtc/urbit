@@ -158,15 +158,52 @@ jobs:
           cd ..
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Mount and patch stock desks
+      - name: Checkout tlon-apps (groups + landscape source)
+        uses: actions/checkout@v3
+        with:
+          repository: tloncorp/tlon-apps
+          path: tlon-apps
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Create, mount, and populate %groups desk
         run: |
-          for desk in groups landscape; do
-            echo "Mounting and patching %${desk}..."
-            ./automation/desk-mount.sh "$desk" ./zod "$CONN_SOCK"
-            sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/${desk}/sys.kelvin"
-            cat "./zod/${desk}/sys.kelvin"
-            ./automation/desk-commit.sh $desk ./zod "$CONN_SOCK"
-          done
+          ./automation/desk-create.sh groups "$CONN_SOCK"
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          if [ -d tlon-apps/desk/groups ]; then
+            rsync -av --no-links --checksum \
+              --exclude='.git*' --exclude='.ignore' \
+              tlon-apps/desk/groups/ ./zod/groups/
+          elif [ -d tlon-apps/packages/groups/desk ]; then
+            rsync -av --no-links --checksum \
+              --exclude='.git*' --exclude='.ignore' \
+              tlon-apps/packages/groups/desk/ ./zod/groups/
+          else
+            echo "WARNING: Could not find groups desk source in tlon-apps"
+            find tlon-apps/ -name "sys.kelvin" -path "*/groups/*" 2>/dev/null | head -5
+          fi
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/groups/sys.kelvin" 2>/dev/null || true
+          cat "./zod/groups/sys.kelvin" 2>/dev/null || echo "(no sys.kelvin)"
+          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+
+      - name: Create, mount, and populate %landscape desk
+        run: |
+          ./automation/desk-create.sh landscape "$CONN_SOCK"
+          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+          if [ -d tlon-apps/desk/landscape ]; then
+            rsync -av --no-links --checksum \
+              --exclude='.git*' --exclude='.ignore' \
+              tlon-apps/desk/landscape/ ./zod/landscape/
+          elif [ -d tlon-apps/packages/landscape/desk ]; then
+            rsync -av --no-links --checksum \
+              --exclude='.git*' --exclude='.ignore' \
+              tlon-apps/packages/landscape/desk/ ./zod/landscape/
+          else
+            echo "WARNING: Could not find landscape desk source in tlon-apps"
+            find tlon-apps/ -name "sys.kelvin" -path "*/landscape/*" 2>/dev/null | head -5
+          fi
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/landscape/sys.kelvin" 2>/dev/null || true
+          cat "./zod/landscape/sys.kelvin" 2>/dev/null || echo "(no sys.kelvin)"
+          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
       - name: Validate all desks
         run: |
