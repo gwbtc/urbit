@@ -114,10 +114,15 @@ jobs:
 
       - name: Build groundwire desk dependencies and populate desk
         run: |
+          # Clear %base leftovers so only groundwire-specific files remain
+          rm -rf ./zod/groundwire/*
           cd gwbtc-groundwire
           chmod +x build.sh
           bash build.sh -p ../zod/groundwire
           cd ..
+          # Ensure kelvin 408
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/groundwire/sys.kelvin 2>/dev/null || true
+          cat ./zod/groundwire/sys.kelvin
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/spv-wallet
@@ -132,9 +137,14 @@ jobs:
         run: |
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
+          # Clear %base leftovers
+          rm -rf ./zod/spv-wallet/*
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/ ./zod/spv-wallet/
+          # Ensure kelvin 408
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/spv-wallet/sys.kelvin 2>/dev/null || true
+          cat ./zod/spv-wallet/sys.kelvin
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/urbit-mcp
@@ -152,10 +162,15 @@ jobs:
 
       - name: Build and populate %urbit-mcp desk
         run: |
+          # Clear %base leftovers
+          rm -rf ./zod/mcp/*
           cd gwbtc-urbit-mcp
           chmod +x build.sh
           bash build.sh -p ../zod/mcp
           cd ..
+          # Ensure kelvin 408
+          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/mcp/sys.kelvin 2>/dev/null || true
+          cat ./zod/mcp/sys.kelvin
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
       - name: Checkout tlon-apps (groups + landscape source)
@@ -169,6 +184,8 @@ jobs:
         run: |
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          # Clear %base leftovers
+          rm -rf ./zod/groups/*
           if [ -d tlon-apps/desk/groups ]; then
             rsync -av --no-links --checksum \
               --exclude='.git*' --exclude='.ignore' \
@@ -189,6 +206,8 @@ jobs:
         run: |
           ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+          # Clear %base leftovers
+          rm -rf ./zod/landscape/*
           if [ -d tlon-apps/desk/landscape ]; then
             rsync -av --no-links --checksum \
               --exclude='.git*' --exclude='.ignore' \
