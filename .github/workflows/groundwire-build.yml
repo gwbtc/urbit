@@ -120,9 +120,13 @@ jobs:
           chmod +x build.sh
           bash build.sh -p ../zod/groundwire
           cd ..
-          # Ensure kelvin 408
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/groundwire/sys.kelvin 2>/dev/null || true
-          cat ./zod/groundwire/sys.kelvin
+          # Ensure kelvin 408 and valid desk.bill
+          echo '[%zuse 408]' > ./zod/groundwire/sys.kelvin
+          if [ ! -f ./zod/groundwire/desk.bill ]; then
+            echo '~' > ./zod/groundwire/desk.bill
+          fi
+          echo "=== groundwire desk.bill ==="
+          cat ./zod/groundwire/desk.bill
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/spv-wallet
@@ -142,9 +146,10 @@ jobs:
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
-          # Ensure kelvin 408
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/spv-wallet/sys.kelvin 2>/dev/null || true
-          cat ./zod/spv-wallet/sys.kelvin
+          # Ensure kelvin 408 and valid desk.bill
+          echo '[%zuse 408]' > ./zod/spv-wallet/sys.kelvin
+          echo "=== spv-wallet desk.bill ==="
+          cat ./zod/spv-wallet/desk.bill
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/urbit-mcp
@@ -168,9 +173,13 @@ jobs:
           chmod +x build.sh
           bash build.sh -p ../zod/mcp
           cd ..
-          # Ensure kelvin 408
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/mcp/sys.kelvin 2>/dev/null || true
-          cat ./zod/mcp/sys.kelvin
+          # Ensure kelvin 408 and valid desk.bill
+          echo '[%zuse 408]' > ./zod/mcp/sys.kelvin
+          if [ ! -f ./zod/mcp/desk.bill ]; then
+            echo '~' > ./zod/mcp/desk.bill
+          fi
+          echo "=== mcp desk.bill ==="
+          cat ./zod/mcp/desk.bill
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
       - name: Checkout tlon-apps (groups + landscape source)
@@ -264,9 +273,37 @@ jobs:
       - name: Validate all desks
         run: |
           for desk in base groundwire spv-wallet mcp groups landscape; do
-            echo "${desk}:"
-            ls "./zod/${desk}/" | head -10
+            echo "=== ${desk} ==="
+            echo "Files on filesystem:"
+            ls "./zod/${desk}/" 2>/dev/null | head -10
+            echo "desk.bill:"
+            cat "./zod/${desk}/desk.bill" 2>/dev/null || echo "(none)"
+            echo "sys.kelvin:"
+            cat "./zod/${desk}/sys.kelvin" 2>/dev/null || echo "(none)"
             echo ""
+          done
+
+      - name: Verify desk.bill in Clay (scry each desk)
+        run: |
+          source ./automation/fyrd.sh
+          for desk in groundwire spv-wallet mcp groups landscape; do
+            read -r -d '' SCRY_BILL << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  bil  .^(* %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
+              (pure:m !>(;;(@t (crip (noah !>(bil))))))
+              '''
+          ==
+          HOON
+            echo "${desk} desk.bill in Clay:"
+            RESULT=$(send_fyrd "$SCRY_BILL" 2>/dev/null) || true
+            echo "  $RESULT"
           done
 
       - name: Build brass pill
