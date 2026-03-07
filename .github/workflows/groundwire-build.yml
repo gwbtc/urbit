@@ -342,14 +342,17 @@ jobs:
             echo "  $RESULT"
           done
 
-      - name: Force-write desk.bill to Clay via %info
+      - name: Fix desk.bill in Clay for all non-base desks
         run: |
           source ./automation/fyrd.sh
-          # Filesystem commits don't reliably update Clay's desk.bill.
-          # Bypass the filesystem entirely: write desk.bill directly to
-          # Clay via %info cards (same mechanism the pill build uses).
-          for desk in groundwire groups landscape; do
-            echo "Force-writing desk.bill=~ for %${desk} via %info..."
+          # Filesystem commits don't update Clay's desk.bill (broken
+          # %dirk->%into flow). Write empty desk.bill directly to Clay
+          # via %info for each non-base desk. send-raw-card emits the
+          # card immediately; Clay processes it when the fyrd completes.
+          # Each fyrd is a separate Arvo event, so by the time the pill
+          # build fyrd runs, Clay will have the updated desk.bills.
+          for desk in groundwire spv-wallet mcp groups landscape; do
+            echo "Fixing desk.bill for %${desk}..."
             read -r -d '' FIX_FYRD << HOON || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -365,12 +368,37 @@ jobs:
                     :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
                     ==
                 ==
-              (pure:m !>('Fixed ${desk} desk.bill'))
+              (pure:m !>('fixed'))
               '''
           ==
           HOON
             RESULT=$(send_fyrd "$FIX_FYRD")
-            echo "  $RESULT"
+            echo "  Result: $RESULT"
+          done
+          echo "Waiting for Clay to process %info cards..."
+          sleep 10
+
+      - name: Verify desk.bill fixed in Clay
+        run: |
+          source ./automation/fyrd.sh
+          for desk in groundwire spv-wallet mcp groups landscape; do
+            read -r -d '' SCRY_BILL << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  bil  .^(* %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
+              (pure:m !>(;;(@t (crip (noah !>(bil))))))
+              '''
+          ==
+          HOON
+            echo -n "${desk} desk.bill: "
+            RESULT=$(send_fyrd "$SCRY_BILL" 2>/dev/null) || true
+            echo "$RESULT"
           done
 
       - name: Build brass pill
