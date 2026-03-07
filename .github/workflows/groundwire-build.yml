@@ -108,15 +108,15 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  kel  .^(@t %cx /(scot %p our)/base/(scot %da now)/sys/kelvin)
-              (pure:m !>(kel))
+              =/  kel  .^(* %cx /(scot %p our)/base/(scot %da now)/sys/kelvin)
+              (pure:m !>(;;(@t (crip (noah !>(kel))))))
               '''
           ==
           HOON
           RESULT=$(send_fyrd "$SCRY_FYRD")
           echo "Clay kelvin: $RESULT"
 
-          echo "=== Scrying Clay for zuse version line ==="
+          echo "=== Scrying Clay for zuse version ==="
           read -r -d '' ZUSE_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -127,13 +127,13 @@ jobs:
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
               =/  zus  .^(@t %cx /(scot %p our)/base/(scot %da now)/sys/zuse/hoon)
-              =/  first-80  (end [3 80] zus)
-              (pure:m !>(first-80))
+              =/  first-120  (end [3 120] zus)
+              (pure:m !>(first-120))
               '''
           ==
           HOON
           RESULT=$(send_fyrd "$ZUSE_FYRD")
-          echo "Clay zuse (first 80 bytes): $RESULT"
+          echo "Clay zuse (first 120 bytes): $RESULT"
 
           echo "=== Listing all desks ==="
           read -r -d '' DESKS_FYRD << 'HOON' || true
@@ -145,8 +145,9 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  desks  .^((set desk) %cd /(scot %p our)/(scot %da now))
-              (pure:m !>(desks))
+              =/  desks  .^(arch %cy /(scot %p our)/(scot %da now))
+              =/  names  ~(tap in dir.desks)
+              (pure:m !>(;;(@t (crip (noah !>(names))))))
               '''
           ==
           HOON
