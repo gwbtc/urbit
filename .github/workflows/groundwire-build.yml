@@ -15,10 +15,25 @@ env:
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
+  BOOTING_BRANCH: combined-improvements
 
 jobs:
   # =============================================================
   # Build the brass pill on a fake ~zod
+  #
+  # Flow:
+  #   1. Boot fake ~zod with custom vere + kelvin 408 arvo (-A flag)
+  #   2. For each desk: create from %base, mount, clear, populate, commit
+  #   3. Fix desk.bill in Clay via %info (filesystem commits are unreliable)
+  #   4. Build brass pill via fyrd, wait for it to appear on filesystem
+  #
+  # Key gotchas:
+  #   - desk-create.sh copies ALL of %base (including desk.bill with
+  #     %acme etc). Must clear and replace before pill build.
+  #   - Filesystem commits need mark files (mar/bill.hoon etc) to work.
+  #     desk-populate.sh preserves mar/ when clearing.
+  #   - Even with marks, filesystem commits can be unreliable. The %info
+  #     step writes desk.bill directly to Clay as a safety net.
   # =============================================================
   build-pill:
     name: Build pill
@@ -57,6 +72,8 @@ jobs:
           pipx install peru
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      # -- Checkout all desk source repos --
+
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
         with:
@@ -65,13 +82,45 @@ jobs:
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
 
-      - name: Boot fake ~zod with modified arvo (-A)
+      - name: Checkout gwbtc/groundwire
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/groundwire
+          ref: ${{ env.GROUNDWIRE_BRANCH }}
+          path: gwbtc-groundwire
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout gwbtc/spv-wallet
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/spv-wallet
+          ref: ${{ env.SPV_WALLET_BRANCH }}
+          path: gwbtc-spv-wallet
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout gwbtc/urbit-mcp
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urbit-mcp
+          ref: ${{ env.URBIT_MCP_BRANCH }}
+          path: gwbtc-urbit-mcp
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout tloncorp/tlon-apps
+        uses: actions/checkout@v3
+        with:
+          repository: tloncorp/tlon-apps
+          path: tlon-apps
+          token: ${{ secrets.GH_PAT }}
+
+      # -- Boot fake ~zod --
+
+      - name: Boot fake ~zod with kelvin 408 arvo
         run: |
-          echo "=== Booting with -A gwbtc-urbit/pkg/arvo/ (kelvin 408) ==="
-          cat gwbtc-urbit/pkg/arvo/sys.kelvin
-          head -7 gwbtc-urbit/pkg/arvo/sys/zuse.hoon
+          # Stock vere rejects kelvin 408 (expects hoon 136, we have 135).
+          # Custom vere from gwbtc/vere supports the new kelvins.
+          # -A flag loads arvo directly, bypassing mount/commit for %base.
           urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
-          echo "Fakeship boot initiated with custom arvo."
 
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -99,260 +148,84 @@ jobs:
       - name: Mount %base desk
         run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
 
-      - name: Checkout gwbtc/groundwire
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/groundwire
-          ref: ${{ env.GROUNDWIRE_BRANCH }}
-          path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
+      # -- Populate desks --
+      # Each desk: create from %base → mount → clear (preserving marks)
+      # → copy desk-specific content → ensure kelvin/bill → commit
 
-      - name: Create and mount %groundwire desk
+      - name: Populate %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
-
-      - name: Build groundwire desk dependencies and populate desk
-        run: |
-          # Clear %base leftovers but keep mar/ for Clay mark processing
-          cd ./zod/groundwire
-          ls | grep -v '^mar$' | xargs rm -rf
-          cd ../..
-          cd gwbtc-groundwire
-          chmod +x build.sh
-          bash build.sh -p ../zod/groundwire
-          cd ..
-          # Ensure essential marks exist (copy from %base if missing)
-          for mark in bill kelvin hoon mime noun txt; do
-            if [ ! -f "./zod/groundwire/mar/${mark}.hoon" ]; then
-              mkdir -p ./zod/groundwire/mar
-              cp "./zod/base/mar/${mark}.hoon" "./zod/groundwire/mar/" 2>/dev/null || true
-            fi
-          done
-          # Ensure kelvin 408 and valid desk.bill
+          ./automation/desk-populate.sh groundwire ./zod
+          cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
           echo '[%zuse 408]' > ./zod/groundwire/sys.kelvin
-          if [ ! -f ./zod/groundwire/desk.bill ]; then
-            echo '~' > ./zod/groundwire/desk.bill
-          fi
-          echo "=== groundwire desk.bill ==="
-          cat ./zod/groundwire/desk.bill
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
-      - name: Checkout gwbtc/spv-wallet
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/spv-wallet
-          ref: ${{ env.SPV_WALLET_BRANCH }}
-          path: gwbtc-spv-wallet
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Create, mount, and populate %spv-wallet desk
+      - name: Populate %spv-wallet desk
         run: |
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
-          # Clear %base leftovers but keep mar/
-          cd ./zod/spv-wallet
-          ls | grep -v '^mar$' | xargs rm -rf
-          cd ../..
-          rsync -av --no-links --checksum \
-            --exclude='.git*' --exclude='.ignore' \
+          ./automation/desk-populate.sh spv-wallet ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
-          # Ensure essential marks exist
-          for mark in bill kelvin hoon mime noun txt; do
-            if [ ! -f "./zod/spv-wallet/mar/${mark}.hoon" ]; then
-              mkdir -p ./zod/spv-wallet/mar
-              cp "./zod/base/mar/${mark}.hoon" "./zod/spv-wallet/mar/" 2>/dev/null || true
-            fi
-          done
           echo '[%zuse 408]' > ./zod/spv-wallet/sys.kelvin
-          echo "=== spv-wallet desk.bill ==="
-          cat ./zod/spv-wallet/desk.bill
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
-      - name: Checkout gwbtc/urbit-mcp
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/urbit-mcp
-          ref: ${{ env.URBIT_MCP_BRANCH }}
-          path: gwbtc-urbit-mcp
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Create and mount %urbit-mcp desk
+      - name: Populate %mcp desk
         run: |
           ./automation/desk-create.sh mcp "$CONN_SOCK"
           ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
-
-      - name: Build and populate %urbit-mcp desk
-        run: |
-          # Clear %base leftovers but keep mar/
-          cd ./zod/mcp
-          ls | grep -v '^mar$' | xargs rm -rf
-          cd ../..
-          cd gwbtc-urbit-mcp
-          chmod +x build.sh
-          bash build.sh -p ../zod/mcp
-          cd ..
-          # Ensure essential marks exist
-          for mark in bill kelvin hoon mime noun txt; do
-            if [ ! -f "./zod/mcp/mar/${mark}.hoon" ]; then
-              mkdir -p ./zod/mcp/mar
-              cp "./zod/base/mar/${mark}.hoon" "./zod/mcp/mar/" 2>/dev/null || true
-            fi
-          done
+          ./automation/desk-populate.sh mcp ./zod
+          cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
           echo '[%zuse 408]' > ./zod/mcp/sys.kelvin
-          if [ ! -f ./zod/mcp/desk.bill ]; then
-            echo '~' > ./zod/mcp/desk.bill
-          fi
-          echo "=== mcp desk.bill ==="
-          cat ./zod/mcp/desk.bill
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Checkout tlon-apps (groups + landscape source)
-        uses: actions/checkout@v3
-        with:
-          repository: tloncorp/tlon-apps
-          path: tlon-apps
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Find tlon-apps desk layout
-        run: |
-          echo "=== tlon-apps top-level ==="
-          ls tlon-apps/
-          echo "=== Looking for desk sources ==="
-          find tlon-apps/ -name "sys.kelvin" -maxdepth 5 2>/dev/null | head -20
-          find tlon-apps/ -name "desk.bill" -maxdepth 5 2>/dev/null | head -20
-
-      - name: Create, mount, and populate %groups desk
+      - name: Populate %groups desk
         run: |
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-          # Clear %base leftovers but keep mar/
-          cd ./zod/groups
-          ls | grep -v '^mar$' | xargs rm -rf
-          cd ../..
-          # Find groups desk source
-          GROUPS_SRC=""
-          for candidate in \
-            tlon-apps/desk/groups \
-            tlon-apps/packages/groups/desk \
-            tlon-apps/desks/groups \
-            tlon-apps/groups/desk \
-            tlon-apps/groups; do
+          ./automation/desk-populate.sh groups ./zod
+          # Find groups desk source in tlon-apps (layout varies by version)
+          for candidate in tlon-apps/desk/groups tlon-apps/packages/groups/desk \
+                           tlon-apps/desks/groups tlon-apps/groups/desk tlon-apps/groups; do
             if [ -f "$candidate/sys.kelvin" ]; then
-              GROUPS_SRC="$candidate"
+              echo "Found groups source at: $candidate"
+              rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+                "$candidate/" ./zod/groups/
               break
-            fi
-          done
-          if [ -n "$GROUPS_SRC" ]; then
-            echo "Found groups desk at: $GROUPS_SRC"
-            rsync -av --no-links --checksum \
-              --exclude='.git*' --exclude='.ignore' \
-              "$GROUPS_SRC/" ./zod/groups/
-          else
-            echo "WARNING: No groups desk source found, writing minimal desk"
-          fi
-          # Ensure essential marks exist
-          for mark in bill kelvin hoon mime noun txt; do
-            if [ ! -f "./zod/groups/mar/${mark}.hoon" ]; then
-              mkdir -p ./zod/groups/mar
-              cp "./zod/base/mar/${mark}.hoon" "./zod/groups/mar/" 2>/dev/null || true
             fi
           done
           echo '[%zuse 408]' > ./zod/groups/sys.kelvin
           echo '~' > ./zod/groups/desk.bill
-          cat ./zod/groups/sys.kelvin
-          cat ./zod/groups/desk.bill
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
-      - name: Create, mount, and populate %landscape desk
+      - name: Populate %landscape desk
         run: |
           ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-          # Clear %base leftovers but keep mar/
-          cd ./zod/landscape
-          ls | grep -v '^mar$' | xargs rm -rf
-          cd ../..
-          # Find landscape desk source
-          LANDSCAPE_SRC=""
-          for candidate in \
-            tlon-apps/desk/landscape \
-            tlon-apps/packages/landscape/desk \
-            tlon-apps/desks/landscape \
-            tlon-apps/landscape/desk \
-            tlon-apps/landscape; do
+          ./automation/desk-populate.sh landscape ./zod
+          for candidate in tlon-apps/desk/landscape tlon-apps/packages/landscape/desk \
+                           tlon-apps/desks/landscape tlon-apps/landscape/desk tlon-apps/landscape; do
             if [ -f "$candidate/sys.kelvin" ]; then
-              LANDSCAPE_SRC="$candidate"
+              echo "Found landscape source at: $candidate"
+              rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+                "$candidate/" ./zod/landscape/
               break
-            fi
-          done
-          if [ -n "$LANDSCAPE_SRC" ]; then
-            echo "Found landscape desk at: $LANDSCAPE_SRC"
-            rsync -av --no-links --checksum \
-              --exclude='.git*' --exclude='.ignore' \
-              "$LANDSCAPE_SRC/" ./zod/landscape/
-          else
-            echo "WARNING: No landscape desk source found, writing minimal desk"
-          fi
-          # Ensure essential marks exist
-          for mark in bill kelvin hoon mime noun txt; do
-            if [ ! -f "./zod/landscape/mar/${mark}.hoon" ]; then
-              mkdir -p ./zod/landscape/mar
-              cp "./zod/base/mar/${mark}.hoon" "./zod/landscape/mar/" 2>/dev/null || true
             fi
           done
           echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
           echo '~' > ./zod/landscape/desk.bill
-          cat ./zod/landscape/sys.kelvin
-          cat ./zod/landscape/desk.bill
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
-      - name: Validate all desks
-        run: |
-          for desk in base groundwire spv-wallet mcp groups landscape; do
-            echo "=== ${desk} ==="
-            echo "Files on filesystem:"
-            ls "./zod/${desk}/" 2>/dev/null | head -10
-            echo "desk.bill:"
-            cat "./zod/${desk}/desk.bill" 2>/dev/null || echo "(none)"
-            echo "sys.kelvin:"
-            cat "./zod/${desk}/sys.kelvin" 2>/dev/null || echo "(none)"
-            echo ""
-          done
+      # -- Fix desk.bill in Clay and build pill --
+      # Filesystem commits can fail to update desk.bill in Clay even with
+      # marks present. As a safety net, write empty desk.bill directly to
+      # Clay via %info cards before building the pill.
 
-      - name: Verify desk.bill in Clay (scry each desk)
+      - name: Fix desk.bill in Clay via %info
         run: |
           source ./automation/fyrd.sh
           for desk in groundwire spv-wallet mcp groups landscape; do
-            read -r -d '' SCRY_BILL << HOON || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  bil  .^(* %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
-              (pure:m !>(;;(@t (crip (noah !>(bil))))))
-              '''
-          ==
-          HOON
-            echo "${desk} desk.bill in Clay:"
-            RESULT=$(send_fyrd "$SCRY_BILL" 2>/dev/null) || true
-            echo "  $RESULT"
-          done
-
-      - name: Fix desk.bill in Clay for all non-base desks
-        run: |
-          source ./automation/fyrd.sh
-          # Filesystem commits don't update Clay's desk.bill (broken
-          # %dirk->%into flow). Write empty desk.bill directly to Clay
-          # via %info for each non-base desk. send-raw-card emits the
-          # card immediately; Clay processes it when the fyrd completes.
-          # Each fyrd is a separate Arvo event, so by the time the pill
-          # build fyrd runs, Clay will have the updated desk.bills.
-          for desk in groundwire spv-wallet mcp groups landscape; do
-            echo "Fixing desk.bill for %${desk}..."
             read -r -d '' FIX_FYRD << HOON || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -372,39 +245,14 @@ jobs:
               '''
           ==
           HOON
-            RESULT=$(send_fyrd "$FIX_FYRD")
-            echo "  Result: $RESULT"
+            send_fyrd "$FIX_FYRD" > /dev/null
           done
-          echo "Waiting for Clay to process %info cards..."
-          sleep 10
-
-      - name: Verify desk.bill fixed in Clay
-        run: |
-          source ./automation/fyrd.sh
-          for desk in groundwire spv-wallet mcp groups landscape; do
-            read -r -d '' SCRY_BILL << HOON || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  bil  .^(* %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
-              (pure:m !>(;;(@t (crip (noah !>(bil))))))
-              '''
-          ==
-          HOON
-            echo -n "${desk} desk.bill: "
-            RESULT=$(send_fyrd "$SCRY_BILL" 2>/dev/null) || true
-            echo "$RESULT"
-          done
+          sleep 5
+          echo "desk.bill fixed for all non-base desks."
 
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
-
           read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -435,15 +283,12 @@ jobs:
               '''
           ==
           HOON
-
-          echo "Triggering brass pill build (fire-and-forget)..."
           fire_and_forget_fyrd "$BUILD_PILL_FYRD"
           echo "Pill build triggered."
 
       - name: Wait for pill to appear
         timeout-minutes: 30
         run: |
-          echo "Polling for pill in ./zod/base/ (up to 30 min)..."
           for i in $(seq 1 600); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
@@ -452,22 +297,16 @@ jobs:
               ls -la ./gw-base.pill
               exit 0
             fi
-            if [ $((i % 60)) -eq 0 ]; then
-              echo "--- $i iterations elapsed, no pill yet ---"
-            fi
+            [ $((i % 60)) -eq 0 ] && echo "--- $i iterations, no pill yet ---"
             sleep 3
           done
-          echo "ERROR: Pill never appeared in ./zod/base/."
-          find ./zod/base/ -type f 2>/dev/null | head -20 || echo "(empty)"
+          echo "ERROR: Pill never appeared."
           exit 1
 
       - name: Shutdown ~zod
         if: always()
         run: |
-          URBIT_PID=$(cat ./zod/.urb/pid 2>/dev/null || true)
-          if [ -n "$URBIT_PID" ]; then
-            kill "$URBIT_PID" || true
-          fi
+          kill "$(cat ./zod/.urb/pid 2>/dev/null)" 2>/dev/null || true
           sleep 3
           pkill -f "urbit" || true
 
@@ -519,7 +358,6 @@ jobs:
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
-          ls -la $(pwd)/urcrypt/
 
       - name: Checkout gwbtc/vere
         uses: actions/checkout@v3
@@ -532,62 +370,39 @@ jobs:
       - name: Build vere
         run: |
           cd gwbtc-vere
-          echo "Building vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
-            echo "Build attempt $attempt of 3..."
+            echo "Build attempt $attempt/3..."
             if zig build -Dtarget=${{ matrix.zig_target }}; then
-              echo "Build succeeded on attempt $attempt."
               break
-            else
-              if [ $attempt -eq 3 ]; then
-                echo "All 3 attempts failed. Checking if zlib URL is the issue..."
-                ZLIB_URL="https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz"
-                HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$ZLIB_URL")
-                echo "zlib URL returned HTTP $HTTP_CODE"
-                if [ "$HTTP_CODE" != "200" ]; then
-                  echo "Patching build.zig.zon to use vendored zlib..."
-                  mkdir -p ext/zlib-src
-                  curl -L -o /tmp/zlib.tar.gz "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
-                  tar xzf /tmp/zlib.tar.gz --strip-components=1 -C ext/zlib-src
-                  python3 << 'PYEOF'
+            elif [ $attempt -eq 3 ]; then
+              # Last resort: try vendoring zlib if GitHub is rate-limiting
+              HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" \
+                "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz")
+              if [ "$HTTP_CODE" != "200" ]; then
+                mkdir -p ext/zlib-src
+                curl -L -o /tmp/zlib.tar.gz \
+                  "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
+                tar xzf /tmp/zlib.tar.gz --strip-components=1 -C ext/zlib-src
+                python3 -c "
           import re
-          with open('build.zig.zon', 'r') as f:
-              content = f.read()
-          content = re.sub(
-              r'(\.zlib\s*=\s*\.\{)\s*\.url\s*=\s*"[^"]+",\s*\.hash\s*=\s*"[^"]+",',
-              r'\1\n            .path = "./ext/zlib-src",',
-              content
-          )
-          with open('build.zig.zon', 'w') as f:
-              f.write(content)
-          print('Patched build.zig.zon')
-          PYEOF
-                  zig build -Dtarget=${{ matrix.zig_target }} || { echo "Build failed even with vendored zlib."; exit 1; }
-                else
-                  echo "zlib URL is reachable but build still failed."
-                  exit 1
-                fi
+          with open('build.zig.zon') as f: c = f.read()
+          c = re.sub(r'(\.zlib\s*=\s*\.\{)\s*\.url\s*=\s*\"[^\"]+\",\s*\.hash\s*=\s*\"[^\"]+\",',
+                     r'\1\n            .path = \"./ext/zlib-src\",', c)
+          with open('build.zig.zon','w') as f: f.write(c)
+          "
+                zig build -Dtarget=${{ matrix.zig_target }} || exit 1
               else
-                echo "Build failed on attempt $attempt, retrying in 15s..."
-                sleep 15
+                exit 1
               fi
+            else
+              sleep 15
             fi
           done
-
           VERE_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
-          if [ -z "$VERE_BIN" ]; then
-            VERE_BIN=$(find zig-out -type f -name "urbit" -o -type f -name "vere" 2>/dev/null | head -1)
-          fi
-          if [ -n "$VERE_BIN" ]; then
-            cp "$VERE_BIN" ../gw-vere
-          else
-            echo "ERROR: Binary not found in zig-out"
-            find zig-out/ -type f 2>/dev/null | head -20
-            exit 1
-          fi
+          [ -z "$VERE_BIN" ] && VERE_BIN=$(find zig-out -type f \( -name "urbit" -o -name "vere" \) 2>/dev/null | head -1)
+          cp "$VERE_BIN" ../gw-vere
           cd ..
           chmod +x ./gw-vere
-          ls -la ./gw-vere
           ./gw-vere --version || true
 
       - name: Upload vere
@@ -635,7 +450,6 @@ jobs:
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
-          ls -la $(pwd)/urcrypt/
 
       - name: Checkout gwbtc/comet-miner
         uses: actions/checkout@v3
@@ -648,40 +462,21 @@ jobs:
       - name: Build comet-miner
         run: |
           cd gwbtc-comet-miner
-          # Fix uint64_t format specifiers for portability (upstream bug)
           sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
           if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
             sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
           fi
-          echo "Building comet-miner for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
-            echo "Build attempt $attempt of 3..."
-            if zig build -Doptimize=ReleaseFast -Dprogram=comet_miner; then
-              echo "Build succeeded on attempt $attempt."
-              break
-            else
-              if [ $attempt -eq 3 ]; then
-                echo "All 3 attempts failed."
-                exit 1
-              fi
-              echo "Build failed on attempt $attempt, retrying in 15s..."
-              sleep 15
-            fi
+            echo "Build attempt $attempt/3..."
+            zig build -Doptimize=ReleaseFast -Dprogram=comet_miner && break
+            [ $attempt -eq 3 ] && exit 1
+            sleep 15
           done
           MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
-          if [ -z "$MINER_BIN" ]; then
-            MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
-          fi
-          if [ -n "$MINER_BIN" ]; then
-            cp "$MINER_BIN" ../comet_miner
-          else
-            echo "ERROR: comet_miner binary not found in zig-out"
-            find zig-out/ -type f 2>/dev/null | head -20
-            exit 1
-          fi
+          [ -z "$MINER_BIN" ] && MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
+          cp "$MINER_BIN" ../comet_miner
           cd ..
           chmod +x ./comet_miner
-          ls -la ./comet_miner
 
       - name: Upload comet-miner
         uses: actions/upload-artifact@v4
@@ -693,6 +488,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: gwbtc/booting
+          ref: ${{ env.BOOTING_BRANCH }}
           path: gwbtc-booting
           token: ${{ secrets.GH_PAT }}
 
@@ -708,7 +504,6 @@ jobs:
           pip install pyinstaller requests embit
           pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
           chmod +x dist/gw-onboard
-          ls -la dist/gw-onboard
 
       - name: Upload gw-onboard
         uses: actions/upload-artifact@v4
@@ -727,42 +522,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download pill
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: gw-base-pill
-          path: ./artifacts/pill
-
-      - name: Download vere binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: gw-vere-*
-          path: ./artifacts/vere
-
-      - name: Download comet-miner binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: comet-miner-*
-          path: ./artifacts/comet-miner
-
-      - name: Download gw-onboard binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: gw-onboard-*
-          path: ./artifacts/gw-onboard
-
-      - name: Prepare release artifacts
-        run: |
-          cp ./artifacts/pill/gw-base.pill ./gw-base.pill
-          ls -la ./gw-base.pill
-          echo "Vere binaries:"
-          find ./artifacts/vere/ -type f -ls
-          echo "Comet-miner binaries:"
-          find ./artifacts/comet-miner/ -type f -ls
-          echo "gw-onboard binaries:"
-          find ./artifacts/gw-onboard/ -type f -ls
-
-          printf 'requests\nembit\n' > requirements.txt
+          path: ./artifacts
 
       - name: Install system dependencies
         run: |
@@ -774,20 +537,17 @@ jobs:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          cp ./artifacts/vere/gw-vere-linux-x86_64/gw-vere ./gw-vere
+          cp ./artifacts/gw-vere-linux-x86_64/gw-vere ./gw-vere
           chmod +x ./gw-vere
+          cp ./artifacts/gw-base-pill/gw-base.pill ./gw-base.pill
           ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
-          echo "Validation successful — ship booted with pill + vere."
-          ls -la ./zod2/
+          echo "Validation successful — ship booted with pill."
 
       - name: Shutdown test ship
         if: always()
         run: |
-          ZOD2_PID=$(cat ./zod2/.urb/pid 2>/dev/null || true)
-          if [ -n "$ZOD2_PID" ]; then
-            kill "$ZOD2_PID" || true
-          fi
+          kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
           sleep 3
           pkill -f "gw-vere" || true
 
@@ -800,23 +560,22 @@ jobs:
               sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
             sudo apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gh
           fi
-          gh --version
 
       - name: Package and publish release
         run: |
+          printf 'requests\nembit\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
-            cp "./artifacts/vere/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
-            cp "./artifacts/comet-miner/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
+            cp "./artifacts/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
+            cp "./artifacts/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
-            cp "./artifacts/gw-onboard/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
+            cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
             chmod +x "pkg-${target}/gw-onboard"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
 
-          # Build date-based release tag with increment for same-day releases
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
           TAG="groundwire-alpha-${DATE_BASE}"
           TITLE="groundwire-alpha ${DATE_BASE}"
