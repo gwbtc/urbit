@@ -180,26 +180,49 @@ jobs:
           path: tlon-apps
           token: ${{ secrets.GH_PAT }}
 
+      - name: Find tlon-apps desk layout
+        run: |
+          echo "=== tlon-apps top-level ==="
+          ls tlon-apps/
+          echo "=== Looking for desk sources ==="
+          find tlon-apps/ -name "sys.kelvin" -maxdepth 5 2>/dev/null | head -20
+          find tlon-apps/ -name "desk.bill" -maxdepth 5 2>/dev/null | head -20
+
       - name: Create, mount, and populate %groups desk
         run: |
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
           # Clear %base leftovers
           rm -rf ./zod/groups/*
-          if [ -d tlon-apps/desk/groups ]; then
+          # Find groups desk source
+          GROUPS_SRC=""
+          for candidate in \
+            tlon-apps/desk/groups \
+            tlon-apps/packages/groups/desk \
+            tlon-apps/desks/groups \
+            tlon-apps/groups/desk \
+            tlon-apps/groups; do
+            if [ -f "$candidate/sys.kelvin" ]; then
+              GROUPS_SRC="$candidate"
+              break
+            fi
+          done
+          if [ -n "$GROUPS_SRC" ]; then
+            echo "Found groups desk at: $GROUPS_SRC"
             rsync -av --no-links --checksum \
               --exclude='.git*' --exclude='.ignore' \
-              tlon-apps/desk/groups/ ./zod/groups/
-          elif [ -d tlon-apps/packages/groups/desk ]; then
-            rsync -av --no-links --checksum \
-              --exclude='.git*' --exclude='.ignore' \
-              tlon-apps/packages/groups/desk/ ./zod/groups/
+              "$GROUPS_SRC/" ./zod/groups/
           else
-            echo "WARNING: Could not find groups desk source in tlon-apps"
-            find tlon-apps/ -name "sys.kelvin" -path "*/groups/*" 2>/dev/null | head -5
+            echo "WARNING: No groups desk source found, writing minimal desk"
           fi
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/groups/sys.kelvin" 2>/dev/null || true
-          cat "./zod/groups/sys.kelvin" 2>/dev/null || echo "(no sys.kelvin)"
+          # Ensure valid desk with correct kelvin (even if source wasn't found)
+          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
+          # Ensure desk.bill exists and doesn't have %base agents
+          if [ ! -f ./zod/groups/desk.bill ]; then
+            echo '~' > ./zod/groups/desk.bill
+          fi
+          cat ./zod/groups/sys.kelvin
+          cat ./zod/groups/desk.bill
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
       - name: Create, mount, and populate %landscape desk
@@ -208,20 +231,34 @@ jobs:
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
           # Clear %base leftovers
           rm -rf ./zod/landscape/*
-          if [ -d tlon-apps/desk/landscape ]; then
+          # Find landscape desk source
+          LANDSCAPE_SRC=""
+          for candidate in \
+            tlon-apps/desk/landscape \
+            tlon-apps/packages/landscape/desk \
+            tlon-apps/desks/landscape \
+            tlon-apps/landscape/desk \
+            tlon-apps/landscape; do
+            if [ -f "$candidate/sys.kelvin" ]; then
+              LANDSCAPE_SRC="$candidate"
+              break
+            fi
+          done
+          if [ -n "$LANDSCAPE_SRC" ]; then
+            echo "Found landscape desk at: $LANDSCAPE_SRC"
             rsync -av --no-links --checksum \
               --exclude='.git*' --exclude='.ignore' \
-              tlon-apps/desk/landscape/ ./zod/landscape/
-          elif [ -d tlon-apps/packages/landscape/desk ]; then
-            rsync -av --no-links --checksum \
-              --exclude='.git*' --exclude='.ignore' \
-              tlon-apps/packages/landscape/desk/ ./zod/landscape/
+              "$LANDSCAPE_SRC/" ./zod/landscape/
           else
-            echo "WARNING: Could not find landscape desk source in tlon-apps"
-            find tlon-apps/ -name "sys.kelvin" -path "*/landscape/*" 2>/dev/null | head -5
+            echo "WARNING: No landscape desk source found, writing minimal desk"
           fi
-          sed -i 's/\[%zuse 409\]/[%zuse 408]/' "./zod/landscape/sys.kelvin" 2>/dev/null || true
-          cat "./zod/landscape/sys.kelvin" 2>/dev/null || echo "(no sys.kelvin)"
+          # Ensure valid desk with correct kelvin
+          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
+          if [ ! -f ./zod/landscape/desk.bill ]; then
+            echo '~' > ./zod/landscape/desk.bill
+          fi
+          cat ./zod/landscape/sys.kelvin
+          cat ./zod/landscape/desk.bill
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
       - name: Validate all desks
