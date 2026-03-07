@@ -80,9 +80,12 @@ jobs:
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-urbit/pkg/arvo/ ./zod/base/
 
-          echo "=== After rsync: should be kelvin 408 ==="
-          cat ./zod/base/sys.kelvin
+          echo "=== After rsync ==="
           head -7 ./zod/base/sys/zuse.hoon
+
+          echo "=== Setting sys.kelvin to support both 408 and 409 ==="
+          printf '[%%zuse 408]\n[%%zuse 409]\n' > ./zod/base/sys.kelvin
+          cat ./zod/base/sys.kelvin
 
           echo "=== Committing %base (should trigger sys-update) ==="
           ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
