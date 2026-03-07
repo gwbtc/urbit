@@ -59,14 +59,6 @@ jobs:
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
-      - name: Mount %base desk
-        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
-
-      - name: Create and mount %gw-base desk
-        run: |
-          ./automation/desk-create.sh gw-base "$CONN_SOCK"
-          ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
-
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
         with:
@@ -75,12 +67,18 @@ jobs:
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
 
-      - name: Populate %gw-base with pkg/arvo
+      - name: Mount %base desk
+        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
+
+      - name: Populate %base with modified arvo and commit (triggers kelvin upgrade)
         run: |
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
-            gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
-          ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
+            gwbtc-urbit/pkg/arvo/ ./zod/base/
+          ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
+
+      - name: Wait for kelvin upgrade to complete
+        run: ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
@@ -153,7 +151,7 @@ jobs:
 
       - name: Validate all desks
         run: |
-          for desk in gw-base groundwire spv-wallet urbit-mcp groups landscape; do
+          for desk in base groundwire spv-wallet mcp groups landscape; do
             echo "${desk}:"
             ls "./zod/${desk}/" | head -10
             echo ""
@@ -172,7 +170,7 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
+              =/  sys=path    /(scot %p our)/base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
@@ -185,7 +183,7 @@ jobs:
                 %:  send-raw-card
                     %pass  /build
                     %arvo  %c
-                    %info  %gw-base  %&
+                    %info  %base  %&
                     :~  [/pill/pill %ins %pill !>(pill)]
                     ==
                 ==
@@ -201,10 +199,9 @@ jobs:
       - name: Wait for pill to appear
         timeout-minutes: 30
         run: |
-          echo "Polling for pill in ./zod/gw-base/ (up to 30 min)..."
+          echo "Polling for pill in ./zod/base/ (up to 30 min)..."
           for i in $(seq 1 600); do
-            ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK" > /dev/null 2>&1 || true
-            PILL_FILE=$(find ./zod/gw-base/ -name "*.pill" -type f 2>/dev/null | head -1)
+            PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
               cp "$PILL_FILE" ./gw-base.pill
@@ -214,9 +211,10 @@ jobs:
             if [ $((i % 60)) -eq 0 ]; then
               echo "--- $i iterations elapsed, no pill yet ---"
             fi
+            sleep 3
           done
-          echo "ERROR: Pill never appeared in ./zod/gw-base/."
-          find ./zod/gw-base/ -type f 2>/dev/null | head -20 || echo "(empty)"
+          echo "ERROR: Pill never appeared in ./zod/base/."
+          find ./zod/base/ -type f 2>/dev/null | head -20 || echo "(empty)"
           exit 1
 
       - name: Shutdown ~zod
