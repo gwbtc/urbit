@@ -22,7 +22,7 @@ jobs:
   # =============================================================
   build-pill:
     name: Build pill
-    needs: build-binaries
+    needs: build-vere
     runs-on: ubuntu-latest
     env:
       CONN_SOCK: ./zod/.urb/conn.sock
@@ -309,51 +309,34 @@ jobs:
           path: ./gw-base.pill
 
   # =============================================================
-  # Build vere + comet-miner for each platform
+  # Build vere for each platform (pill build depends on this)
   # =============================================================
-  build-binaries:
-    name: "Build: ${{ matrix.target }}"
+  build-vere:
+    name: "Build vere: ${{ matrix.target }}"
     strategy:
       matrix:
         include:
           - target: linux-x86_64
             runner: ubuntu-latest
-            zig_archive: zig-x86_64-linux-0.15.2.tar.xz
-            zig_014_archive: zig-x86_64-linux-0.14.1.tar.xz
+            zig_archive: zig-x86_64-linux-0.14.1.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
-            zig_archive: zig-aarch64-linux-0.15.2.tar.xz
-            zig_014_archive: zig-aarch64-linux-0.14.1.tar.xz
+            zig_archive: zig-aarch64-linux-0.14.1.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-latest
-            zig_archive: zig-aarch64-macos-0.15.2.tar.xz
-            zig_014_archive: zig-aarch64-macos-0.14.1.tar.xz
+            zig_archive: zig-aarch64-macos-0.14.1.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig (0.15.2 for vere, 0.14.1 for comet-miner)
+      - name: Install Zig 0.14.1
         run: |
-          curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
+          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
-          ZIG15_DIR="${{ matrix.zig_archive }}"
-          ZIG15_DIR="${ZIG15_DIR%.tar.xz}"
-
-          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_014_archive }}"
-          tar xf "${{ matrix.zig_014_archive }}"
-          ZIG14_DIR="${{ matrix.zig_014_archive }}"
-          ZIG14_DIR="${ZIG14_DIR%.tar.xz}"
-
-          echo "$(pwd)/$ZIG15_DIR" >> $GITHUB_PATH
-          echo "ZIG14=$(pwd)/$ZIG14_DIR/zig" >> $GITHUB_ENV
-
-      - name: Verify Zig versions
-        run: |
-          echo "Zig 0.15.2 (vere):"
-          zig version
-          echo "Zig 0.14.1 (comet-miner):"
-          $ZIG14 version
+          ZIG_DIR="${{ matrix.zig_archive }}"
+          ZIG_DIR="${ZIG_DIR%.tar.xz}"
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
         uses: actions/checkout@v3
@@ -369,52 +352,6 @@ jobs:
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
           ls -la $(pwd)/urcrypt/
 
-      - name: Checkout gwbtc/comet-miner
-        uses: actions/checkout@v3
-        with:
-          repository: gwbtc/comet-miner
-          ref: ${{ env.COMET_MINER_BRANCH }}
-          path: gwbtc-comet-miner
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Build comet-miner (Zig 0.14.1)
-        run: |
-          cd gwbtc-comet-miner
-          # Fix uint64_t format specifiers for portability (upstream bug)
-          sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
-          if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
-            sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
-          fi
-          echo "Building comet-miner for ${{ matrix.target }}..."
-          for attempt in 1 2 3; do
-            echo "Build attempt $attempt of 3..."
-            if $ZIG14 build -Doptimize=ReleaseFast -Dprogram=comet_miner; then
-              echo "Build succeeded on attempt $attempt."
-              break
-            else
-              if [ $attempt -eq 3 ]; then
-                echo "All 3 attempts failed."
-                exit 1
-              fi
-              echo "Build failed on attempt $attempt, retrying in 15s..."
-              sleep 15
-            fi
-          done
-          MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
-          if [ -z "$MINER_BIN" ]; then
-            MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
-          fi
-          if [ -n "$MINER_BIN" ]; then
-            cp "$MINER_BIN" ../comet_miner
-          else
-            echo "ERROR: comet_miner binary not found in zig-out"
-            find zig-out/ -type f 2>/dev/null | head -20
-            exit 1
-          fi
-          cd ..
-          chmod +x ./comet_miner
-          ls -la ./comet_miner
-
       - name: Checkout gwbtc/vere
         uses: actions/checkout@v3
         with:
@@ -423,13 +360,13 @@ jobs:
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Build vere (Zig 0.15.2)
+      - name: Build vere
         run: |
           cd gwbtc-vere
           echo "Building vere for ${{ matrix.target }}..."
           for attempt in 1 2 3; do
             echo "Build attempt $attempt of 3..."
-            if $ZIG14 build -Dtarget=${{ matrix.zig_target }}; then
+            if zig build -Dtarget=${{ matrix.zig_target }}; then
               echo "Build succeeded on attempt $attempt."
               break
             else
@@ -456,7 +393,7 @@ jobs:
               f.write(content)
           print('Patched build.zig.zon')
           PYEOF
-                  $ZIG14 build -Dtarget=${{ matrix.zig_target }} || { echo "Build failed even with vendored zlib."; exit 1; }
+                  zig build -Dtarget=${{ matrix.zig_target }} || { echo "Build failed even with vendored zlib."; exit 1; }
                 else
                   echo "zlib URL is reachable but build still failed."
                   exit 1
@@ -489,6 +426,93 @@ jobs:
         with:
           name: gw-vere-${{ matrix.target }}
           path: ./gw-vere
+
+  # =============================================================
+  # Build comet-miner + gw-onboard for each platform
+  # =============================================================
+  build-extras:
+    name: "Build extras: ${{ matrix.target }}"
+    strategy:
+      matrix:
+        include:
+          - target: linux-x86_64
+            runner: ubuntu-latest
+            zig_archive: zig-x86_64-linux-0.14.1.tar.xz
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+            zig_archive: zig-aarch64-linux-0.14.1.tar.xz
+          - target: macos-aarch64
+            runner: macos-latest
+            zig_archive: zig-aarch64-macos-0.14.1.tar.xz
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Install Zig 0.14.1
+        run: |
+          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
+          tar xf "${{ matrix.zig_archive }}"
+          ZIG_DIR="${{ matrix.zig_archive }}"
+          ZIG_DIR="${ZIG_DIR%.tar.xz}"
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+
+      - name: Checkout gwbtc/urcrypt
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/urcrypt
+          ref: ${{ env.URCRYPT_BRANCH }}
+          path: gwbtc-urcrypt
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Prepare urcrypt
+        run: |
+          rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
+          ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
+          ls -la $(pwd)/urcrypt/
+
+      - name: Checkout gwbtc/comet-miner
+        uses: actions/checkout@v3
+        with:
+          repository: gwbtc/comet-miner
+          ref: ${{ env.COMET_MINER_BRANCH }}
+          path: gwbtc-comet-miner
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Build comet-miner
+        run: |
+          cd gwbtc-comet-miner
+          # Fix uint64_t format specifiers for portability (upstream bug)
+          sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
+          if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
+            sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
+          fi
+          echo "Building comet-miner for ${{ matrix.target }}..."
+          for attempt in 1 2 3; do
+            echo "Build attempt $attempt of 3..."
+            if zig build -Doptimize=ReleaseFast -Dprogram=comet_miner; then
+              echo "Build succeeded on attempt $attempt."
+              break
+            else
+              if [ $attempt -eq 3 ]; then
+                echo "All 3 attempts failed."
+                exit 1
+              fi
+              echo "Build failed on attempt $attempt, retrying in 15s..."
+              sleep 15
+            fi
+          done
+          MINER_BIN=$(find zig-out -type f -name "comet_miner" 2>/dev/null | head -1)
+          if [ -z "$MINER_BIN" ]; then
+            MINER_BIN=$(find zig-out -type f -executable 2>/dev/null | head -1)
+          fi
+          if [ -n "$MINER_BIN" ]; then
+            cp "$MINER_BIN" ../comet_miner
+          else
+            echo "ERROR: comet_miner binary not found in zig-out"
+            find zig-out/ -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          cd ..
+          chmod +x ./comet_miner
+          ls -la ./comet_miner
 
       - name: Upload comet-miner
         uses: actions/upload-artifact@v4
@@ -528,7 +552,7 @@ jobs:
   # =============================================================
   validate-and-release:
     name: Validate and release
-    needs: [build-pill, build-binaries]
+    needs: [build-pill, build-vere, build-extras]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
