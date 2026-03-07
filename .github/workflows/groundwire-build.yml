@@ -141,7 +141,7 @@ jobs:
           rm -rf ./zod/spv-wallet/*
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
-            gwbtc-spv-wallet/ ./zod/spv-wallet/
+            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
           # Ensure kelvin 408
           sed -i 's/\[%zuse 409\]/[%zuse 408]/' ./zod/spv-wallet/sys.kelvin 2>/dev/null || true
           cat ./zod/spv-wallet/sys.kelvin
