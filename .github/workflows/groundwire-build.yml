@@ -90,14 +90,62 @@ jobs:
           echo "=== Committing %base (should trigger sys-update) ==="
           ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
 
-      - name: Wait and diagnose commit
+      - name: Test if mount/commit works at all
         run: |
-          echo "=== Waiting 60s for IO driver to process %into ==="
-          sleep 60
-
           source ./automation/fyrd.sh
 
-          echo "=== 1. Clay kelvin (what Clay has internally) ==="
+          echo "=== Adding a harmless test file to mounted %base ==="
+          echo "test-content-12345" > ./zod/base/gw-test.txt
+          ls -la ./zod/base/gw-test.txt
+
+          echo "=== Committing %base with just the test file ==="
+          ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
+          sleep 15
+
+          echo "=== Checking if Clay picked up the test file ==="
+          read -r -d '' TEST_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  has  .^(? %cu /(scot %p our)/base/(scot %da now)/gw-test/txt)
+              (pure:m !>(;;(@t ?:(has 'YES-clay-has-file' 'NO-file-missing'))))
+              '''
+          ==
+          HOON
+          RESULT=$(send_fyrd "$TEST_FYRD")
+          echo "Test file in Clay: $RESULT"
+
+      - name: Dump ship log for crash traces
+        run: |
+          echo "=== Ship log output ==="
+          if [ -d ./zod/.urb/log ]; then
+            find ./zod/.urb/log -type f | head -5
+            for f in $(find ./zod/.urb/log -type f | head -3); do
+              echo "--- $f ---"
+              tail -100 "$f"
+            done
+          fi
+          if [ -d ./zod/.urb/output ]; then
+            echo "=== .urb/output ==="
+            find ./zod/.urb/output -type f | head -5
+            for f in $(find ./zod/.urb/output -type f | head -3); do
+              echo "--- $f ---"
+              tail -100 "$f"
+            done
+          fi
+          echo "=== Check for core dumps or crash indicators ==="
+          ls -la ./zod/.urb/ | head -20
+
+      - name: Diagnose Clay state
+        run: |
+          source ./automation/fyrd.sh
+
+          echo "=== Clay kelvin ==="
           read -r -d '' SCRY_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -115,7 +163,7 @@ jobs:
           RESULT=$(send_fyrd "$SCRY_FYRD")
           echo "Clay kelvin: $RESULT"
 
-          echo "=== 2. Tire state (waiting commits / wic per desk) ==="
+          echo "=== Tire state (use * type to avoid find.zest) ==="
           read -r -d '' TIRE_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -125,50 +173,15 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  =rock:tire:clay
-                .^(rock:tire:clay %cx /(scot %p our)//(scot %da now)/tire)
-              =/  out=tape  ""
-              =.  out
-                %+  roll  ~(tap by rock)
-                |=  [[=desk =zest wic=(set weft)] acc=tape]
-                %+  weld  acc
-                "{(trip desk)}: zest={<zest>} wic={<wic>}\0a"
-              (pure:m !>(;;(@t (crip out))))
+              =/  tire-raw  .^(* %cx /(scot %p our)//(scot %da now)/tire)
+              (pure:m !>(;;(@t (crip (noah !>(tire-raw))))))
               '''
           ==
           HOON
           RESULT=$(send_fyrd "$TIRE_FYRD")
-          echo "Tire: $RESULT"
+          echo "Tire (raw): $RESULT"
 
-          echo "=== 3. Send %dirk directly and re-check ==="
-          read -r -d '' DIRK_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  ~  bind:m
-                %:  send-raw-card
-                    %pass  /dirk-test
-                    %arvo  %c
-                    %dirk  %base
-                ==
-              (pure:m !>('"dirk sent"'))
-              '''
-          ==
-          HOON
-          RESULT=$(send_fyrd "$DIRK_FYRD")
-          echo "Direct %dirk: $RESULT"
-
-          echo "=== Waiting 30s after direct %dirk ==="
-          sleep 30
-
-          echo "=== 4. Re-check Clay kelvin after direct %dirk ==="
-          RESULT=$(send_fyrd "$SCRY_FYRD")
-          echo "Clay kelvin (post-dirk): $RESULT"
-
-          echo "=== 5. Filesystem state ==="
+          echo "=== Filesystem ==="
           cat ./zod/base/sys.kelvin
           head -7 ./zod/base/sys/zuse.hoon
 
