@@ -342,6 +342,37 @@ jobs:
             echo "  $RESULT"
           done
 
+      - name: Force-write desk.bill to Clay via %info
+        run: |
+          source ./automation/fyrd.sh
+          # Filesystem commits don't reliably update Clay's desk.bill.
+          # Bypass the filesystem entirely: write desk.bill directly to
+          # Clay via %info cards (same mechanism the pill build uses).
+          for desk in groundwire groups landscape; do
+            echo "Force-writing desk.bill=~ for %${desk} via %info..."
+            read -r -d '' FIX_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /fix-bill
+                    %arvo  %c
+                    %info  %${desk}  %&
+                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
+                    ==
+                ==
+              (pure:m !>('Fixed ${desk} desk.bill'))
+              '''
+          ==
+          HOON
+            RESULT=$(send_fyrd "$FIX_FYRD")
+            echo "  $RESULT"
+          done
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
