@@ -90,18 +90,14 @@ jobs:
           echo "=== Committing %base (should trigger sys-update) ==="
           ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
 
-      - name: Wait for kelvin upgrade to complete
+      - name: Wait and diagnose commit
         run: |
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          echo "=== Post-upgrade: checking mounted desk (filesystem) ==="
-          cat ./zod/base/sys.kelvin
-          head -7 ./zod/base/sys/zuse.hoon
+          echo "=== Waiting 60s for IO driver to process %into ==="
+          sleep 60
 
-      - name: Diagnose Clay state
-        run: |
           source ./automation/fyrd.sh
 
-          echo "=== Scrying Clay for %base kelvin ==="
+          echo "=== 1. Clay kelvin (what Clay has internally) ==="
           read -r -d '' SCRY_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -119,8 +115,8 @@ jobs:
           RESULT=$(send_fyrd "$SCRY_FYRD")
           echo "Clay kelvin: $RESULT"
 
-          echo "=== Scrying Clay for zuse version ==="
-          read -r -d '' ZUSE_FYRD << 'HOON' || true
+          echo "=== 2. Tire state (waiting commits / wic per desk) ==="
+          read -r -d '' TIRE_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
               :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
@@ -129,33 +125,52 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  zus  .^(@t %cx /(scot %p our)/base/(scot %da now)/sys/zuse/hoon)
-              =/  first-120  (end [3 120] zus)
-              (pure:m !>(first-120))
+              =/  =rock:tire:clay
+                .^(rock:tire:clay %cx /(scot %p our)//(scot %da now)/tire)
+              =/  out=tape  ""
+              =.  out
+                %+  roll  ~(tap by rock)
+                |=  [[=desk =zest wic=(set weft)] acc=tape]
+                %+  weld  acc
+                "{(trip desk)}: zest={<zest>} wic={<wic>}\0a"
+              (pure:m !>(;;(@t (crip out))))
               '''
           ==
           HOON
-          RESULT=$(send_fyrd "$ZUSE_FYRD")
-          echo "Clay zuse (first 120 bytes): $RESULT"
+          RESULT=$(send_fyrd "$TIRE_FYRD")
+          echo "Tire: $RESULT"
 
-          echo "=== Listing all desks ==="
-          read -r -d '' DESKS_FYRD << 'HOON' || true
+          echo "=== 3. Send %dirk directly and re-check ==="
+          read -r -d '' DIRK_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
               :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
               '''
               =/  m  (strand ,vase)
               ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  desks  .^(arch %cy /(scot %p our)/(scot %da now))
-              =/  names  ~(tap in dir.desks)
-              (pure:m !>(;;(@t (crip (noah !>(names))))))
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /dirk-test
+                    %arvo  %c
+                    %dirk  %base
+                ==
+              (pure:m !>('"dirk sent"'))
               '''
           ==
           HOON
-          RESULT=$(send_fyrd "$DESKS_FYRD")
-          echo "Desks on ship: $RESULT"
+          RESULT=$(send_fyrd "$DIRK_FYRD")
+          echo "Direct %dirk: $RESULT"
+
+          echo "=== Waiting 30s after direct %dirk ==="
+          sleep 30
+
+          echo "=== 4. Re-check Clay kelvin after direct %dirk ==="
+          RESULT=$(send_fyrd "$SCRY_FYRD")
+          echo "Clay kelvin (post-dirk): $RESULT"
+
+          echo "=== 5. Filesystem state ==="
+          cat ./zod/base/sys.kelvin
+          head -7 ./zod/base/sys/zuse.hoon
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
