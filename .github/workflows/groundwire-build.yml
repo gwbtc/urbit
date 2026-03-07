@@ -51,14 +51,6 @@ jobs:
           pipx install peru
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Boot fake ~zod
-        run: |
-          urbit -d -F zod -c zod
-          echo "Fakeship boot initiated in daemon mode."
-
-      - name: Wait for ~zod to be idle
-        run: ./automation/wait-idle.sh "$CONN_SOCK"
-
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v3
         with:
@@ -67,85 +59,20 @@ jobs:
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT }}
 
-      - name: Mount %base desk
-        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
-
-      - name: Populate %base with modified arvo and commit (triggers kelvin upgrade)
+      - name: Boot fake ~zod with modified arvo (-A)
         run: |
-          echo "=== Before rsync: stock sys.kelvin ==="
-          cat ./zod/base/sys.kelvin
-          head -7 ./zod/base/sys/zuse.hoon
+          echo "=== Booting with -A gwbtc-urbit/pkg/arvo/ (kelvin 408) ==="
+          cat gwbtc-urbit/pkg/arvo/sys.kelvin
+          head -7 gwbtc-urbit/pkg/arvo/sys/zuse.hoon
+          urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
+          echo "Fakeship boot initiated with custom arvo."
 
-          rsync -av --no-links --checksum \
-            --exclude='.git*' --exclude='.ignore' \
-            gwbtc-urbit/pkg/arvo/ ./zod/base/
+      - name: Wait for ~zod to be idle
+        run: ./automation/wait-idle.sh "$CONN_SOCK"
 
-          echo "=== After rsync ==="
-          head -7 ./zod/base/sys/zuse.hoon
-
-          echo "=== Setting sys.kelvin to support both 408 and 409 ==="
-          printf '[%%zuse 408]\n[%%zuse 409]\n' > ./zod/base/sys.kelvin
-          cat ./zod/base/sys.kelvin
-
-          echo "=== Committing %base (should trigger sys-update) ==="
-          ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
-
-      - name: Test if mount/commit works at all
+      - name: Verify kelvin 408 boot
         run: |
           source ./automation/fyrd.sh
-
-          echo "=== Adding a harmless test file to mounted %base ==="
-          echo "test-content-12345" > ./zod/base/gw-test.txt
-          ls -la ./zod/base/gw-test.txt
-
-          echo "=== Committing %base with just the test file ==="
-          ./automation/desk-commit.sh base ./zod "$CONN_SOCK"
-          sleep 15
-
-          echo "=== Checking if Clay picked up the test file ==="
-          read -r -d '' TEST_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  has  .^(? %cu /(scot %p our)/base/(scot %da now)/gw-test/txt)
-              (pure:m !>(;;(@t ?:(has 'YES-clay-has-file' 'NO-file-missing'))))
-              '''
-          ==
-          HOON
-          RESULT=$(send_fyrd "$TEST_FYRD")
-          echo "Test file in Clay: $RESULT"
-
-      - name: Dump ship log for crash traces
-        run: |
-          echo "=== Ship log output ==="
-          if [ -d ./zod/.urb/log ]; then
-            find ./zod/.urb/log -type f | head -5
-            for f in $(find ./zod/.urb/log -type f | head -3); do
-              echo "--- $f ---"
-              tail -100 "$f"
-            done
-          fi
-          if [ -d ./zod/.urb/output ]; then
-            echo "=== .urb/output ==="
-            find ./zod/.urb/output -type f | head -5
-            for f in $(find ./zod/.urb/output -type f | head -3); do
-              echo "--- $f ---"
-              tail -100 "$f"
-            done
-          fi
-          echo "=== Check for core dumps or crash indicators ==="
-          ls -la ./zod/.urb/ | head -20
-
-      - name: Diagnose Clay state
-        run: |
-          source ./automation/fyrd.sh
-
-          echo "=== Clay kelvin ==="
           read -r -d '' SCRY_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -163,27 +90,8 @@ jobs:
           RESULT=$(send_fyrd "$SCRY_FYRD")
           echo "Clay kelvin: $RESULT"
 
-          echo "=== Tire state (use * type to avoid find.zest) ==="
-          read -r -d '' TIRE_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  tire-raw  .^(* %cx /(scot %p our)//(scot %da now)/tire)
-              (pure:m !>(;;(@t (crip (noah !>(tire-raw))))))
-              '''
-          ==
-          HOON
-          RESULT=$(send_fyrd "$TIRE_FYRD")
-          echo "Tire (raw): $RESULT"
-
-          echo "=== Filesystem ==="
-          cat ./zod/base/sys.kelvin
-          head -7 ./zod/base/sys/zuse.hoon
+      - name: Mount %base desk
+        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v3
