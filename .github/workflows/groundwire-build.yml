@@ -114,12 +114,21 @@ jobs:
 
       - name: Build groundwire desk dependencies and populate desk
         run: |
-          # Clear %base leftovers so only groundwire-specific files remain
-          rm -rf ./zod/groundwire/*
+          # Clear %base leftovers but keep mar/ for Clay mark processing
+          cd ./zod/groundwire
+          ls | grep -v '^mar$' | xargs rm -rf
+          cd ../..
           cd gwbtc-groundwire
           chmod +x build.sh
           bash build.sh -p ../zod/groundwire
           cd ..
+          # Ensure essential marks exist (copy from %base if missing)
+          for mark in bill kelvin hoon mime noun txt; do
+            if [ ! -f "./zod/groundwire/mar/${mark}.hoon" ]; then
+              mkdir -p ./zod/groundwire/mar
+              cp "./zod/base/mar/${mark}.hoon" "./zod/groundwire/mar/" 2>/dev/null || true
+            fi
+          done
           # Ensure kelvin 408 and valid desk.bill
           echo '[%zuse 408]' > ./zod/groundwire/sys.kelvin
           if [ ! -f ./zod/groundwire/desk.bill ]; then
@@ -141,12 +150,20 @@ jobs:
         run: |
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
-          # Clear %base leftovers
-          rm -rf ./zod/spv-wallet/*
+          # Clear %base leftovers but keep mar/
+          cd ./zod/spv-wallet
+          ls | grep -v '^mar$' | xargs rm -rf
+          cd ../..
           rsync -av --no-links --checksum \
             --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
-          # Ensure kelvin 408 and valid desk.bill
+          # Ensure essential marks exist
+          for mark in bill kelvin hoon mime noun txt; do
+            if [ ! -f "./zod/spv-wallet/mar/${mark}.hoon" ]; then
+              mkdir -p ./zod/spv-wallet/mar
+              cp "./zod/base/mar/${mark}.hoon" "./zod/spv-wallet/mar/" 2>/dev/null || true
+            fi
+          done
           echo '[%zuse 408]' > ./zod/spv-wallet/sys.kelvin
           echo "=== spv-wallet desk.bill ==="
           cat ./zod/spv-wallet/desk.bill
@@ -167,13 +184,21 @@ jobs:
 
       - name: Build and populate %urbit-mcp desk
         run: |
-          # Clear %base leftovers
-          rm -rf ./zod/mcp/*
+          # Clear %base leftovers but keep mar/
+          cd ./zod/mcp
+          ls | grep -v '^mar$' | xargs rm -rf
+          cd ../..
           cd gwbtc-urbit-mcp
           chmod +x build.sh
           bash build.sh -p ../zod/mcp
           cd ..
-          # Ensure kelvin 408 and valid desk.bill
+          # Ensure essential marks exist
+          for mark in bill kelvin hoon mime noun txt; do
+            if [ ! -f "./zod/mcp/mar/${mark}.hoon" ]; then
+              mkdir -p ./zod/mcp/mar
+              cp "./zod/base/mar/${mark}.hoon" "./zod/mcp/mar/" 2>/dev/null || true
+            fi
+          done
           echo '[%zuse 408]' > ./zod/mcp/sys.kelvin
           if [ ! -f ./zod/mcp/desk.bill ]; then
             echo '~' > ./zod/mcp/desk.bill
@@ -201,8 +226,10 @@ jobs:
         run: |
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-          # Clear %base leftovers
-          rm -rf ./zod/groups/*
+          # Clear %base leftovers but keep mar/
+          cd ./zod/groups
+          ls | grep -v '^mar$' | xargs rm -rf
+          cd ../..
           # Find groups desk source
           GROUPS_SRC=""
           for candidate in \
@@ -224,12 +251,15 @@ jobs:
           else
             echo "WARNING: No groups desk source found, writing minimal desk"
           fi
-          # Ensure valid desk with correct kelvin (even if source wasn't found)
+          # Ensure essential marks exist
+          for mark in bill kelvin hoon mime noun txt; do
+            if [ ! -f "./zod/groups/mar/${mark}.hoon" ]; then
+              mkdir -p ./zod/groups/mar
+              cp "./zod/base/mar/${mark}.hoon" "./zod/groups/mar/" 2>/dev/null || true
+            fi
+          done
           echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-          # Ensure desk.bill exists and doesn't have %base agents
-          if [ ! -f ./zod/groups/desk.bill ]; then
-            echo '~' > ./zod/groups/desk.bill
-          fi
+          echo '~' > ./zod/groups/desk.bill
           cat ./zod/groups/sys.kelvin
           cat ./zod/groups/desk.bill
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
@@ -238,8 +268,10 @@ jobs:
         run: |
           ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-          # Clear %base leftovers
-          rm -rf ./zod/landscape/*
+          # Clear %base leftovers but keep mar/
+          cd ./zod/landscape
+          ls | grep -v '^mar$' | xargs rm -rf
+          cd ../..
           # Find landscape desk source
           LANDSCAPE_SRC=""
           for candidate in \
@@ -261,11 +293,15 @@ jobs:
           else
             echo "WARNING: No landscape desk source found, writing minimal desk"
           fi
-          # Ensure valid desk with correct kelvin
+          # Ensure essential marks exist
+          for mark in bill kelvin hoon mime noun txt; do
+            if [ ! -f "./zod/landscape/mar/${mark}.hoon" ]; then
+              mkdir -p ./zod/landscape/mar
+              cp "./zod/base/mar/${mark}.hoon" "./zod/landscape/mar/" 2>/dev/null || true
+            fi
+          done
           echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-          if [ ! -f ./zod/landscape/desk.bill ]; then
-            echo '~' > ./zod/landscape/desk.bill
-          fi
+          echo '~' > ./zod/landscape/desk.bill
           cat ./zod/landscape/sys.kelvin
           cat ./zod/landscape/desk.bill
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
