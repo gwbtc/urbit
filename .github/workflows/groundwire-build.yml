@@ -197,6 +197,8 @@ jobs:
             tlon-apps/desk/ ./zod/groups/
           echo '[%zuse 408]' > ./zod/groups/sys.kelvin
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+          # groups has ~487 files — wait for Clay to finish processing
+          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Populate %landscape desk
         run: |
@@ -207,6 +209,7 @@ jobs:
             tloncorp-landscape/desk/ ./zod/landscape/
           echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
 
       # -- Write desk.bill to Clay and build pill --
       # Filesystem commits can fail to update desk.bill in Clay even with
@@ -220,9 +223,10 @@ jobs:
           # Each desk gets its actual agent list written to Clay via %info.
           # This bypasses unreliable filesystem commits. Agents listed here
           # will be started by Gall when the desk is set %live during pill boot.
+          # Agent lists must match each repo's actual desk.bill
           declare -A DESK_BILLS=(
-            [groundwire]='~[%ord-watcher]'
-            [spv-wallet]='~[%block-headers %spv-wallet]'
+            [groundwire]='~[%reg-tester %urb-watcher]'
+            [spv-wallet]='~[%spv-wallet %indexer]'
             [mcp]='~[%mcp-server]'
             [groups]='~[%logs %groups %chat %notify %grouper %groups-ui %channels %channels-server %profile %activity %contacts %reel %bait %growl %bark %genuine %lanyard %dumb-proxy %expose %metagrab]'
             [landscape]='~[%docket %hark %settings %storage %treaty %vitals]'
