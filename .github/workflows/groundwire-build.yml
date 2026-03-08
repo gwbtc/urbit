@@ -278,7 +278,7 @@ jobs:
                   .^(? %cu /(scot %p our)/${desk}/(scot %da now)/app/[i.bil]/hoon)
                 =/  tag=tape  ?:(exists "OK" "MISSING")
                 =/  entry=tape  "{<i.bil>}={tag} "
-                $(bil t.bil, results (weld results entry))
+                \$(bil t.bil, results (weld results entry))
               (pure:m !>(;;(@t (crip results))))
               '''
           ==
