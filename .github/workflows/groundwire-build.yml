@@ -107,11 +107,18 @@ jobs:
           path: gwbtc-urbit-mcp
           token: ${{ secrets.GH_PAT }}
 
-      - name: Checkout tloncorp/tlon-apps
+      - name: Checkout tloncorp/tlon-apps (groups desk)
         uses: actions/checkout@v3
         with:
           repository: tloncorp/tlon-apps
           path: tlon-apps
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout tloncorp/landscape (landscape desk)
+        uses: actions/checkout@v3
+        with:
+          repository: tloncorp/landscape
+          path: tloncorp-landscape
           token: ${{ secrets.GH_PAT }}
 
       # -- Boot fake ~zod --
@@ -186,16 +193,8 @@ jobs:
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groups ./zod
-          # Find groups desk source in tlon-apps (layout varies by version)
-          for candidate in tlon-apps/desk/groups tlon-apps/packages/groups/desk \
-                           tlon-apps/desks/groups tlon-apps/groups/desk tlon-apps/groups; do
-            if [ -f "$candidate/sys.kelvin" ]; then
-              echo "Found groups source at: $candidate"
-              rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-                "$candidate/" ./zod/groups/
-              break
-            fi
-          done
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            tlon-apps/desk/ ./zod/groups/
           echo '[%zuse 408]' > ./zod/groups/sys.kelvin
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
@@ -204,15 +203,8 @@ jobs:
           ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh landscape ./zod
-          for candidate in tlon-apps/desk/landscape tlon-apps/packages/landscape/desk \
-                           tlon-apps/desks/landscape tlon-apps/landscape/desk tlon-apps/landscape; do
-            if [ -f "$candidate/sys.kelvin" ]; then
-              echo "Found landscape source at: $candidate"
-              rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-                "$candidate/" ./zod/landscape/
-              break
-            fi
-          done
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            tloncorp-landscape/desk/ ./zod/landscape/
           echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
@@ -228,11 +220,12 @@ jobs:
           # Each desk gets its actual agent list written to Clay via %info.
           # This bypasses unreliable filesystem commits. Agents listed here
           # will be started by Gall when the desk is set %live during pill boot.
-          # groups/landscape use their desk.bill from tlon-apps via filesystem commit.
           declare -A DESK_BILLS=(
             [groundwire]='~[%ord-watcher]'
             [spv-wallet]='~[%block-headers %spv-wallet]'
             [mcp]='~[%mcp-server]'
+            [groups]='~[%logs %groups %chat %notify %grouper %groups-ui %channels %channels-server %profile %activity %contacts %reel %bait %growl %bark %genuine %lanyard %dumb-proxy %expose %metagrab]'
+            [landscape]='~[%docket %hark %settings %storage %treaty %vitals]'
           )
 
           for desk in "${!DESK_BILLS[@]}"; do
