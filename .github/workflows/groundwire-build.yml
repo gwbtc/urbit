@@ -255,6 +255,29 @@ jobs:
           sleep 5
           echo "desk.bill written for all non-base desks."
 
+      - name: Verify desk.bill in Clay for each desk
+        run: |
+          source ./automation/fyrd.sh
+          for desk in base groundwire spv-wallet mcp groups landscape; do
+            read -r -d '' SCRY_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  bil  .^((list dude:gall) %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
+              (pure:m !>(;;(@t (crip (noah !>(bil))))))
+              '''
+          ==
+          HOON
+            echo -n "%${desk} desk.bill: "
+            RESULT=$(send_fyrd "$SCRY_FYRD" 2>/dev/null) || true
+            echo "$RESULT"
+          done
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
