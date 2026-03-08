@@ -25,7 +25,7 @@ jobs:
   # Flow:
   #   1. Boot fake ~zod with custom vere + kelvin 408 arvo (-A flag)
   #   2. For each desk: create from %base, mount, clear, populate, commit
-  #   3. Fix desk.bill in Clay via %info (filesystem commits are unreliable)
+  #   3. Write each desk's agent list to Clay via %info (filesystem commits are unreliable)
   #   4. Build brass pill via fyrd, wait for it to appear on filesystem
   #
   # Key gotchas:
@@ -197,7 +197,6 @@ jobs:
             fi
           done
           echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-          echo '~' > ./zod/groups/desk.bill
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
       - name: Populate %landscape desk
@@ -215,18 +214,29 @@ jobs:
             fi
           done
           echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-          echo '~' > ./zod/landscape/desk.bill
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
-      # -- Fix desk.bill in Clay and build pill --
+      # -- Write desk.bill to Clay and build pill --
       # Filesystem commits can fail to update desk.bill in Clay even with
-      # marks present. As a safety net, write empty desk.bill directly to
-      # Clay via %info cards before building the pill.
+      # marks present. Write each desk's actual agent list directly to Clay
+      # via %info cards so Gall starts the right agents during pill boot.
 
-      - name: Fix desk.bill in Clay via %info
+      - name: Write desk.bill to Clay via %info
         run: |
           source ./automation/fyrd.sh
-          for desk in groundwire spv-wallet mcp groups landscape; do
+
+          # Each desk gets its actual agent list written to Clay via %info.
+          # This bypasses unreliable filesystem commits. Agents listed here
+          # will be started by Gall when the desk is set %live during pill boot.
+          # groups/landscape use their desk.bill from tlon-apps via filesystem commit.
+          declare -A DESK_BILLS=(
+            [groundwire]='~[%ord-watcher]'
+            [spv-wallet]='~[%block-headers %spv-wallet]'
+            [mcp]='~[%mcp-server]'
+          )
+
+          for desk in "${!DESK_BILLS[@]}"; do
+            bill_expr="${DESK_BILLS[$desk]}"
             read -r -d '' FIX_FYRD << HOON || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -239,17 +249,18 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %${desk}  %&
-                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
+                    :~  [/desk/bill %mut %bill !>(${bill_expr})]
                     ==
                 ==
               (pure:m !>('fixed'))
               '''
           ==
           HOON
+            echo "Writing desk.bill for %${desk}: ${bill_expr}"
             send_fyrd "$FIX_FYRD" > /dev/null
           done
           sleep 5
-          echo "desk.bill fixed for all non-base desks."
+          echo "desk.bill written for all non-base desks."
 
       - name: Build brass pill
         run: |
