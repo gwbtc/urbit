@@ -255,9 +255,10 @@ jobs:
           sleep 5
           echo "desk.bill written for all non-base desks."
 
-      - name: Verify desk.bill in Clay for each desk
+      - name: Verify desk.bill and agent files in Clay
         run: |
           source ./automation/fyrd.sh
+          # Check desk.bill AND whether each agent's source file exists in Clay
           for desk in base groundwire spv-wallet mcp groups landscape; do
             read -r -d '' SCRY_FYRD << HOON || true
           :*  0
@@ -269,11 +270,20 @@ jobs:
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
               =/  bil  .^((list dude:gall) %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
-              (pure:m !>(;;(@t (crip (noah !>(bil))))))
+              =/  results=tape  "{<bil>} | files: "
+              =.  results
+                |-  ^-  tape
+                ?~  bil  (weld results "")
+                =/  exists=?
+                  .^(? %cu /(scot %p our)/${desk}/(scot %da now)/app/[i.bil]/hoon)
+                =/  tag=tape  ?:(exists "OK" "MISSING")
+                =/  entry=tape  "{<i.bil>}={tag} "
+                $(bil t.bil, results (weld results entry))
+              (pure:m !>(;;(@t (crip results))))
               '''
           ==
           HOON
-            echo -n "%${desk} desk.bill: "
+            echo -n "%${desk}: "
             RESULT=$(send_fyrd "$SCRY_FYRD" 2>/dev/null) || true
             echo "$RESULT"
           done
