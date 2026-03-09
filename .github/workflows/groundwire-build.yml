@@ -495,7 +495,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-        64.23.185.118  sudo apt-get update -y
+          sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
       - name: Boot test ship with pill
