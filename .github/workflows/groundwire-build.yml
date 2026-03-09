@@ -16,7 +16,7 @@ env:
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
-  BOOTING_BRANCH: combined-improvements
+  BOOTING_BRANCH: main
 
 jobs:
   # =============================================================
