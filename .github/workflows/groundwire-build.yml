@@ -506,7 +506,7 @@ jobs:
           cp ./artifacts/gw-vere-linux-x86_64/gw-vere ./gw-vere
           chmod +x ./gw-vere
           cp ./artifacts/gw-base-pill/gw-base.pill ./gw-base.pill
-          ./gw-vere -F zod -B ./gw-base.pill -c zod2
+          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Validation successful — ship booted with pill."
 
