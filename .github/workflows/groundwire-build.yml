@@ -160,13 +160,20 @@ jobs:
       # Each desk: create from %base → mount → clear (preserving marks)
       # → copy desk-specific content → ensure kelvin/bill → commit
 
+      - name: Populate %gw-base desk
+        run: |
+          ./automation/desk-create.sh gw-base "$CONN_SOCK"
+          ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh gw-base ./zod
+          cd gwbtc-urbit && chmod +x build.sh && bash build.sh -p ../zod/gw-base && cd ..
+          ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
+
       - name: Populate %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
           cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
-          echo '[%zuse 408]' > ./zod/groundwire/sys.kelvin
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -176,7 +183,6 @@ jobs:
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
-          echo '[%zuse 408]' > ./zod/spv-wallet/sys.kelvin
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -185,7 +191,6 @@ jobs:
           ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh mcp ./zod
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
-          echo '[%zuse 408]' > ./zod/mcp/sys.kelvin
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
       - name: Populate %groups desk
@@ -211,87 +216,6 @@ jobs:
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
           ./automation/wait-idle.sh "$CONN_SOCK"
 
-      # -- Write desk.bill to Clay and build pill --
-      # Filesystem commits can fail to update desk.bill in Clay even with
-      # marks present. Write each desk's actual agent list directly to Clay
-      # via %info cards so Gall starts the right agents during pill boot.
-
-      - name: Write desk.bill to Clay via %info
-        run: |
-          source ./automation/fyrd.sh
-
-          # Each desk gets its actual agent list written to Clay via %info.
-          # This bypasses unreliable filesystem commits. Agents listed here
-          # will be started by Gall when the desk is set %live during pill boot.
-          # Agent lists must match each repo's actual desk.bill
-          declare -A DESK_BILLS=(
-            [groundwire]='~[%reg-tester %urb-watcher]'
-            [spv-wallet]='~[%spv-wallet %indexer]'
-            [mcp]='~[%mcp-server]'
-            [groups]='~[%logs %groups %chat %notify %grouper %groups-ui %channels %channels-server %profile %activity %contacts %reel %bait %growl %bark %genuine %lanyard %dumb-proxy %expose %metagrab]'
-            [landscape]='~[%docket %hark %settings %storage %treaty %vitals]'
-          )
-
-          for desk in "${!DESK_BILLS[@]}"; do
-            bill_expr="${DESK_BILLS[$desk]}"
-            read -r -d '' FIX_FYRD << HOON || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  ~  bind:m
-                %:  send-raw-card
-                    %pass  /fix-bill
-                    %arvo  %c
-                    %info  %${desk}  %&
-                    :~  [/desk/bill %mut %bill !>(${bill_expr})]
-                    ==
-                ==
-              (pure:m !>('fixed'))
-              '''
-          ==
-          HOON
-            echo "Writing desk.bill for %${desk}: ${bill_expr}"
-            send_fyrd "$FIX_FYRD" > /dev/null
-          done
-          sleep 5
-          echo "desk.bill written for all non-base desks."
-
-      - name: Verify desk.bill and agent files in Clay
-        run: |
-          source ./automation/fyrd.sh
-          # Check desk.bill AND whether each agent's source file exists in Clay
-          for desk in base groundwire spv-wallet mcp groups landscape; do
-            read -r -d '' SCRY_FYRD << HOON || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  bil  .^((list dude:gall) %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
-              =/  results=tape  "{<bil>} | files: "
-              =.  results
-                |-  ^-  tape
-                ?~  bil  (weld results "")
-                =/  exists=?
-                  .^(? %cu /(scot %p our)/${desk}/(scot %da now)/app/[i.bil]/hoon)
-                =/  tag=tape  ?:(exists "OK" "MISSING")
-                =/  entry=tape  "{<i.bil>}={tag} "
-                \$(bil t.bil, results (weld results entry))
-              (pure:m !>(;;(@t (crip results))))
-              '''
-          ==
-          HOON
-            echo -n "%${desk}: "
-            RESULT=$(send_fyrd "$SCRY_FYRD" 2>/dev/null) || true
-            echo "$RESULT"
-          done
-
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
@@ -304,7 +228,7 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  sys=path    /(scot %p our)/base/(scot %da now)/sys
+              =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
@@ -571,7 +495,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update -y
+        64.23.185.118  sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
       - name: Boot test ship with pill
@@ -582,7 +506,7 @@ jobs:
           cp ./artifacts/gw-vere-linux-x86_64/gw-vere ./gw-vere
           chmod +x ./gw-vere
           cp ./artifacts/gw-base-pill/gw-base.pill ./gw-base.pill
-          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+          ./gw-vere -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Validation successful — ship booted with pill."
 

@@ -25,21 +25,11 @@ if [ ! -d "$DESK_PATH" ]; then
   exit 1
 fi
 
-# Clear everything except mar/ — Clay needs mark definitions (especially
-# mar/bill.hoon and mar/kelvin.hoon) to process desk.bill and sys.kelvin
-# during commits. Without marks, commits silently fail.
+# Clear everything.
 echo "Clearing %${DESK} (preserving mar/)..."
 cd "$DESK_PATH"
-ls | grep -v '^mar$' | xargs rm -rf
+ls | xargs rm -rf
 cd - > /dev/null
-
-# Ensure essential marks exist (copy from %base if missing)
-for mark in bill kelvin hoon mime noun txt; do
-  if [ ! -f "${DESK_PATH}/mar/${mark}.hoon" ]; then
-    mkdir -p "${DESK_PATH}/mar"
-    cp "${BASE_PATH}/mar/${mark}.hoon" "${DESK_PATH}/mar/" 2>/dev/null || true
-  fi
-done
 
 # Write sys.kelvin
 echo "[%zuse ${KELVIN}]" > "${DESK_PATH}/sys.kelvin"
