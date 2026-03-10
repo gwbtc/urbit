@@ -386,12 +386,15 @@ jobs:
           - target: linux-x86_64
             runner: ubuntu-latest
             zig_archive: zig-x86_64-linux-0.14.1.tar.xz
+            zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
             zig_archive: zig-aarch64-linux-0.14.1.tar.xz
+            zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-latest
             zig_archive: zig-aarch64-macos-0.14.1.tar.xz
+            zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Install Zig 0.14.1
@@ -432,7 +435,7 @@ jobs:
           fi
           for attempt in 1 2 3; do
             echo "Build attempt $attempt/3..."
-            zig build -Doptimize=ReleaseFast -Dprogram=comet_miner && break
+            zig build -Dtarget=${{ matrix.zig_target }} -Doptimize=ReleaseFast -Dprogram=comet_miner && break
             [ $attempt -eq 3 ] && exit 1
             sleep 15
           done
