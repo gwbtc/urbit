@@ -3158,7 +3158,6 @@
         ::
         [%websocket-event ws-id=@ event=websocket-event]
         [%websocket-handshake ws-id=@ secure=? =address =request:http]
-
     ==
   :: UIP-125
   :: 
@@ -3176,7 +3175,6 @@
         [%disconnect ~]
         [%message message=websocket-message]
     ==
-
   ::  +origin: request origin as specified in an Origin header
   ::
   +$  origin  @torigin
@@ -3985,7 +3983,6 @@
         ::
         [%websocket-handshake id=@ud url=@t]
         [%websocket-response id=@ud websocket-event:eyre]
-
     ==
   ::
   +$  task
@@ -4012,12 +4009,12 @@
         :: 
         [%cancel-websocket id=@ud]
         ::  receives websocket event from earth
+        ::
         [%websocket-connect app=term url=@t]
         ::  receives websocket event from earth
         ::
         [%websocket-event id=@ud event=websocket-event:eyre]
     ==
-
   ::  UIP-125
   :: 
   +$  websocket-connection
