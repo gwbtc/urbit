@@ -615,9 +615,10 @@
     ==
   ::
       %~2025.7.17
-    =/  new-ax=axle
-      [%~2026.1.1 *(map @ud websocket-connection) state.old]
-    iris-gate(ax new-ax)
+    %=  $
+      date.old   %~2026.1.1
+      state.old  [*(map @ud websocket-connection) state.old]
+    ==
   ::
       %~2026.1.1
     iris-gate(ax old)
@@ -632,52 +633,6 @@
   |=  [lyc=gang pov=path car=term bem=beam]
   ^-  (unit (unit cage))
   ~>  %spin.['scry/iris']
-  :: UIP-125
-  :: scry state of open sockets
-  ~&  >>  iris-scry=[lyc=lyc pov=pov car=car bem=bem syd=q.bem]
-  ?.  ?=(%x car)  [~ ~]
-  =/  caller  +<.pov
-  ?:  ?=(%ws q.bem)
-    ~&  iris-ws-scry-id=s.bem
-    ?+    s.bem  ~
-        ~   ``noun+!>(sockets.state.ax)
-    ::
-        [%app ~]
-      =|  conns=(list [wid=@ud url=@t status=$?(%accepted %pending)])
-      =/  sockets  ~(tap by sockets.state.ax)
-      ::  pass a (unit websocket-connection)
-      :^  ~  ~  %noun
-      !>
-      |-
-      ?~  sockets  conns
-      =/  socket=websocket-connection:iris  q.i.sockets
-      ?.  =(app.socket caller)  $(sockets t.sockets)
-      =.  conns
-        :_  conns  [id.socket url.socket status.socket]
-      $(sockets t.sockets)
-    ::
-        [%id @ ~]
-      ~&  caller=caller
-      =/  wid  (slav %ud i.t.s.bem)
-      =/  socket  (~(get by sockets.state.ax) wid)
-      ?~  socket  ``noun+!>(~)
-      ?.  =(app.u.socket caller)  ~
-      ``noun+!>(`[id.u.socket url.u.socket status.u.socket])
-    ::
-        [%url @ ~]
-      =/  sockets  ~(tap by sockets.state.ax)
-      ::  pass a (unit websocket-connection)
-      :^  ~  ~  %noun
-      !>
-      |-
-      ?~  sockets  ~
-      =/  socket=websocket-connection:iris  q.i.sockets
-      ?.  =(app.socket caller)  $(sockets t.sockets)
-      ?:  =(url.socket i.t.s.bem)  `[id.socket url.socket status.socket]
-      $(sockets t.sockets)
-    ==
-  :: /socket scry
-  :: 
   =*  ren  car
   =*  why=shop  &/p.bem
   =*  syd  q.bem
@@ -686,7 +641,9 @@
   ::
   ?.  ?=(%& -.why)  ~
   =*  his  p.why
-  ?:  &(?=(%x ren) =(tyl //whey) =([~ ~] lyc))
+  ?.  =([~ ~] lyc))  ~
+  ::
+  ?:  &(?=(%x ren) =(tyl //whey))
     =/  maz=(list mass)
       :~  nex+&+next-id.state.ax
           outbound+&+outbound-duct.state.ax
@@ -695,5 +652,40 @@
           axle+&+ax
       ==
     ``mass+!>(maz)
-  [~ ~]
+  ::
+  ~&  >>  iris-scry=[lyc=lyc pov=pov car=car bem=bem syd=q.bem]
+  ~&  iris-ws-scry-id=tyl
+  ?.  =([%$ our] why)  ~
+  ?.  &(?=(%x ren) ?=(%$ syd))  ~
+  ?+    tyl  ~
+      [%ws ~]   ``noun+!>(sockets.state.ax)
+  ::
+      [%ws app=@ ~]
+    :^  ~  ~  %noun
+    !>  ^-  (list [wid=@ud url=@t status=?(%accepted %pending)])
+    %+  murn  ~(tap by sockets.state.ax)
+    |=  [wid=@ud conn=websocket-connection]
+    ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)]
+    ?.  =(app.tyl app.socket)  ~
+    `[id url status]:conn
+  ::
+      [%ws app=@ %id id=@ ~]
+    =/  wid  (slav %ud id.tyl)
+    ?~  suc=(~(get by sockets.state.ax) wid)
+      ``noun+!>(~)
+    ?.  =(app.u.suc app.tyl)  [~ ~]
+    ``noun+!>(`[id url status]:u.suc)
+  ::
+      [%ws app=@ %url url=@ ~]
+    =/  sockets  ~(tap by sockets.state.ax)
+    ::  pass a (unit websocket-connection)
+    :^  ~  ~  %noun
+    !>
+    |-  ^-  [wid=@ud url=@t status=?(%accepted %pending)]
+    ?~  sockets  ~
+    =/  socket=websocket-connection  q.i.sockets
+    ?.  =(app.socket app.tyl)  $(sockets t.sockets)
+    ?.  =(url.socket url.tyl)  $(sockets t.sockets)
+    `[id url status]:socket
+  ==
 --
