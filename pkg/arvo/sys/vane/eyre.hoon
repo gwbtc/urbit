@@ -1033,8 +1033,9 @@
     ?~  conn  `state
     ?.  ?=(%app -.action.u.conn)  `state
     =/  url  url.request.inbound-request.u.conn
-    =/  pat=(unit path)  (rush url stap)
-    ?~  pat  ~&  error-parsing-path=pat  `state
+    =/  pat=(unit (list @t))
+      (rush url ;~(pfix fas (more fas smeg:de-purl:html)))
+    ?~  pat  ~&(error-parsing-path=url `state)
     =/  app  app.action.u.conn
     =/  identity  identity.u.conn
     =/  wsid  (scot %ud wid)
@@ -1073,9 +1074,8 @@
     =^  $@(invalid=@uv [@uv identity (list move)])  state
       (session-for-request:authentication request)
     =/  [session-id=@uv =identity som=(list move)]
-      ?@  -
-        ~&(invalid-session=invalid [invalid [%fake *@p] ~])
-      -
+      ?^  -  -
+      ~&(invalid-session=invalid [invalid [%fake *@p] ~])
     =/  authenticated  ?=(%ours -.identity)
     =/  connection=outstanding-connection
       [action [authenticated secure address request] [session-id identity] ~ 0]
@@ -3949,11 +3949,11 @@
       %set-response
     =^  moves  server-state.ax  (set-response:server +.task)
     [moves http-server-gate]
-    ::
+  ::
       %websocket-event
     =^  moves  server-state.ax  (ws-event:server +.task)
     [moves http-server-gate]
- 
+  ::
       %websocket-handshake
     =^  moves  server-state.ax  (ws-handshake:server +.task)
     [moves http-server-gate]
