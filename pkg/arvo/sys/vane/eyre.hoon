@@ -641,6 +641,24 @@
   |=  [wid=@u tan=tang]
   ^-  wall
   (zing (turn tan |=(a=tank (wash 0^wid a))))
+::  +wall-to-octs: text to binary output
+::
+++  wall-to-octs
+  |=  =wall
+  ^-  (unit octs)
+  ::
+  ?:  =(~ wall)
+    ~
+  ::
+  :-  ~
+  %-  as-octs:mimes:html
+  %-  crip
+  %-  zing  ^-  ^wall
+  %-  zing  ^-  (list ^wall)
+  %+  turn  wall
+  |=  t=tape
+  ^-  ^wall
+  ~[t "\0a"]
 ::  +internal-server-error: 500 page, with a tang
 ::
 ++  internal-server-error
@@ -805,7 +823,7 @@
     =^  ?(invalid=@uv [suv=@uv =identity som=(list move)])  state
       (session-for-request:authentication request)
     ?@  -
-      ::  the request provided a session cookie that's not (or no longer)
+      ::  the request provided a session coocokie that's not (or no longer)
       ::  valid. to make sure they're aware, tell them 401
       ::
       ::NOTE  some code duplication with below, but request handling deserves
@@ -1119,7 +1137,10 @@
   ++  galaxy-for
     |=  =ship
     ^-  @p
-    (rear (^^saxo:title rof /ames our now ship))
+    =/  next  (^^sein:title rof /eyre our now ship)
+    ?:  ?=(%czar (clan:title next))
+      next
+    $(ship next)
   ::
   ++  handle-sponsor
     |=  [=identity =request:http]
@@ -2473,7 +2494,7 @@
       ::
       =/  mode=?(%json %jam)
         (find-channel-mode %'GET' header-list.request)
-      =^  [exit=? c=cord moves=(list move)]  state
+      =^  [exit=? =wall moves=(list move)]  state
         ::  the request may include a 'Last-Event-Id' header
         ::
         =/  maybe-last-event-id=(unit @ud)
@@ -2491,7 +2512,7 @@
           =^  mos  state
             %^  return-static-data-on-duct  403  'text/html'
             (error-page 403 | url.request ~)
-          [[& '' mos] state]
+          [[& ~ mos] state]
         ::  make sure the request "mode" doesn't conflict with a prior request
         ::
         ::TODO  or could we change that on the spot, given that only a single
@@ -2501,7 +2522,7 @@
             %^  return-static-data-on-duct  406  'text/html'
             =;  msg=tape  (error-page 406 %.y url.request msg)
             "channel already established in {(trip mode.channel)} mode"
-          [[& '' mos] state]
+          [[& ~ mos] state]
         ::  when opening an event-stream, we must cancel our timeout timer
         ::  if there's no duct already bound. else, kill the old request,
         ::  we will replace its duct at the end of this arm
@@ -2530,12 +2551,12 @@
         ::
         ::  combine the remaining queued events to send to the client
         ::
-        =;  event-replay=cord
+        =;  event-replay=wall
           [[| - cancel-moves] state]
-        %-  roll  :_
-          |=([a=cord b=cord] (cat 3 a b))
+        %-  zing
+        %-  flop
         =/  queue  events.channel
-        =|  events=(list cord)
+        =|  events=(list wall)
         |-
         ^+  events
         ?:  =(~ queue)
@@ -2546,9 +2567,9 @@
         ::      since conversion failure also gets caught during first receive.
         ::      we can't do anything about this, so consider it unsupported.
         =/  said
-          (channel-event-to-cord channel request-id channel-event)
+          (channel-event-to-tape channel request-id channel-event)
         ?~  said  $
-        $(events [(event-cord-to-event-stream id +.u.said) events])
+        $(events [(event-tape-to-wall id +.u.said) events])
       ?:  exit  [moves state]
       ::  send the start event to the client
       ::
@@ -2565,7 +2586,7 @@
             ::  instead. some clients won't consider the connection established
             ::  until they've heard some bytes come over the wire.
             ::
-            ?.  =(~ c)  (some (as-octs:mimes:html c))
+            ?.  =(~ wall)  (wall-to-octs wall)
             (some (as-octs:mimes:html ':\0a'))
           ::
             complete=%.n
@@ -2873,8 +2894,8 @@
         (sign-to-channel-event sign u.channel request-id)
       ?~  maybe-channel-event  [~ state]
       =/  =channel-event  u.maybe-channel-event
-      =/  said=(unit (quip move cord))
-        (channel-event-to-cord u.channel request-id channel-event)
+      =/  said=(unit (quip move tape))
+        (channel-event-to-tape u.channel request-id channel-event)
       =?  moves  ?=(^ said)
         (weld moves -.u.said)
       =*  sending  &(?=([%| *] state.u.channel) ?=(^ said))
@@ -2897,9 +2918,8 @@
         :*  %response  %continue
         ::
             ^=  data
-            :-  ~
-            %-  as-octs:mimes:html
-            (event-cord-to-event-stream next-id +:(need said))
+            %-  wall-to-octs
+            (event-tape-to-wall next-id +:(need said))
         ::
             complete=%.n
         ==
@@ -2960,10 +2980,9 @@
         :*  %response  %continue
         ::
             ^=  data
-            :-  ~
-            %-  as-octs:mimes:html
-            %+  event-cord-to-event-stream  next-id
-            +:(need (channel-event-to-cord u.channel request-id %kick ~))
+            %-  wall-to-octs
+            %+  event-tape-to-wall  next-id
+            +:(need (channel-event-to-tape u.channel request-id %kick ~))
         ::
             complete=%.n
         ==
@@ -2997,15 +3016,15 @@
       ?.  ?=([~ ~ *] des)
         ((trace 0 |.("no desk for app {<app.u.sub>}")) ~)
       `!<(=desk q.u.u.des)
-    ::  +channel-event-to-cord: render channel-event from request-id in specified mode
+    ::  +channel-event-to-tape: render channel-event from request-id in specified mode
     ::
-    ++  channel-event-to-cord
+    ++  channel-event-to-tape
       |=  [=channel request-id=@ud =channel-event]
-      ^-  (unit (quip move cord))
+      ^-  (unit (quip move tape))
       ?-  mode.channel
         %json  %+  bind  (channel-event-to-json channel request-id channel-event)
-               |=((quip move json) [+<- (en:json:html +<+)])
-        %jam   =-  `[~ (scot %uw (jam -))]
+               |=((quip move json) [+<- (trip (en:json:html +<+))])
+        %jam   =-  `[~ (scow %uw (jam -))]
                [request-id channel-event]
       ==
     ::  +channel-event-to-json: render channel event as json channel event
@@ -3078,13 +3097,14 @@
         ==
       ==
     ::
-    ++  event-cord-to-event-stream
-      ~%  %eyre-cord-to-event-stream  ..part  ~
-      |=  [event-id=@ud data=cord]
-      ^-  cord
-      %^  cat  3
-      (cat 3 (cat 3 'id: ' (crip (a-co:co event-id))) '\0a')
-      (cat 3 (cat 3 'data: ' data) '\0a\0a')
+    ++  event-tape-to-wall
+      ~%  %eyre-tape-to-wall  ..part  ~
+      |=  [event-id=@ud =tape]
+      ^-  wall
+      :~  (weld "id: " (a-co:co event-id))
+          (weld "data: " tape)
+          ""
+      ==
     ::
     ++  on-channel-heartbeat
       |=  channel-id=@t
@@ -3152,29 +3172,6 @@
         (subscription-wire channel-id request-id identity.session ship app)
       [identity.session ship app %leave ~]
     --
-  ::
-  ++  handle-ws-response
-    |=  [wid=@ event=websocket-event]
-    ^-  [(list move) server-state]    
-    =.  connections.state
-      ?+  -.event  connections.state
-        ?(%reject %disconnect)  (~(del by connections.state) duct)
-      ==
-    =.  sockets.state
-      ?+    -.event  sockets.state
-          ?(%reject %disconnect)
-        (~(del by sockets.state) wid)
-      ::
-          %accept
-        =/  outstanding  (~(get by connections.state) duct)
-        ?~  outstanding
-          ~&  >>>  eyre-ws-error=[wid event]  sockets.state
-        =/  req=inbound-request  inbound-request.u.outstanding
-        ::  TODO this is bad
-        ?>  ?=(%app -.action.u.outstanding)
-        (~(put by sockets.state) wid +.action.u.outstanding req)
-      ==
-    [[duct %give %websocket-response [wid event]]~ state]
   ::  +handle-gall-error: a call to +poke-http-response resulted in a %coup
   ::
   ++  handle-gall-error
@@ -3202,12 +3199,37 @@
           tang
       ==
     [(weld moves-1 moves-2) state]
+  ::
+  ++  handle-ws-response
+    |=  [wid=@ event=websocket-event]
+    ^-  [(list move) server-state]    
+    =.  connections.state
+      ?+  -.event  connections.state
+        ?(%reject %disconnect)  (~(del by connections.state) duct)
+      ==
+    =.  sockets.state
+      ?+    -.event  sockets.state
+          ?(%reject %disconnect)
+        (~(del by sockets.state) wid)
+      ::
+          %accept
+        =/  outstanding  (~(get by connections.state) duct)
+        ?~  outstanding
+          ~&  >>>  eyre-ws-error=[wid event]  sockets.state
+        =/  req=inbound-request  inbound-request.u.outstanding
+        ::  TODO this is bad
+        ?>  ?=(%app -.action.u.outstanding)
+        (~(put by sockets.state) wid +.action.u.outstanding req)
+      ==
+    [[duct %give %websocket-response [wid event]]~ state]
+  ::
   ::  +handle-response: check a response for correctness and send to earth
   ::
   ::    All outbound responses including %http-server generated responses need to go
   ::    through this interface because we want to have one centralized place
   ::    where we perform logging and state cleanup for connections that we're
   ::    done with.
+  ::
   ::
   ++  handle-response
     |=  =http-event:http
@@ -3651,7 +3673,6 @@
   ~/  %eyre-call
   |=  [=duct dud=(unit goof) wrapped-task=(hobo task)]
   ^-  [(list move) _http-server-gate]
-  ~>  %spin.['call/eyre']
   ::
   =/  task=task  ((harden task) wrapped-task)
   ::
@@ -3963,7 +3984,6 @@
   ~/  %eyre-take
   |=  [=wire =duct dud=(unit goof) =sign]
   ^-  [(list move) _http-server-gate]
-  ~>  %spin.['take/eyre']
   =>  %=    .
           sign
         ?:  ?=(%gall -.sign)
@@ -4035,16 +4055,14 @@
       [moves http-server-gate]
     ==
   ::
-  ++  run-ws-app-request
-    
-    `http-server-gate
-
+  ++  run-ws-app-request  `http-server-gate
   ::
   ++  run-app-request
     ::
     ?>  ?=([%gall %unto *] sign)
     ::
     ::
+    :: ~&  run-app-req-eyre=p.sign
     ?>  ?=([%poke-ack *] p.sign)
     ?>  ?=([@ *] t.wire)
     ?~  p.p.sign
@@ -4072,6 +4090,7 @@
         [~ http-server-gate]
       ::  we have an error; propagate it to the client
       ::
+      ~&  eyre-watch-response-gall-error=duct
       =/  handle-gall-error
         handle-gall-error:(per-server-event event-args)
       =^  moves  server-state.ax  (handle-gall-error u.p.p.sign)
@@ -4399,7 +4418,7 @@
             ports=[insecure=@ud secure=(unit @ud)]
             outgoing-duct=duct
             verb=@
-        ==
+      ==
       ::
       +$  server-state-5
         $:  bindings=(list [=binding =duct =action])
@@ -4418,7 +4437,6 @@
       --
   |=  old=axle-any
   ^+  http-server-gate
-  ~>  %spin.['load/eyre']
   ?-    -.old
   ::
   ::  adds /~/name
@@ -4557,7 +4575,6 @@
   ^-  roon
   |=  [lyc=gang pov=path car=term bem=beam]
   ^-  (unit (unit cage))
-  ~>  %spin.['scry/eyre']
   =*  ren  car
   =*  why=shop  &/p.bem
   =*  syd  q.bem

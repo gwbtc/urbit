@@ -3175,6 +3175,7 @@
         [%disconnect ~]
         [%message message=websocket-message]
     ==
+
   ::  +origin: request origin as specified in an Origin header
   ::
   +$  origin  @torigin

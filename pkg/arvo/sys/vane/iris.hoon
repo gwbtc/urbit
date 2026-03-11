@@ -525,9 +525,10 @@
 ::  http-client issues no requests to other vanes
 ::
 ++  take
-  |=  [=wire =duct dud=(unit goof) sign=*]
+  |=  [wire=(pole knot) =duct dud=(unit goof) hin=sign-arvo]
   ^-  [(list move) _iris-gate]
   ~>  %spin.['take/iris']
+  ~&  iris-take=[wire duct]
   ?<  ?=(^ dud)
   :_  iris-gate
   ?+    wire  ~
@@ -536,7 +537,7 @@
     ~&  iris-ws-take=-.hin
     ?+    -.hin  ~
         %gall
-      ?>  ?=(%unto +<.hin)
+      ?>  ?=([%unto *] +.hin)
       ~&  hin=-.p.hin
       ?+    -.p.hin  ~
           ?(%poke-ack %watch-ack)
@@ -577,7 +578,7 @@
   =>  |%
       +$  axle-any
         $%  [date=%~2019.2.8 state=state-0]
-            [date=%~2025.7.17 =state-1]
+            [date=%~2025.7.17 state=state-1]
             [date=%~2026.1.1 =state]
         ==
       ::
@@ -649,8 +650,7 @@
   =*  tyl  s.bem
   ::
   ?.  ?=(%& -.why)  ~
-  =*  his  p.why
-  ?.  =([~ ~] lyc))  ~
+  ?.  =([~ ~] lyc)  ~
   ::
   ?:  &(?=(%x ren) =(tyl //whey))
     =/  maz=(list mass)
@@ -662,39 +662,43 @@
       ==
     ``mass+!>(maz)
   ::
-  ~&  >>  iris-scry=[lyc=lyc pov=pov car=car bem=bem syd=q.bem]
   ~&  iris-ws-scry-id=tyl
   ?.  =([%$ our] why)  ~
   ?.  &(?=(%x ren) ?=(%$ syd))  ~
   ?+    tyl  ~
       [%ws ~]   ``noun+!>(sockets.state.ax)
   ::
-      [%ws app=@ ~]
+      [%ws @ ~]
+    =/  app=@tas  i.t.tyl
     :^  ~  ~  %noun
     !>  ^-  (list [wid=@ud url=@t status=?(%accepted %pending)])
     %+  murn  ~(tap by sockets.state.ax)
     |=  [wid=@ud conn=websocket-connection]
-    ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)]
-    ?.  =(app.tyl app.socket)  ~
+    ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)])
+    ?.  =(app app.conn)  ~
     `[id url status]:conn
   ::
-      [%ws app=@ %id id=@ ~]
-    =/  wid  (slav %ud id.tyl)
+      [%ws @ %id @ ~]
+    =/  app=@tas  i.t.tyl
+    =/  wid  (slav %ud i.t.t.t.tyl)
     ?~  suc=(~(get by sockets.state.ax) wid)
       ``noun+!>(~)
-    ?.  =(app.u.suc app.tyl)  [~ ~]
+    ?.  =(app.u.suc app)  [~ ~]
     ``noun+!>(`[id url status]:u.suc)
   ::
-      [%ws app=@ %url url=@ ~]
+      [%ws @ %url @ ~]
+    =/  app=@tas  i.t.tyl
+    =/  url=@t    i.t.t.t.tyl
     =/  sockets  ~(tap by sockets.state.ax)
     ::  pass a (unit websocket-connection)
     :^  ~  ~  %noun
     !>
-    |-  ^-  [wid=@ud url=@t status=?(%accepted %pending)]
+    |-  ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)])
     ?~  sockets  ~
     =/  socket=websocket-connection  q.i.sockets
-    ?.  =(app.socket app.tyl)  $(sockets t.sockets)
-    ?.  =(url.socket url.tyl)  $(sockets t.sockets)
+    ?.  =(app.socket app)  $(sockets t.sockets)
+    ?.  =(url.socket url)  $(sockets t.sockets)
     `[id url status]:socket
   ==
 --
+
