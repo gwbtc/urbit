@@ -47,7 +47,7 @@ jobs:
         run: sudo rm -rf ./zod || true
 
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download custom vere (kelvin 408 compatible)
         uses: actions/download-artifact@v4
@@ -76,7 +76,7 @@ jobs:
       # -- Checkout all desk source repos --
 
       - name: Checkout gwbtc/urbit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/urbit
           ref: ${{ env.URBIT_BRANCH }}
@@ -84,7 +84,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Checkout gwbtc/groundwire
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
@@ -92,7 +92,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Checkout gwbtc/spv-wallet
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/spv-wallet
           ref: ${{ env.SPV_WALLET_BRANCH }}
@@ -100,7 +100,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Checkout gwbtc/urbit-mcp
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
@@ -108,14 +108,14 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
-#        uses: actions/checkout@v3
+#        uses: actions/checkout@v4
 #        with:
 #          repository: tloncorp/tlon-apps
 #          path: tlon-apps
 #          token: ${{ secrets.GH_PAT }}
 
 #      - name: Checkout tloncorp/landscape (landscape desk)
-#        uses: actions/checkout@v3
+#        uses: actions/checkout@v4
 #        with:
 #          repository: tloncorp/landscape
 #          path: tloncorp-landscape
@@ -311,7 +311,7 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
           ref: ${{ env.URCRYPT_BRANCH }}
@@ -324,7 +324,7 @@ jobs:
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/vere
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/vere
           ref: ${{ env.VERE_BRANCH }}
@@ -406,7 +406,7 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
           ref: ${{ env.URCRYPT_BRANCH }}
@@ -419,7 +419,7 @@ jobs:
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/comet-miner
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/comet-miner
           ref: ${{ env.COMET_MINER_BRANCH }}
@@ -452,7 +452,7 @@ jobs:
           path: ./comet_miner
 
       - name: Checkout gwbtc/booting
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gwbtc/booting
           ref: ${{ env.BOOTING_BRANCH }}
@@ -487,7 +487,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
