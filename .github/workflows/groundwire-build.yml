@@ -290,21 +290,21 @@ jobs:
         include:
           - target: linux-x86_64
             runner: ubuntu-latest
-            zig_archive: zig-x86_64-linux-0.14.1.tar.xz
+            zig_archive: zig-linux-x86_64-0.15.2.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
-            zig_archive: zig-aarch64-linux-0.14.1.tar.xz
+            zig_archive: zig-linux-aarch64-0.15.2.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-latest
-            zig_archive: zig-aarch64-macos-0.14.1.tar.xz
+            zig_archive: zig-macos-aarch64-0.15.2.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig 0.14.1
+      - name: Install Zig 0.15.2
         run: |
-          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
+          curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
           ZIG_DIR="${{ matrix.zig_archive }}"
           ZIG_DIR="${ZIG_DIR%.tar.xz}"
