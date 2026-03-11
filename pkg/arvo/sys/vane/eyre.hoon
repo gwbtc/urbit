@@ -4286,7 +4286,8 @@
             [date=%~2023.4.11 server-state-3]
             [date=%~2023.5.15 server-state-4]
             [date=%~2024.8.20 server-state-4]
-            [date=%~2025.1.31 server-state]
+            [date=%~2025.1.31 server-state-5]
+            [date=%~2025.10.28 server-state]
         ==
       ::
       +$  server-state-0
@@ -4398,6 +4399,21 @@
             ports=[insecure=@ud secure=(unit @ud)]
             outgoing-duct=duct
             verb=@
+        ==
+      ::
+      +$  server-state-5
+        $:  bindings=(list [=binding =duct =action])
+            cache=(map url=@t [aeon=@ud val=(unit cache-entry)])
+            =cors-registry
+            connections=(map duct outstanding-connection)
+            auth=authentication-state
+            =channel-state
+            domains=(set turf)
+            =http-config
+            ports=[insecure=@ud secure=(unit @ud)]
+            outgoing-duct=duct
+            verb=@
+            check-session-timer=_|
         ==
       --
   |=  old=axle-any
@@ -4518,6 +4534,8 @@
       date.old  %~2025.1.31
       verb.old  [verb.old check-session-timer=&]
     ==
+  ::
+  ::  adds web sockets: UIP-125
   ::
       %~2025.1.31
     %=  $
