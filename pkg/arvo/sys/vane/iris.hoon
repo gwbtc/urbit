@@ -29,10 +29,16 @@
       $:  %d
           ::
           ::
-        $%  [%flog =flog:dill]
-      ==
-      ==
-      [%g $>(%deal task:gall)]
+      $%  [%flog =flog:dill]
+      ==  ==
+  ::
+      ::  %g: to gall
+      ::
+      $:  %g
+          ::
+          ::
+      $%  [%deal p=sack q=term r=deal:gall]
+      ==  ==
   ==
 --
 ::  more structures
@@ -338,20 +344,19 @@
   :: 
   ++  ws-connect
     |=  [desk=term url=@t]
-      ~&  iris-ws-connect=[desk url duct]
-
-      ?:  (~(has by connection-by-duct.state) duct)
-      ~&  "cant sent second ws-connect on same duct"  `state
-      :: TODO ... the wid comes from vere tho...?
-      =^  id  next-id.state  [next-id.state +(next-id.state)]
-
-      =/  wc=websocket-connection  [desk duct id url %pending]
-      =.  sockets.state  (~(put by sockets.state) id wc)
-    :: ::  keep track of the duct for cancellation
-
-      :: This sends it to Vere to actually do the request
-      :-  [outbound-duct.state %give %websocket-handshake id url]~
-      state
+    ~&  iris-ws-connect=[desk url duct]
+    ?:  (~(has by connection-by-duct.state) duct)
+      ~&  "cant sent second ws-connect on same duct"
+      `state
+    :: TODO ... the wid comes from vere tho...?
+    =^  id  next-id.state  [next-id.state +(next-id.state)]
+    =/  wc=websocket-connection  [desk duct id url %pending]
+    =.  sockets.state  (~(put by sockets.state) id wc)
+    ::  keep track of the duct for cancellation
+    :: This sends it to Vere to actually do the request
+    :_  state
+    [outbound-duct.state %give %websocket-handshake id url]~
+  ::
   ++  cleanup-ws
     |=  wid=@ud
     ^-  [(list move) ^state]
@@ -361,66 +366,73 @@
     :_  state
     :~  (leave-agent wid app.u.con)
     ==
-
   ::  incoming websockets event to be sent BY VERE NOT USERSPACE
+  ::
   ++  ws-event
     |=  [wid=@ud event=websocket-event:eyre]
-      ~&  iris-ws-event=[wid -.event duct]
-      =/  wc  (~(get by sockets.state) wid)
-      ?~  wc  `state
-      =/  wc  u.wc
-      ~&  wc=wc
-      =^  moves  state
-        ?-  -.event
-          %accept
-            =.  wc  wc(status %accepted)
-            =.  sockets.state  (~(put by sockets.state) wid wc)
-            :_  state
-            :~  (watch-agent wid app.wc)                         
-            ==
-          %message  :_  state
-                    :~  (poke-agent [wid +.event] app.wc)
-                    ==
-          %reject  (cleanup-ws wid)
-
+    ~&  iris-ws-event=[wid -.event duct]
+    =/  wc  (~(get by sockets.state) wid)
+    ?~  wc  `state
+    =/  wc  u.wc
+    ~&  wc=wc
+    =^  moves  state
+      ?-    -.event
+          %reject      (cleanup-ws wid)
           %disconnect  (cleanup-ws wid)
+      ::
+          %accept
+        =.  wc  wc(status %accepted)
+        =.  sockets.state  (~(put by sockets.state) wid wc)
+        :_  state
+        :~  (watch-agent wid app.wc)                         
         ==
-      =/  m2  (ws-response wc event)
-      [(welp m2 moves) state]
-
-      ++  ws-response
-      |=  [wc=websocket-connection event=websocket-event:eyre]
-        ~&  ws-response=wc
-        :~  :*
-                duct.wc
-                %give
-                %websocket-response
-                id.wc
-                event
-        ==  ==
-      
+      ::
+          %message
+        :_  state
+        :~  (poke-agent [wid +.event] app.wc)
+        ==
+      ==
+    =/  m2  (ws-response wc event)
+    [(welp m2 moves) state]
+  ::
+  ++  ws-response
+    |=  [wc=websocket-connection event=websocket-event:eyre]
+    ^-  (list move)
+    ~&  ws-response=wc
+    :~  :*  duct.wc
+            %give
+            %websocket-response
+            id.wc
+            event
+    ==  ==
+  ::    
   ++  ws-cancel
     |=  wid=@ud
     =.  sockets.state  (~(del by sockets.state) wid)
     :_  state
     :: TODO this goes to vere
-    :~  [outbound-duct.state %give %cancel-request wid]
-    ==
-  
+    [outbound-duct.state %give %cancel-request wid]~
+  ::
   ++  watch-agent
-    |=  [wid=@ud app=term]  ^-  move
-      =/  wids  (scot %ud wid)
-      =/  =note  [%g %deal [our our /iris] app %watch /websocket-client/[wids]]
-      [duct %pass /ws-watch/[wids] note]
+    |=  [wid=@ud app=term]
+    ^-  move
+    =/  wids  (scot %ud wid)
+    =/  =note  [%g %deal [our our /iris] app %watch /websocket-client/[wids]]
+    [duct %pass /ws-watch/[wids] note]
+  ::
   ++  leave-agent
-    |=  [wid=@ud app=term]  ^-  move
-      ~&  iris-leave-agent=[wid app]
-      =/  wids  (scot %ud wid)
-      =/  =note  [%g %deal [our our /iris] app %leave ~]
-      [duct %pass /ws-watch/[wids] note]
+    |=  [wid=@ud app=term]
+    ^-  move
+    ~&  iris-leave-agent=[wid app]
+    =/  wids  (scot %ud wid)
+    =/  =note  [%g %deal [our our /iris] app %leave ~]
+    [duct %pass /ws-watch/[wids] note]
+  ::
   ++  poke-agent
-    |=  [msg=[@ud websocket-message:eyre] app=term]  ^-  move
-      =/  =note  [%g %deal [our our /iris] app %poke %websocket-client-message !>(msg)]
+    |=  [msg=[@ud websocket-message:eyre] app=term]
+    ^-  move
+    =/  =note
+      [%g %deal [our our /iris] app %poke %websocket-client-message !>(msg)]
     [duct %pass /iris-ws-poke note]    
   --
 --
@@ -498,13 +510,15 @@
     [moves iris-gate]
   ::  UIP-125
   ::
-    %websocket-connect
+      %websocket-connect
     =^  moves  state.ax  (ws-connect:client +.task)
     [moves iris-gate]
-    %websocket-event
+  ::
+      %websocket-event
     =^  moves  state.ax  (ws-event:client +.task)
     [moves iris-gate]
-    %cancel-websocket
+  ::
+      %cancel-websocket
     =^  moves  state.ax  (ws-cancel:client +.task)
     [moves iris-gate]
   ==
@@ -517,49 +531,44 @@
   ~&  iris-take=[wire duct]
   ?<  ?=(^ dud)
   :_  iris-gate
-  ?+  wire  ~
-    [%ws-watch wids=@t ~]  =/  wid  (slav %ud wids.wire)
-      ~&  iris-ws-take=-.hin
-      ?+    -.hin  ~
+  ?+    wire  ~
+      [%ws-watch wids=@t ~]
+    =/  wid  (slav %ud wids.wire)
+    ~&  iris-ws-take=-.hin
+    ?+    -.hin  ~
         %gall
-          ?>  ?=(%unto +<.hin)
-          ~&  hin=-.p.hin
-          ?+    -.p.hin  ~
-            ?(%poke-ack %watch-ack)
-              ?~  p.p.hin  ~
-              ~
-            %kick  
-                =/  event-args  [[eny duct now rof] state.ax]
-                =/  client  (per-client-event event-args)
-                =^  movs  state.ax  (cleanup-ws:client wid)
-                movs
-            %fact
-              =*  cag  cage.p.hin
-              :: This comes from agent, goes to vere
-              ~&  >  iris-take-ws-fact=p.cag
-              ?+    p.cag  ~&(bad-fact+p.cag !!)
-                %message  =/  msg  !<(websocket-message:eyre q.cag)
-                          :~  [outbound-duct.state.ax %give %websocket-response wid %message msg]
-                          ==
-                %disconnect
-                  ~&  iris-take-ws-disconnect=wid
-                  =/  event-args  [[eny duct now rof] state.ax]
-                  =/  client  (per-client-event event-args)
-                  =^  movs  state.ax  (cleanup-ws:client wid)
-                  %+  welp  movs
-                  :~  [outbound-duct.state.ax %give %websocket-response wid %disconnect ~]
-                  ==
-    ::       =/  =tang  !<(tang q.cag)
-    ::       ::  %-  (slog 'khan-fact' tang)
-    ::       :: [hen %give %arow %| p.cag tang]~
-          :: ~
-    ::     ::
-    ::         %thread-done
-    ::       :: [hen %give %arow %& %noun q.cag]~
-    ::       ~
-          ==
+      ?>  ?=([%unto *] +.hin)
+      ~&  hin=-.p.hin
+      ?+    -.p.hin  ~
+          ?(%poke-ack %watch-ack)
+        ?~  p.p.hin  ~
+        ~
+      ::
+          %kick  
+        =/  event-args  [[eny duct now rof] state.ax]
+        =/  client  (per-client-event event-args)
+        =^  movs  state.ax  (cleanup-ws:client wid)
+        movs
+      ::
+          %fact
+        =*  cag  cage.p.hin
+        :: This comes from agent, goes to vere
+        ~&  >  iris-take-ws-fact=p.cag
+        ?+    p.cag  ~&(bad-fact+p.cag !!)
+            %message
+          =/  msg  !<(websocket-message:eyre q.cag)
+          [outbound-duct.state.ax %give %websocket-response wid %message msg]~
+        ::
+            %disconnect
+          ~&  iris-take-ws-disconnect=wid
+          =/  event-args  [[eny duct now rof] state.ax]
+          =/  client  (per-client-event event-args)
+          =^  movs  state.ax  (cleanup-ws:client wid)
+          %+  welp  movs
+          [outbound-duct.state.ax %give %websocket-response wid %disconnect ~]~
         ==
       ==
+    ==
   ==
 ::
 ++  iris-gate  ..$
@@ -587,42 +596,42 @@
             bytes-read=@ud
             expected-size=(unit @ud)
         ==
-    +$  state-1
-      $:  next-id=@ud
-          connection-by-id=(map @ud [=duct =in-progress-http-request])
-          connection-by-duct=(map duct @ud)
-          outbound-duct=duct
-      ==
+      +$  state-1
+        $:  next-id=@ud
+            connection-by-id=(map @ud [=duct =in-progress-http-request])
+            connection-by-duct=(map duct @ud)
+            outbound-duct=duct
+        ==
       --
   |=  old=axle-any
   ^+  iris-gate
   ~>  %spin.['load/iris']
   ?-    -.old
       %~2019.2.8
-    %=  $
-      date.old  %~2025.7.17
+    %=    $
+        date.old  %~2025.7.17
     ::
-      connection-by-id.state.old
-    %-  ~(run by connection-by-id.state.old)
-    |=  [d=duct r=in-progress-http-request-0]
-    ^-  [duct in-progress-http-request]
-    :-  d
-    ::  set remaining redirects to 0 because we don't have the original request.
-    ::  it's safe to bunt the .request because it only gets used if
-    ::  .remaining-redirects is non-zero.
-    ::
-    :-  remaining-redirects=0
-    +.r(expected-size [expected-size.r *request:http])
-    ==
-    ::
-      %~2025.7.17
-    =/  new-ax=axle
-     :-  %~2026.1.1
-     :-  *(map @ud websocket-connection)
-         state.old
-   iris-gate(ax new-ax)
+        connection-by-id.state.old
+      %-  ~(run by connection-by-id.state.old)
+      |=  [d=duct r=in-progress-http-request-0]
+      ^-  [duct in-progress-http-request]
+      :-  d
+      ::  set remaining redirects to 0 because we don't have the original request.
+      ::  it's safe to bunt the .request because it only gets used if
+      ::  .remaining-redirects is non-zero.
       ::
-      %~2026.1.1   iris-gate(ax old)
+      :-  remaining-redirects=0
+      +.r(expected-size [expected-size.r *request:http])
+    ==
+  ::
+      %~2025.7.17
+    %=  $
+      date.old   %~2026.1.1
+      state.old  [*(map @ud websocket-connection) state.old]
+    ==
+  ::
+      %~2026.1.1
+    iris-gate(ax old)
   ==
 ::  +stay: produce current state
 ::
@@ -634,46 +643,6 @@
   |=  [lyc=gang pov=path car=term bem=beam]
   ^-  (unit (unit cage))
   ~>  %spin.['scry/iris']
-  :: UIP-125
-  :: scry state of open sockets
-  ~&  >>  iris-scry=[lyc=lyc pov=pov car=car bem=bem syd=q.bem]
-  ?.  ?=(%x car)  [~ ~]
-  =/  caller  +<.pov
-  ?:  ?=(%ws q.bem)
-    ~&  iris-ws-scry-id=s.bem
-    ?+  s.bem  ~
-      ~  ``noun+!>(sockets.state.ax)
-
-    [%app ~]
-            =|  conns=(list [wid=@ud url=@t status=$?(%accepted %pending)])
-            =/  sockets  ~(tap by sockets.state.ax)
-            ::  pass a (unit websocket-connection)
-            :-  ~  :-  ~  :-  %noun  !>
-            |-  ?~  sockets  conns
-              =/  socket=websocket-connection:iris  q.i.sockets
-              ?.  .=(app.socket caller)  $(sockets t.sockets)
-                =.  conns  :_  conns  [id.socket url.socket status.socket]
-                $(sockets t.sockets)
-     [%id @ ~]
-        ~&  caller=caller
-        =/  wid  (slav %ud i.t.s.bem)
-        =/  socket  (~(get by sockets.state.ax) wid)
-        ?~  socket  ``noun+!>(~)
-        ?.  .=(app.u.socket caller)  ~
-        ``noun+!>(`[id.u.socket url.u.socket status.u.socket])
-
-    [%url @ ~]
-            =/  sockets  ~(tap by sockets.state.ax)
-            ::  pass a (unit websocket-connection)
-            :-  ~  :-  ~  :-  %noun  !>
-            |-  ?~  sockets  ~
-              =/  socket=websocket-connection:iris  q.i.sockets
-              ?.  .=(app.socket caller)  $(sockets t.sockets)
-              ?:  .=(url.socket i.t.s.bem)  `[id.socket url.socket status.socket]
-              $(sockets t.sockets)
-    ==
-  :: /socket scry
-  :: 
   =*  ren  car
   =*  why=shop  &/p.bem
   =*  syd  q.bem
@@ -681,8 +650,9 @@
   =*  tyl  s.bem
   ::
   ?.  ?=(%& -.why)  ~
-  =*  his  p.why
-  ?:  &(=(tyl //whey) =([~ ~] lyc))
+  ?.  =([~ ~] lyc)  ~
+  ::
+  ?:  &(?=(%x ren) =(tyl //whey))
     =/  maz=(list mass)
       :~  nex+&+next-id.state.ax
           outbound+&+outbound-duct.state.ax
@@ -691,6 +661,44 @@
           axle+&+ax
       ==
     ``mass+!>(maz)
-  [~ ~]
+  ::
+  ~&  iris-ws-scry-id=tyl
+  ?.  =([%$ our] why)  ~
+  ?.  &(?=(%x ren) ?=(%$ syd))  ~
+  ?+    tyl  ~
+      [%ws ~]   ``noun+!>(sockets.state.ax)
+  ::
+      [%ws @ ~]
+    =/  app=@tas  i.t.tyl
+    :^  ~  ~  %noun
+    !>  ^-  (list [wid=@ud url=@t status=?(%accepted %pending)])
+    %+  murn  ~(tap by sockets.state.ax)
+    |=  [wid=@ud conn=websocket-connection]
+    ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)])
+    ?.  =(app app.conn)  ~
+    `[id url status]:conn
+  ::
+      [%ws @ %id @ ~]
+    =/  app=@tas  i.t.tyl
+    =/  wid  (slav %ud i.t.t.t.tyl)
+    ?~  suc=(~(get by sockets.state.ax) wid)
+      ``noun+!>(~)
+    ?.  =(app.u.suc app)  [~ ~]
+    ``noun+!>(`[id url status]:u.suc)
+  ::
+      [%ws @ %url @ ~]
+    =/  app=@tas  i.t.tyl
+    =/  url=@t    i.t.t.t.tyl
+    =/  sockets  ~(tap by sockets.state.ax)
+    ::  pass a (unit websocket-connection)
+    :^  ~  ~  %noun
+    !>
+    |-  ^-  (unit [wid=@ud url=@t status=?(%accepted %pending)])
+    ?~  sockets  ~
+    =/  socket=websocket-connection  q.i.sockets
+    ?.  =(app.socket app)  $(sockets t.sockets)
+    ?.  =(url.socket url)  $(sockets t.sockets)
+    `[id url status]:socket
+  ==
 --
 
