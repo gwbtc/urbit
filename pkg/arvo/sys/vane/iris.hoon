@@ -30,7 +30,16 @@
           ::
           ::
       $%  [%flog =flog:dill]
-  ==  ==  ==
+      ==  ==
+  ::
+      ::  %g: to gall
+      ::
+      $:  %g
+          ::
+          ::
+      $%  [%deal p=sack q=term r=deal:gall]
+      ==  ==
+  ==
 --
 ::  more structures
 ::
@@ -499,13 +508,13 @@
       %receive
     =^  moves  state.ax  (receive:client +.task)
     [moves iris-gate]
-    ::  UIP-125
+  ::  UIP-125
   ::
       %websocket-connect
     =^  moves  state.ax  (ws-connect:client +.task)
     [moves iris-gate]
-      %websocket-event
   ::
+      %websocket-event
     =^  moves  state.ax  (ws-event:client +.task)
     [moves iris-gate]
   ::
