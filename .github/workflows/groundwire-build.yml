@@ -225,12 +225,29 @@ jobs:
           ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
           ./automation/wait-idle.sh "$CONN_SOCK"
 
-      - name: Update %landscape kelvin
+      - name: Populate %gw-landscape desk
         run: |
+          source ./automation/fyrd.sh
+          # Create gw-landscape as a copy of the stock %landscape desk
+          read -r -d '' MERGE_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)  ^-  form:m
+              ;<  our=@p  bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              ;<  ~  bind:m
+                (poke-our %hood %kiln-merge !>([%gw-landscape our %landscape [%da now] %init]))
+              (pure:m !>('Merge sent!'))
+              '''
+          ==
+          HOON
+          send_fyrd "$MERGE_FYRD"
           ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/landscape/sys.kelvin
-          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+          ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/gw-landscape/sys.kelvin
+          ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
 
 #      - name: Populate %groups desk
 #        run: |
@@ -273,7 +290,7 @@ jobs:
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
                 [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
-                [%landscape /(scot %p our)/landscape/(scot %da now)]
+                [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
               ;<  ~  bind:m
