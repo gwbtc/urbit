@@ -260,19 +260,10 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
-      - name: Mount %base desk
-        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
-
-      - name: Verify ship is alive before pill build
-        run: ./automation/wait-idle.sh "$CONN_SOCK"
-
-      - name: Build brass pill
-        timeout-minutes: 45
+      - name: Verify kelvin 408 boot
         run: |
           source ./automation/fyrd.sh
-
-          # First: test that we can scry gw-base/sys to confirm the desk is readable
-          read -r -d '' TEST_FYRD << 'HOON' || true
+          read -r -d '' SCRY_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
               :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
@@ -281,16 +272,20 @@ jobs:
               ^-  form:m
               ;<  our=@p   bind:m  get-our
               ;<  now=@da  bind:m  get-time
-              =/  kel  .^(* %cx /(scot %p our)/gw-base/(scot %da now)/sys/kelvin)
+              =/  kel  .^(* %cx /(scot %p our)/base/(scot %da now)/sys/kelvin)
               (pure:m !>(;;(@t (crip (noah !>(kel))))))
               '''
           ==
           HOON
-          echo "=== Testing gw-base sys/kelvin scry ==="
-          RESULT=$(send_fyrd "$TEST_FYRD")
-          echo "gw-base kelvin: $RESULT"
+          RESULT=$(send_fyrd "$SCRY_FYRD")
+          echo "Clay kelvin: $RESULT"
 
-          echo "=== Sending pill build fyrd ==="
+      - name: Mount %base desk
+        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
+
+      - name: Build brass pill
+        run: |
+          source ./automation/fyrd.sh
           read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -321,15 +316,13 @@ jobs:
               '''
           ==
           HOON
-          # Background the fyrd send — pill build takes 10-30 min, nc will EOF but poke is delivered
-          echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/dev/null | \
-            nc -U -W 5 "$CONN_SOCK" 2>/dev/null > /dev/null || true
-          echo "Pill build poke sent."
+          fire_and_forget_fyrd "$BUILD_PILL_FYRD"
+          echo "Pill build triggered."
 
-          # Now poll for the pill AND check ship logs for errors
-          echo "=== Waiting for pill (checking logs too) ==="
-          for i in $(seq 1 900); do
-            # Check mounted base desk
+      - name: Wait for pill to appear
+        timeout-minutes: 30
+        run: |
+          for i in $(seq 1 600); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
@@ -337,27 +330,10 @@ jobs:
               ls -la ./gw-base.pill
               exit 0
             fi
-            if [ $((i % 60)) -eq 0 ]; then
-              echo "--- $i iterations ($((i * 3))s), no pill yet ---"
-              # Check if ship is still alive
-              if ! kill -0 "$(cat ./zod/.urb/pid 2>/dev/null)" 2>/dev/null; then
-                echo "ERROR: Ship process is dead!"
-                echo "=== Last 50 lines of ship output ==="
-                tail -50 ./zod/.urb/log 2>/dev/null || echo "(no log file)"
-                ls -la ./zod/.urb/ 2>/dev/null
-                exit 1
-              fi
-              # Show ship log tail for progress
-              echo "=== Recent ship log ==="
-              tail -5 ./zod/.urb/log 2>/dev/null || echo "(no log)"
-            fi
+            [ $((i % 60)) -eq 0 ] && echo "--- $i iterations, no pill yet ---"
             sleep 3
           done
           echo "ERROR: Pill never appeared."
-          echo "=== Ship log ==="
-          tail -100 ./zod/.urb/log 2>/dev/null || echo "(no log file)"
-          echo "=== Listing base mount ==="
-          ls -la ./zod/base/ 2>/dev/null || echo "(base not mounted)"
           exit 1
 
       - name: Shutdown ~zod
