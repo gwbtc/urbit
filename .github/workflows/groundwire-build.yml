@@ -16,7 +16,6 @@ env:
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
-  GROUPS_BRANCH: master
   BOOTING_BRANCH: main
 
 jobs:
@@ -108,14 +107,6 @@ jobs:
           path: gwbtc-urbit-mcp
           token: ${{ secrets.GH_PAT }}
 
-      - name: Checkout tloncorp/landscape
-        uses: actions/checkout@v4
-        with:
-          repository: tloncorp/landscape
-          path: tloncorp-landscape
-          token: ${{ secrets.GH_PAT }}
-
-
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
 #        uses: actions/checkout@v4
 #        with:
@@ -123,114 +114,24 @@ jobs:
 #          path: tlon-apps
 #          token: ${{ secrets.GH_PAT }}
 
-
+#      - name: Checkout tloncorp/landscape (landscape desk)
+#        uses: actions/checkout@v4
+#        with:
+#          repository: tloncorp/landscape
+#          path: tloncorp-landscape
+#          token: ${{ secrets.GH_PAT }}
 
       # -- Boot fake ~zod --
 
       - name: Boot fake ~zod with kelvin 408 arvo
-        run: urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
+        run: |
+          # Stock vere rejects kelvin 408 (expects hoon 136, we have 135).
+          # Custom vere from gwbtc/vere supports the new kelvins.
+          # -A flag loads arvo directly, bypassing mount/commit for %base.
+          urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
 
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
-
-      - name: Log +vats
-        run: |
-          source ./automation/fyrd.sh
-          read -r -d '' VATS_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  desks  .^((set desk) %cd /(scot %p our)/$/(scot %da now))
-              =/  out=tape  ""
-              =.  out
-                %-  zing
-                %+  turn  ~(tap in desks)
-                |=  =desk
-                =/  kel  .^(@t %cx /(scot %p our)/(scot desk)/(scot %da now)/sys/kelvin)
-                "{(trip desk)}: {(trip kel)}\0a"
-              (pure:m !>(;;(@t (crip out))))
-              '''
-          ==
-          HOON
-          RESULT=$(send_fyrd "$VATS_FYRD")
-          echo "=== Desks on ~zod ==="
-          echo "$RESULT"
-
-      # -- Populate desks --
-      # Each desk: create from %base → mount → clear (preserving marks)
-      # → copy desk-specific content → ensure kelvin/bill → commit
-
-      - name: Populate %gw-base desk
-        run: |
-          ./automation/desk-create.sh gw-base "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh gw-base ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/gw-base/sys.kelvin
-          ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
-
-      - name: Populate %groundwire desk
-        run: |
-          ./automation/desk-create.sh groundwire "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh groundwire ./zod
-          cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/groundwire/sys.kelvin
-          ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
-
-      - name: Populate %spv-wallet desk
-        run: |
-          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh spv-wallet ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/spv-wallet/sys.kelvin
-          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
-
-      - name: Populate %mcp desk
-        run: |
-          ./automation/desk-create.sh mcp "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh mcp ./zod
-          cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/mcp/sys.kelvin
-          ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
-
-
-
-#      - name: Populate %groups desk
-#        run: |
-#          ./automation/desk-create.sh groups "$CONN_SOCK"
-#          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh groups ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tlon-apps/desk/ ./zod/groups/
-#          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-#          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
-#          # groups has ~487 files — wait for Clay to finish processing
-#          ./automation/wait-idle.sh "$CONN_SOCK"
-#
-#      - name: Populate %landscape desk
-#        run: |
-#          ./automation/desk-create.sh landscape "$CONN_SOCK"
-#          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh landscape ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tloncorp-landscape/desk/ ./zod/landscape/
-#          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-#          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Verify kelvin 408 boot
         run: |
@@ -254,6 +155,66 @@ jobs:
 
       - name: Mount %base desk
         run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
+
+      # -- Populate desks --
+      # Each desk: create from %base → mount → clear (preserving marks)
+      # → copy desk-specific content → ensure kelvin/bill → commit
+
+      - name: Populate %gw-base desk
+        run: |
+          ./automation/desk-create.sh gw-base "$CONN_SOCK"
+          ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh gw-base ./zod
+          cd gwbtc-urbit && chmod +x build.sh && bash build.sh -p ../zod/gw-base && cd ..
+          ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
+
+      - name: Populate %groundwire desk
+        run: |
+          ./automation/desk-create.sh groundwire "$CONN_SOCK"
+          ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh groundwire ./zod
+          cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
+          ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
+
+      - name: Populate %spv-wallet desk
+        run: |
+          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
+          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh spv-wallet ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
+          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
+
+      - name: Populate %mcp desk
+        run: |
+          ./automation/desk-create.sh mcp "$CONN_SOCK"
+          ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh mcp ./zod
+          cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
+          ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
+
+#      - name: Populate %groups desk
+#        run: |
+#          ./automation/desk-create.sh groups "$CONN_SOCK"
+#          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+#          ./automation/desk-populate.sh groups ./zod
+#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+#            tlon-apps/desk/ ./zod/groups/
+#          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
+#          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+#          # groups has ~487 files — wait for Clay to finish processing
+#          ./automation/wait-idle.sh "$CONN_SOCK"
+#
+#      - name: Populate %landscape desk
+#        run: |
+#          ./automation/desk-create.sh landscape "$CONN_SOCK"
+#          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+#          ./automation/desk-populate.sh landscape ./zod
+#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+#            tloncorp-landscape/desk/ ./zod/landscape/
+#          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
+#          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+#          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Build brass pill
         run: |

@@ -28,7 +28,7 @@ fi
 # Clear everything.
 echo "Clearing %${DESK} (preserving mar/)..."
 cd "$DESK_PATH"
-ls | grep -v '^mar$' | xargs rm -rf
+ls | xargs rm -rf
 cd - > /dev/null
 
 # Write sys.kelvin
