@@ -53,8 +53,9 @@ jobs:
         run: |
           curl -L https://urbit.org/install/linux-x86_64/latest -o vere.tgz
           tar xzf vere.tgz
-          chmod +x urbit
-          sudo mv urbit /usr/local/bin/urbit
+          VERE_BIN=$(tar tzf vere.tgz | head -1)
+          chmod +x "$VERE_BIN"
+          sudo mv "$VERE_BIN" /usr/local/bin/urbit
           urbit --version || true
 
       - name: Install system dependencies
