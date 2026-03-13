@@ -266,7 +266,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%gwbtc-groups /(scot %p our)/gwbtc-groups/(scot %da now)]
+                [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
                 [%landscape /(scot %p our)/landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
