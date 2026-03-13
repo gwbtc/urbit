@@ -130,6 +130,34 @@ jobs:
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
+      - name: Log +vats
+        run: |
+          source ./automation/fyrd.sh
+          read -r -d '' VATS_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  desks  .^((set desk) %cd /(scot %p our)/$/(scot %da now))
+              =/  out=tape  ""
+              =.  out
+                %-  zing
+                %+  turn  ~(tap in desks)
+                |=  =desk
+                =/  kel  .^(@t %cx /(scot %p our)/(scot desk)/(scot %da now)/sys/kelvin)
+                "{(trip desk)}: {(trip kel)}\0a"
+              (pure:m !>(;;(@t (crip out))))
+              '''
+          ==
+          HOON
+          RESULT=$(send_fyrd "$VATS_FYRD")
+          echo "=== Desks on ~zod ==="
+          echo "$RESULT"
+
       # -- Populate desks --
       # Each desk: create from %base → mount → clear (preserving marks)
       # → copy desk-specific content → ensure kelvin/bill → commit
