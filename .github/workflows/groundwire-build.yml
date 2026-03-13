@@ -194,6 +194,7 @@ jobs:
 
       - name: Populate %landscape desk
         run: |
+          ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
           printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/landscape/sys.kelvin
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
