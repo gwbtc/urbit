@@ -226,6 +226,7 @@ jobs:
           ./automation/desk-populate.sh gw-landscape ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             tloncorp-landscape/desk/ ./zod/gw-landscape/
+          echo '[%zuse 408]' > ./zod/gw-landscape/sys.kelvin
           ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
 
 #      - name: Populate %groups desk
