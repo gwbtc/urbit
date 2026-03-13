@@ -51,7 +51,8 @@ jobs:
 
       - name: Install stock vere from urbit.org
         run: |
-          curl -L https://urbit.org/install/linux-x86_64/latest -o urbit
+          curl -L https://urbit.org/install/linux-x86_64/latest -o vere.tgz
+          tar xzf vere.tgz
           chmod +x urbit
           sudo mv urbit /usr/local/bin/urbit
           urbit --version || true
