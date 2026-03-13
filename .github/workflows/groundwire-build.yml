@@ -16,6 +16,7 @@ env:
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
+  GROUPS_BRANCH: master
   BOOTING_BRANCH: main
 
 jobs:
@@ -107,6 +108,14 @@ jobs:
           path: gwbtc-urbit-mcp
           token: ${{ secrets.GH_PAT }}
 
+      - name: Checkout gwbtc/groups
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/groups
+          ref: ${{ env.GROUPS_BRANCH }}
+          path: gwbtc-groups
+          token: ${{ secrets.GH_PAT }}
+
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
 #        uses: actions/checkout@v4
 #        with:
@@ -194,6 +203,15 @@ jobs:
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
+      - name: Populate %gwbtc-groups desk
+        run: |
+          ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
+          ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh gwbtc-groups ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-groups/ ./zod/gwbtc-groups/
+          ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
+
 #      - name: Populate %groups desk
 #        run: |
 #          ./automation/desk-create.sh groups "$CONN_SOCK"
@@ -234,6 +252,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
+                [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
               ;<  ~  bind:m
