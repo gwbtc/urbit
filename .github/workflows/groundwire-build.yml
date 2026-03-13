@@ -174,6 +174,7 @@ jobs:
       - name: Populate %gw-base desk
         run: |
           ./automation/desk-create.sh gw-base "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh gw-base ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
@@ -184,6 +185,7 @@ jobs:
       - name: Populate %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
           cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
@@ -193,6 +195,7 @@ jobs:
       - name: Populate %spv-wallet desk
         run: |
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
@@ -203,6 +206,7 @@ jobs:
       - name: Populate %mcp desk
         run: |
           ./automation/desk-create.sh mcp "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh mcp ./zod
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
@@ -212,6 +216,7 @@ jobs:
       - name: Populate %gwbtc-groups desk
         run: |
           ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh gwbtc-groups ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
@@ -222,6 +227,7 @@ jobs:
 
       - name: Update %landscape kelvin
         run: |
+          ./automation/wait-idle.sh "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
           printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/landscape/sys.kelvin
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
