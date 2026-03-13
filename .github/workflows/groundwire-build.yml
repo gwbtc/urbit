@@ -129,8 +129,8 @@ jobs:
 
       # -- Boot fake ~zod --
 
-      - name: Boot fake ~zod
-        run: urbit -d -F zod -c zod
+      - name: Boot fake ~zod with kelvin 408 arvo
+        run: urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
 
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
