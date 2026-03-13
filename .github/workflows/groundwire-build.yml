@@ -39,7 +39,6 @@ jobs:
   # =============================================================
   build-pill:
     name: Build pill
-    needs: build-vere
     runs-on: ubuntu-latest
     env:
       CONN_SOCK: ./zod/.urb/conn.sock
@@ -50,16 +49,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download custom vere (kelvin 408 compatible)
-        uses: actions/download-artifact@v4
-        with:
-          name: gw-vere-linux-x86_64
-          path: ./vere-bin
-
-      - name: Install custom vere
+      - name: Install stock vere from urbit.org
         run: |
-          chmod +x ./vere-bin/gw-vere
-          sudo mv ./vere-bin/gw-vere /usr/local/bin/urbit
+          curl -L https://urbit.org/install/linux-x86_64/latest -o urbit
+          chmod +x urbit
+          sudo mv urbit /usr/local/bin/urbit
           urbit --version || true
 
       - name: Install system dependencies
