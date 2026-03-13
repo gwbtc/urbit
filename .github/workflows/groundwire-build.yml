@@ -16,6 +16,7 @@ env:
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
+  GROUPS_BRANCH: master
   BOOTING_BRANCH: main
 
 jobs:
@@ -105,6 +106,14 @@ jobs:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
           path: gwbtc-urbit-mcp
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout gwbtc/groups
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/groups
+          ref: ${{ env.GROUPS_BRANCH }}
+          path: gwbtc-groups
           token: ${{ secrets.GH_PAT }}
 
 
@@ -200,11 +209,16 @@ jobs:
           printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/mcp/sys.kelvin
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Update %groups kelvin
+      - name: Populate %gwbtc-groups desk
         run: |
-          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/groups/sys.kelvin
-          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+          ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
+          ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh gwbtc-groups ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-groups/ ./zod/gwbtc-groups/
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/gwbtc-groups/sys.kelvin
+          ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Update %landscape kelvin
         run: |
@@ -252,7 +266,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%groups /(scot %p our)/groups/(scot %da now)]
+                [%gwbtc-groups /(scot %p our)/gwbtc-groups/(scot %da now)]
                 [%landscape /(scot %p our)/landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
