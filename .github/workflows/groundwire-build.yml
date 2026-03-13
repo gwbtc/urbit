@@ -252,6 +252,9 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
+      - name: Mount %base desk
+        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
