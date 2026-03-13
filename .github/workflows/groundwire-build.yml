@@ -132,38 +132,11 @@ jobs:
 
       # -- Boot fake ~zod --
 
-      - name: Boot fake ~zod with kelvin 408 arvo
-        run: |
-          # Stock vere rejects kelvin 408 (expects hoon 136, we have 135).
-          # Custom vere from gwbtc/vere supports the new kelvins.
-          # -A flag loads arvo directly, bypassing mount/commit for %base.
-          urbit -d -F zod -A gwbtc-urbit/pkg/arvo/ -c zod
+      - name: Boot fake ~zod
+        run: urbit -d -F zod -c zod
 
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
-
-      - name: Verify kelvin 408 boot
-        run: |
-          source ./automation/fyrd.sh
-          read -r -d '' SCRY_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  kel  .^(* %cx /(scot %p our)/base/(scot %da now)/sys/kelvin)
-              (pure:m !>(;;(@t (crip (noah !>(kel))))))
-              '''
-          ==
-          HOON
-          RESULT=$(send_fyrd "$SCRY_FYRD")
-          echo "Clay kelvin: $RESULT"
-
-      - name: Mount %base desk
-        run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
 
       # -- Populate desks --
       # Each desk: create from %base → mount → clear (preserving marks)
@@ -175,6 +148,7 @@ jobs:
           ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh gw-base ./zod
           cd gwbtc-urbit && chmod +x build.sh && bash build.sh -p ../zod/gw-base && cd ..
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/gw-base/sys.kelvin
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
       - name: Populate %groundwire desk
@@ -183,6 +157,7 @@ jobs:
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
           cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/groundwire/sys.kelvin
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -192,6 +167,7 @@ jobs:
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/spv-wallet/sys.kelvin
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -200,6 +176,7 @@ jobs:
           ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh mcp ./zod
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/mcp/sys.kelvin
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
       - name: Populate %groups desk
@@ -209,15 +186,15 @@ jobs:
           ./automation/desk-populate.sh groups ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groups/ ./zod/groups/
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/groups/sys.kelvin
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
           # groups has many files — wait for Clay to finish processing
           ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Populate %landscape desk
         run: |
-          ./automation/desk-create.sh landscape "$CONN_SOCK"
           ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
+          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/landscape/sys.kelvin
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
 #      - name: Populate %groups desk
