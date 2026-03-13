@@ -124,12 +124,7 @@ jobs:
 #          path: tlon-apps
 #          token: ${{ secrets.GH_PAT }}
 
-      - name: Checkout tloncorp/landscape
-        uses: actions/checkout@v4
-        with:
-          repository: tloncorp/landscape
-          path: tloncorp-landscape
-          token: ${{ secrets.GH_PAT }}
+
 
       # -- Boot fake ~zod --
 
@@ -225,17 +220,6 @@ jobs:
           ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
           ./automation/wait-idle.sh "$CONN_SOCK"
 
-      - name: Populate %gw-landscape desk
-        run: |
-          ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
-          ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh gw-landscape ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            tloncorp-landscape/desk/ ./zod/gw-landscape/
-          printf '[%%zuse 409]\n[%%zuse 408]\n' > ./zod/gw-landscape/sys.kelvin
-          ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK"
 
 #      - name: Populate %groups desk
 #        run: |
@@ -301,7 +285,6 @@ jobs:
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
                 [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
-                [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
               ;<  ~  bind:m
