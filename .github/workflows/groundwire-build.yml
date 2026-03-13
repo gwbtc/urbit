@@ -296,8 +296,15 @@ jobs:
               '''
           ==
           HOON
-          fire_and_forget_fyrd "$BUILD_PILL_FYRD"
-          echo "Pill build triggered."
+          # Send the pill build fyrd with a long timeout — pill build takes minutes
+          echo "$BUILD_PILL_FYRD" | urbit eval -jn 2>/tmp/pill-eval-err | \
+            nc -U -W 1800 "$CONN_SOCK" 2>/tmp/pill-nc-err | \
+            urbit eval -cn 2>/tmp/pill-decode-err || true
+          echo "=== Pill build fyrd output ==="
+          for f in /tmp/pill-eval-err /tmp/pill-nc-err /tmp/pill-decode-err; do
+            [ -s "$f" ] && echo "$(basename $f): $(cat $f)"
+          done
+          echo "Pill build fyrd completed."
 
       - name: Wait for pill to appear
         timeout-minutes: 30
