@@ -252,6 +252,35 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
+      # gw-landscape's filesystem commit doesn't update desk.bill in Clay
+      # (tloncorp/landscape lacks mar/bill.hoon). Write it directly via %info
+      # so Clay doesn't keep %base's desk.bill (which has %acme etc).
+      - name: Fix gw-landscape desk.bill in Clay via %info
+        run: |
+          source ./automation/fyrd.sh
+          read -r -d '' FIX_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /fix-bill
+                    %arvo  %c
+                    %info  %gw-landscape  %&
+                    :~  [/desk/bill %mut %bill !>(~[%docket %hark %settings %storage %treaty %vitals])]
+                    ==
+                ==
+              (pure:m !>('fixed'))
+              '''
+          ==
+          HOON
+          send_fyrd "$FIX_FYRD" > /dev/null
+          sleep 3
+          echo "gw-landscape desk.bill written to Clay."
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
