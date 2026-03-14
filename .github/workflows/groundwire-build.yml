@@ -252,9 +252,10 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
-      # gw-landscape's filesystem commit doesn't update desk.bill in Clay
-      # (tloncorp/landscape lacks mar/bill.hoon). Write it directly via %info
-      # so Clay doesn't keep %base's desk.bill (which has %acme etc).
+      # gw-landscape needs %info for two reasons:
+      # 1. tloncorp/landscape lacks mar/bill.hoon so filesystem commits can't update desk.bill
+      # 2. landscape agents (kelvin 410) don't compile at kelvin 408 yet
+      # Write empty desk.bill so Clay doesn't try to compile them or keep %base's %acme.
       - name: Fix gw-landscape desk.bill in Clay via %info
         run: |
           source ./automation/fyrd.sh
@@ -270,7 +271,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %gw-landscape  %&
-                    :~  [/desk/bill %mut %bill !>(~[%docket %hark %settings %storage %treaty %vitals])]
+                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
                     ==
                 ==
               (pure:m !>('fixed'))
