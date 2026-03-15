@@ -17,6 +17,7 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   GROUPS_BRANCH: master
+  URSOCKETS_BRANCH: develop
   BOOTING_BRANCH: main
 
 jobs:
@@ -123,6 +124,14 @@ jobs:
           path: gwbtc-groups
           token: ${{ secrets.GH_PAT }}
 
+      - name: Checkout gwbtc/ursockets (nostrill desk)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.URSOCKETS_BRANCH }}
+          path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT }}
+
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
 #        uses: actions/checkout@v4
 #        with:
@@ -219,6 +228,15 @@ jobs:
             gwbtc-groups/ ./zod/gwbtc-groups/
           ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
 
+      - name: Populate %nostrill desk
+        run: |
+          ./automation/desk-create.sh nostrill "$CONN_SOCK"
+          ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh nostrill ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-ursockets/app/ ./zod/nostrill/
+          ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
+
       - name: Populate %gw-landscape desk
         run: |
           ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
@@ -300,6 +318,7 @@ jobs:
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
                 [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
+                [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & | | ~)
