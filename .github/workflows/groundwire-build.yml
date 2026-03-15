@@ -270,6 +270,34 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
+      # nostrill (kelvin 410 code) doesn't compile at kelvin 408 yet.
+      # Write empty desk.bill so Clay skips compilation.
+      - name: Fix nostrill desk.bill in Clay via %info
+        run: |
+          source ./automation/fyrd.sh
+          read -r -d '' FIX_FYRD << 'HOON' || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /fix-bill
+                    %arvo  %c
+                    %info  %nostrill  %&
+                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
+                    ==
+                ==
+              (pure:m !>('fixed'))
+              '''
+          ==
+          HOON
+          send_fyrd "$FIX_FYRD" > /dev/null
+          sleep 3
+          echo "nostrill desk.bill written to Clay."
+
       # gw-landscape needs %info for two reasons:
       # 1. tloncorp/landscape lacks mar/bill.hoon so filesystem commits can't update desk.bill
       # 2. landscape agents (kelvin 410) don't compile at kelvin 408 yet
