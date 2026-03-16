@@ -11,7 +11,6 @@ on:
 env:
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: hd/consolidate-urb
-  SPV_WALLET_BRANCH: develop
   URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
@@ -91,14 +90,6 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Checkout gwbtc/spv-wallet
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/spv-wallet
-          ref: ${{ env.SPV_WALLET_BRANCH }}
-          path: gwbtc-spv-wallet
           token: ${{ secrets.GH_PAT }}
 
       - name: Checkout gwbtc/urbit-mcp
@@ -208,7 +199,7 @@ jobs:
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
+            gwbtc-groundwire/spv-wallet/desk/ ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
