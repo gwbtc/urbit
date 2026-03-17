@@ -208,7 +208,7 @@ jobs:
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/spv-wallet/desk/ ./zod/spv-wallet/
+            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
