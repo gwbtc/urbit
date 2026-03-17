@@ -232,7 +232,7 @@ jobs:
         run: |
           ./automation/desk-create.sh nostrill "$CONN_SOCK"
           ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh nostrill ./zod
+          # Don't clear — nostrill needs base libs (default-agent, verb, etc.)
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-ursockets/app/ ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
@@ -241,7 +241,7 @@ jobs:
         run: |
           ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
           ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh gw-landscape ./zod
+          # Don't clear — landscape needs base libs (default-agent, server, etc.)
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             tloncorp-landscape/desk/ ./zod/gw-landscape/
           echo '[%zuse 408]' > ./zod/gw-landscape/sys.kelvin
@@ -287,7 +287,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %nostrill  %&
-                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
+                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%nostrill])]
                     ==
                 ==
               (pure:m !>('fixed'))
@@ -313,7 +313,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %gw-landscape  %&
-                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%treaty])]
+                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket %hark %settings %storage %treaty])]
                     ==
                 ==
               (pure:m !>('fixed'))
