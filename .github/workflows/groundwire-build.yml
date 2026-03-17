@@ -313,7 +313,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %gw-landscape  %&
-                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket %hark %settings %storage %treaty])]
+                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket])]
                     ==
                 ==
               (pure:m !>('fixed'))
