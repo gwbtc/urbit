@@ -607,11 +607,6 @@ jobs:
           name: gw-onboard-${{ matrix.target }}
           path: dist/gw-onboard
 
-      - name: Upload gw-onboard.py (for NixOS / non-PyInstaller use)
-        uses: actions/upload-artifact@v4
-        with:
-          name: gw-onboard-py-${{ matrix.target }}
-          path: gwbtc-booting/gw-onboard.py
 
   # =============================================================
   # Validate the pill boots, then publish release
@@ -674,7 +669,6 @@ jobs:
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
             cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
             chmod +x "pkg-${target}/gw-onboard"
-            cp "./artifacts/gw-onboard-py-${target}/gw-onboard.py" "pkg-${target}/gw-onboard.py"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
@@ -701,12 +695,10 @@ jobs:
           - \`gw-vere\` — Urbit runtime
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
-          - \`gw-onboard\` — Onboarding script (compiled)
-          - \`gw-onboard.py\` — Onboarding script (Python source, for NixOS or systems where the compiled binary doesn't work)
+          - \`gw-onboard\` — Onboarding script
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
 
           Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
-          NixOS: \`pip install -r requirements.txt && python gw-onboard.py\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
