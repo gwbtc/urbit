@@ -13,7 +13,7 @@ env:
   GROUNDWIRE_BRANCH: hd/consolidate-urb
   SPV_WALLET_BRANCH: develop
   URCRYPT_BRANCH: gw/cmp-pub
-  VERE_BRANCH: tinnus-test-hack
+  VERE_BRANCH: gw/next/kelvin/408
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   GROUPS_BRANCH: master
@@ -313,7 +313,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %gw-landscape  %&
-                    :~  [/desk/bill %mut %bill !>(*(list dude:gall))]
+                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket %hark %settings %storage %treaty])]
                     ==
                 ==
               (pure:m !>('fixed'))
