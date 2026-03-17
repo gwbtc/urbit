@@ -16,8 +16,8 @@ env:
   VERE_BRANCH: gw/next/kelvin/408
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
-  GROUPS_BRANCH: master
   URSOCKETS_BRANCH: develop
+  TLONDESKS_BRANCH: polwex/tlondesks
   BOOTING_BRANCH: main
 
 jobs:
@@ -109,27 +109,20 @@ jobs:
           path: gwbtc-urbit-mcp
           token: ${{ secrets.GH_PAT }}
 
-      - name: Checkout tloncorp/landscape
-        uses: actions/checkout@v4
-        with:
-          repository: tloncorp/landscape
-          path: tloncorp-landscape
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Checkout gwbtc/groups
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/groups
-          ref: ${{ env.GROUPS_BRANCH }}
-          path: gwbtc-groups
-          token: ${{ secrets.GH_PAT }}
-
       - name: Checkout gwbtc/ursockets (nostrill desk)
         uses: actions/checkout@v4
         with:
           repository: gwbtc/ursockets
           ref: ${{ env.URSOCKETS_BRANCH }}
           path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Checkout gwbtc/ursockets tlondesks (landscape + groups)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.TLONDESKS_BRANCH }}
+          path: gwbtc-tlondesks
           token: ${{ secrets.GH_PAT }}
 
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
@@ -223,9 +216,9 @@ jobs:
         run: |
           ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
           ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh gwbtc-groups ./zod
+          # Don't clear — groups needs base libs
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groups/ ./zod/gwbtc-groups/
+            gwbtc-tlondesks/tlon/groups/ ./zod/gwbtc-groups/
           ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
 
       - name: Populate %nostrill desk
@@ -243,8 +236,7 @@ jobs:
           ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
           # Don't clear — landscape needs base libs (default-agent, server, etc.)
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            tloncorp-landscape/desk/ ./zod/gw-landscape/
-          echo '[%zuse 408]' > ./zod/gw-landscape/sys.kelvin
+            gwbtc-tlondesks/tlon/landscape/ ./zod/gw-landscape/
           ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
 
 #      - name: Populate %groups desk
@@ -313,7 +305,7 @@ jobs:
                     %pass  /fix-bill
                     %arvo  %c
                     %info  %gw-landscape  %&
-                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket %hark %settings %storage %treaty])]
+                    :~  [/desk/bill %mut %bill !>(`(list dude:gall)`~[%docket %hark %settings %storage %treaty %vitals])]
                     ==
                 ==
               (pure:m !>('fixed'))
