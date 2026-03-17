@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - gw/next/kelvin/408
+  schedule:
+    - cron: '0 6 * * *'  # daily at 06:00 UTC
   workflow_dispatch:
 
 env:
@@ -21,6 +23,79 @@ env:
   BOOTING_BRANCH: main
 
 jobs:
+  # =============================================================
+  # Check if any dependency repo has new commits since last build
+  # =============================================================
+  check-changes:
+    name: Check for changes
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.compare.outputs.has_changes }}
+    steps:
+      - name: Collect latest commit SHAs from all repos
+        id: shas
+        run: |
+          get_sha() {
+            gh api "repos/$1/commits/$2" --jq '.sha' 2>/dev/null || echo "unknown"
+          }
+          COMBINED=""
+          for pair in \
+            "gwbtc/urbit:$URBIT_BRANCH" \
+            "gwbtc/groundwire:$GROUNDWIRE_BRANCH" \
+            "gwbtc/spv-wallet:$SPV_WALLET_BRANCH" \
+            "gwbtc/urcrypt:$URCRYPT_BRANCH" \
+            "gwbtc/vere:$VERE_BRANCH" \
+            "gwbtc/comet-miner:$COMET_MINER_BRANCH" \
+            "gwbtc/urbit-mcp:$URBIT_MCP_BRANCH" \
+            "gwbtc/ursockets:$URSOCKETS_BRANCH" \
+            "gwbtc/ursockets:$TLONDESKS_BRANCH" \
+            "gwbtc/booting:$BOOTING_BRANCH"; do
+            repo="${pair%%:*}"
+            branch="${pair##*:}"
+            sha=$(get_sha "$repo" "$branch")
+            echo "$repo@$branch: $sha"
+            COMBINED="${COMBINED}${sha}"
+          done
+          HASH=$(echo -n "$COMBINED" | sha256sum | cut -d' ' -f1)
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "Combined hash: $HASH"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Restore previous hash
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .last-build-hash
+          key: groundwire-build-hash-${{ steps.shas.outputs.hash }}
+          restore-keys: groundwire-build-hash-
+
+      - name: Compare hashes
+        id: compare
+        run: |
+          NEW_HASH="${{ steps.shas.outputs.hash }}"
+          if [ -f .last-build-hash ]; then
+            OLD_HASH=$(cat .last-build-hash)
+            echo "Previous: $OLD_HASH"
+            echo "Current:  $NEW_HASH"
+            if [ "$OLD_HASH" = "$NEW_HASH" ]; then
+              echo "No changes detected. Skipping build."
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "Changes detected. Will build."
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "$NEW_HASH" > .last-build-hash
+
+      - name: Save new hash
+        if: steps.compare.outputs.has_changes == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .last-build-hash
+          key: groundwire-build-hash-${{ steps.shas.outputs.hash }}
+
   # =============================================================
   # Build the brass pill on a fake ~zod
   #
@@ -40,7 +115,8 @@ jobs:
   # =============================================================
   build-pill:
     name: Build pill
-    needs: build-vere
+    needs: [build-vere, check-changes]
+    if: always() && (github.event_name != 'schedule' || needs.check-changes.outputs.has_changes == 'true') && needs.build-vere.result == 'success'
     runs-on: ubuntu-latest
     env:
       CONN_SOCK: ./zod/.urb/conn.sock
@@ -334,6 +410,8 @@ jobs:
   # =============================================================
   build-vere:
     name: "Build vere: ${{ matrix.target }}"
+    if: always() && (github.event_name != 'schedule' || needs.check-changes.outputs.has_changes == 'true')
+    needs: check-changes
     strategy:
       matrix:
         include:
@@ -429,6 +507,8 @@ jobs:
   # =============================================================
   build-extras:
     name: "Build extras: ${{ matrix.target }}"
+    if: always() && (github.event_name != 'schedule' || needs.check-changes.outputs.has_changes == 'true')
+    needs: check-changes
     strategy:
       matrix:
         include:
@@ -527,6 +607,12 @@ jobs:
           name: gw-onboard-${{ matrix.target }}
           path: dist/gw-onboard
 
+      - name: Upload gw-onboard.py (for NixOS / non-PyInstaller use)
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-onboard-py-${{ matrix.target }}
+          path: gwbtc-booting/gw-onboard.py
+
   # =============================================================
   # Validate the pill boots, then publish release
   # =============================================================
@@ -588,6 +674,7 @@ jobs:
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
             cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
             chmod +x "pkg-${target}/gw-onboard"
+            cp "./artifacts/gw-onboard-py-${target}/gw-onboard.py" "pkg-${target}/gw-onboard.py"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
@@ -614,10 +701,12 @@ jobs:
           - \`gw-vere\` — Urbit runtime
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
-          - \`gw-onboard\` — Onboarding script
+          - \`gw-onboard\` — Onboarding script (compiled)
+          - \`gw-onboard.py\` — Onboarding script (Python source, for NixOS or systems where the compiled binary doesn't work)
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
 
           Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
+          NixOS: \`pip install -r requirements.txt && python gw-onboard.py\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
