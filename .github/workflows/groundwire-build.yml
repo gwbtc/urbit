@@ -55,7 +55,7 @@ jobs:
           # Get gw-vere from the latest groundwire release
           TARBALL=$(gh release view --repo gwbtc/urbit --json assets --jq '.assets[] | select(.name | test("linux-x86_64")) | .url' | head -1)
           curl -L "$TARBALL" -o release.tar.gz
-          tar xzf release.tar.gz gw-vere
+          tar xzf release.tar.gz ./gw-vere
           chmod +x gw-vere
           sudo mv gw-vere /usr/local/bin/urbit
           urbit --version || true
