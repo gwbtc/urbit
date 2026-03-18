@@ -406,7 +406,25 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Get source commit SHAs for cache key
+        id: cache-key
+        run: |
+          VERE_SHA=$(gh api "repos/gwbtc/vere/commits/${{ env.VERE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          IVORY_SHA="${{ needs.build-pill.outputs.ivory_sha || 'none' }}"
+          echo "key=vere-${{ matrix.target }}-${VERE_SHA}-${URCRYPT_SHA}-${IVORY_SHA}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Check vere cache
+        id: vere-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ./gw-vere
+          key: ${{ steps.cache-key.outputs.key }}
+
       - name: Install Zig 0.15.2
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -415,6 +433,7 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -423,11 +442,13 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/vere
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/vere
@@ -436,12 +457,14 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Download ivory pill (kelvin 408)
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v4
         with:
           name: gw-ivory-pill
           path: ./ivory-pill
 
       - name: Bake ivory pill into vere
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           PILL=ivory-pill/gw-ivory.pill
           H=gwbtc-vere/pkg/vere/ivory/ivory.h
@@ -468,6 +491,7 @@ jobs:
           echo "Baked ivory pill ($cnt bytes) into vere."
 
       - name: Build vere
+        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-vere
           for attempt in 1 2 3; do
@@ -505,6 +529,13 @@ jobs:
           chmod +x ./gw-vere
           ./gw-vere --version || true
 
+      - name: Save vere cache
+        if: steps.vere-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ./gw-vere
+          key: ${{ steps.cache-key.outputs.key }}
+
       - name: Upload vere
         uses: actions/upload-artifact@v4
         with:
@@ -533,7 +564,33 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Get source commit SHAs for cache key
+        id: cache-key
+        run: |
+          MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          BOOTING_SHA=$(gh api "repos/gwbtc/booting/commits/${{ env.BOOTING_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "onboard-key=gw-onboard-${{ matrix.target }}-${BOOTING_SHA}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Check comet-miner cache
+        id: miner-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ./comet_miner
+          key: ${{ steps.cache-key.outputs.miner-key }}
+
+      - name: Check gw-onboard cache
+        id: onboard-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ./dist/gw-onboard
+          key: ${{ steps.cache-key.outputs.onboard-key }}
+
       - name: Install Zig 0.14.1
+        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -542,6 +599,7 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
+        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -550,11 +608,13 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
+        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/comet-miner
+        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/comet-miner
@@ -563,6 +623,7 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build comet-miner
+        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-comet-miner
           sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
@@ -581,6 +642,13 @@ jobs:
           cd ..
           chmod +x ./comet_miner
 
+      - name: Save comet-miner cache
+        if: steps.miner-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ./comet_miner
+          key: ${{ steps.cache-key.outputs.miner-key }}
+
       - name: Upload comet-miner
         uses: actions/upload-artifact@v4
         with:
@@ -588,6 +656,7 @@ jobs:
           path: ./comet_miner
 
       - name: Checkout gwbtc/booting
+        if: steps.onboard-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/booting
@@ -596,6 +665,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Build gw-onboard
+        if: steps.onboard-cache.outputs.cache-hit != 'true'
         run: |
           if [[ "$OSTYPE" == darwin* ]]; then
             sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
@@ -607,6 +677,13 @@ jobs:
           pip install pyinstaller requests embit
           pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
           chmod +x dist/gw-onboard
+
+      - name: Save gw-onboard cache
+        if: steps.onboard-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ./dist/gw-onboard
+          key: ${{ steps.cache-key.outputs.onboard-key }}
 
       - name: Upload gw-onboard
         uses: actions/upload-artifact@v4
