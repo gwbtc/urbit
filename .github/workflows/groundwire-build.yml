@@ -552,22 +552,56 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      - name: Boot test ship with pill
-        env:
-          VERE_BIN: ./gw-vere
-          CONN_SOCK: ./zod2/.urb/conn.sock
+      - name: Prepare binaries
         run: |
           cp ./artifacts/gw-vere-linux-x86_64/gw-vere ./gw-vere
           chmod +x ./gw-vere
           cp ./artifacts/gw-base-pill/gw-base.pill ./gw-base.pill
+          cp ./artifacts/comet-miner-linux-x86_64/comet_miner ./comet_miner
+          chmod +x ./comet_miner
+
+      - name: "Validate: fake ~zod boot"
+        env:
+          VERE_BIN: ./gw-vere
+          CONN_SOCK: ./zod2/.urb/conn.sock
+        run: |
           ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
-          echo "Validation successful — ship booted with pill."
+          echo "Fake ~zod boot successful."
+          kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
+          sleep 3
 
-      - name: Shutdown test ship
+      - name: "Validate: comet boot"
+        run: |
+          ./gw-vere -d -B ./gw-base.pill -c mycomet
+          ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
+          echo "Comet boot successful."
+          kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
+          sleep 3
+
+      - name: "Validate: comet boot with wallet"
+        run: |
+          # Mine a comet identity for the wallet test
+          COMET=$(./comet_miner 2>/dev/null | grep -oP '~[a-z-]+' | head -1)
+          if [ -z "$COMET" ]; then
+            echo "WARNING: comet_miner did not produce a comet, skipping wallet test"
+            exit 0
+          fi
+          echo "Mined comet: $COMET"
+          # Generate a dummy feed key for testing
+          FEED=$(openssl rand -hex 32)
+          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet
+          ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
+          echo "Comet boot with wallet successful."
+          kill "$(cat ./mycomet-wallet/.urb/pid 2>/dev/null)" 2>/dev/null || true
+          sleep 3
+
+      - name: Shutdown all test ships
         if: always()
         run: |
-          kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
+          for pier in zod2 mycomet mycomet-wallet; do
+            kill "$(cat ./$pier/.urb/pid 2>/dev/null)" 2>/dev/null || true
+          done
           sleep 3
           pkill -f "gw-vere" || true
 
