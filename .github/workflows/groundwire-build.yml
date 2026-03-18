@@ -318,52 +318,6 @@ jobs:
           echo "ERROR: Pill never appeared."
           exit 1
 
-      - name: Build ivory pill
-        run: |
-          source ./automation/fyrd.sh
-          read -r -d '' IVORY_FYRD << 'HOON' || true
-          :*  0
-              %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  /lib/pill/hoon  ==
-              '''
-              =/  m  (strand ,vase)
-              ^-  form:m
-              ;<  our=@p   bind:m  get-our
-              ;<  now=@da  bind:m  get-time
-              =/  sys=path  /(scot %p our)/gw-base/(scot %da now)/sys
-              =/  =pill:pill  (ivory:pill sys)
-              ;<  ~  bind:m
-                %:  send-raw-card
-                    %pass  /build-ivory
-                    %arvo  %c
-                    %info  %base  %&
-                    :~  [/ivory/pill %ins %pill !>(pill)]
-                    ==
-                ==
-              (pure:m !>('Built ivory pill!'))
-              '''
-          ==
-          HOON
-          fire_and_forget_fyrd "$IVORY_FYRD"
-          echo "Ivory pill build triggered."
-
-      - name: Wait for ivory pill to appear
-        timeout-minutes: 15
-        run: |
-          for i in $(seq 1 300); do
-            IVORY_FILE=$(find ./zod/base/ -name "ivory.pill" -type f 2>/dev/null | head -1)
-            if [ -n "$IVORY_FILE" ]; then
-              echo "Found ivory pill at: $IVORY_FILE"
-              cp "$IVORY_FILE" ./gw-ivory.pill
-              ls -la ./gw-ivory.pill
-              exit 0
-            fi
-            [ $((i % 60)) -eq 0 ] && echo "--- $i iterations, no ivory pill yet ---"
-            sleep 3
-          done
-          echo "ERROR: Ivory pill never appeared."
-          exit 1
-
       - name: Shutdown ~zod
         if: always()
         run: |
@@ -377,18 +331,11 @@ jobs:
           name: gw-base-pill
           path: ./gw-base.pill
 
-      - name: Upload ivory pill
-        uses: actions/upload-artifact@v4
-        with:
-          name: gw-ivory-pill
-          path: ./gw-ivory.pill
-
   # =============================================================
-  # Build vere for each platform (pill build depends on this)
+  # Build vere for each platform
   # =============================================================
   build-vere:
     name: "Build vere: ${{ matrix.target }}"
-    needs: build-pill  # needs ivory pill artifact
     strategy:
       matrix:
         include:
@@ -411,8 +358,7 @@ jobs:
         run: |
           VERE_SHA=$(gh api "repos/gwbtc/vere/commits/${{ env.VERE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          IVORY_SHA="${{ needs.build-pill.outputs.ivory_sha || 'none' }}"
-          echo "key=vere-${{ matrix.target }}-${VERE_SHA}-${URCRYPT_SHA}-${IVORY_SHA}" >> "$GITHUB_OUTPUT"
+          echo "key=vere-${{ matrix.target }}-${VERE_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -455,40 +401,6 @@ jobs:
           ref: ${{ env.VERE_BRANCH }}
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Download ivory pill (kelvin 408)
-        if: steps.vere-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: gw-ivory-pill
-          path: ./ivory-pill
-
-      - name: Bake ivory pill into vere
-        if: steps.vere-cache.outputs.cache-hit != 'true'
-        run: |
-          PILL=ivory-pill/gw-ivory.pill
-          H=gwbtc-vere/pkg/vere/ivory/ivory.h
-          C=gwbtc-vere/pkg/vere/ivory/ivory.c
-          VAR=u3_Ivory_pill
-
-          echo "#ifndef ${VAR}_H" > "$H"
-          echo "#define ${VAR}_H" >> "$H"
-          echo "extern unsigned char $VAR[];" >> "$H"
-          echo "extern unsigned int ${VAR}_len;" >> "$H"
-          echo '#endif' >> "$H"
-
-          printf '#include "ivory.h"\n' > "$C"
-          echo "unsigned char $VAR[] = {" >> "$C"
-          cnt=0
-          while IFS='' read line; do
-            for byte in $line; do
-              printf " 0x%s," "$byte" >> "$C"
-              cnt=$((cnt+1))
-            done
-          done < <(od -An -v -tx1 "$PILL")
-          echo "};" >> "$C"
-          echo "unsigned int ${VAR}_len = $cnt;" >> "$C"
-          echo "Baked ivory pill ($cnt bytes) into vere."
 
       - name: Build vere
         if: steps.vere-cache.outputs.cache-hit != 'true'
