@@ -262,6 +262,9 @@ jobs:
 #          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 #          ./automation/wait-idle.sh "$CONN_SOCK"
 
+      - name: Wait for Clay to settle
+        run: ./automation/wait-idle.sh "$CONN_SOCK"
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
@@ -300,7 +303,7 @@ jobs:
           echo "Pill build triggered."
 
       - name: Wait for pill to appear
-        timeout-minutes: 30
+        timeout-minutes: 45
         run: |
           for i in $(seq 1 600); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
