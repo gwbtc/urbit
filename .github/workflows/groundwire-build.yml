@@ -647,7 +647,11 @@ jobs:
 
       - name: "Validate: comet boot"
         run: |
-          ./gw-vere -d -B ./gw-base.pill -c mycomet
+          MINER_OUT=$(./comet_miner --suite-c --tweak "'fake'" daplyd 2>&1)
+          COMET=$(echo "$MINER_OUT" | grep '^comet:' | sed 's/^comet: ~//')
+          FEED=$(echo "$MINER_OUT" | grep '^feed:' | awk '{print $2}')
+          echo "Mined comet: $COMET"
+          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED"
           ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
           echo "Comet boot successful."
           kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
