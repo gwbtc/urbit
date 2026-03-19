@@ -18,7 +18,7 @@ env:
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
   TLONDESKS_BRANCH: polwex/tlondesks
-  BOOTING_BRANCH: main
+  BOOTING_BRANCH: fix/tmux-boot-error-handling
 
 jobs:
   # =============================================================
