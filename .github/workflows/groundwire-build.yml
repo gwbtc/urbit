@@ -10,7 +10,7 @@ on:
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
-  GROUNDWIRE_BRANCH: hd/consolidate-urb
+  GROUNDWIRE_BRANCH: main
   SPV_WALLET_BRANCH: develop
   URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: tinnus-test-hack
