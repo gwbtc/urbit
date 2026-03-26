@@ -17,7 +17,6 @@ env:
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
   TLONDESKS_BRANCH: polwex/tlondesks
-  BOOTING_BRANCH: main
 
 jobs:
   # =============================================================
@@ -478,9 +477,9 @@ jobs:
         run: |
           MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          BOOTING_SHA=$(gh api "repos/gwbtc/booting/commits/${{ env.BOOTING_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          GROUNDWIRE_SHA=$(gh api "repos/gwbtc/groundwire/commits/${{ env.GROUNDWIRE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "onboard-key=gw-onboard-${{ matrix.target }}-${BOOTING_SHA}" >> "$GITHUB_OUTPUT"
+          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -564,27 +563,28 @@ jobs:
           name: comet-miner-${{ matrix.target }}
           path: ./comet_miner
 
-      - name: Checkout gwbtc/booting
+      - name: Checkout gwbtc/groundwire (for onboarding script)
         if: steps.onboard-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
-          repository: gwbtc/booting
-          ref: ${{ env.BOOTING_BRANCH }}
-          path: gwbtc-booting
+          repository: gwbtc/groundwire
+          ref: ${{ env.GROUNDWIRE_BRANCH }}
+          path: gwbtc-groundwire-onboard
           token: ${{ secrets.GH_PAT }}
 
       - name: Build gw-onboard
         if: steps.onboard-cache.outputs.cache-hit != 'true'
         run: |
+          BOOTING_DIR=gwbtc-groundwire-onboard/onboarding/booting
           if [[ "$OSTYPE" == darwin* ]]; then
-            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
-            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
+            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           else
-            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
-            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
+            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           fi
-          pip install pyinstaller requests embit
-          pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
+          pip install pyinstaller requests embit PyNaCl
+          pyinstaller --onefile --name gw-onboard "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
 
       - name: Save gw-onboard cache
@@ -691,7 +691,7 @@ jobs:
 
       - name: Package and publish release
         run: |
-          printf 'requests\nembit\n' > requirements.txt
+          printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
