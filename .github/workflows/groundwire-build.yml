@@ -479,7 +479,7 @@ jobs:
           URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           GROUNDWIRE_SHA=$(gh api "repos/gwbtc/groundwire/commits/${{ env.GROUNDWIRE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}-${{ hashFiles('.github/workflows/groundwire-build.yml') }}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -583,8 +583,8 @@ jobs:
             sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
             sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           fi
-          pip install pyinstaller requests embit PyNaCl
-          pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend "$BOOTING_DIR/gw-onboard.py"
+          pip install pyinstaller requests embit PyNaCl cffi
+          pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend --collect-all cffi "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
 
       - name: Save gw-onboard cache
