@@ -584,7 +584,7 @@ jobs:
             sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           fi
           pip install pyinstaller requests embit PyNaCl
-          pyinstaller --onefile --name gw-onboard "$BOOTING_DIR/gw-onboard.py"
+          pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
 
       - name: Save gw-onboard cache
