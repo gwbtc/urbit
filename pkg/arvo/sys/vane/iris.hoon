@@ -644,12 +644,10 @@
   ^-  (unit (unit cage))
   ~>  %spin.['scry/iris']
   =*  ren  car
-  =*  why=shop  &/p.bem
   =*  syd  q.bem
   =*  lot=coin  $/r.bem
   =*  tyl  s.bem
   ::
-  ?.  ?=(%& -.why)  ~
   ?.  =([~ ~] lyc)  ~
   ::
   ?:  &(?=(%x ren) =(tyl //whey))
@@ -663,7 +661,6 @@
     ``mass+!>(maz)
   ::
   ~&  iris-ws-scry-id=tyl
-  ?.  =([%$ our] why)  ~
   ?.  &(?=(%x ren) ?=(%$ syd))  ~
   ?+    tyl  ~
       [%ws ~]   ``noun+!>(sockets.state.ax)

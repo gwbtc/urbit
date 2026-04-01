@@ -11,14 +11,12 @@ on:
 env:
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
-  SPV_WALLET_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: tinnus-test-hack
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
   TLONDESKS_BRANCH: polwex/tlondesks
-  BOOTING_BRANCH: main
 
 jobs:
   # =============================================================
@@ -91,14 +89,6 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
-
-      - name: Checkout gwbtc/spv-wallet
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/spv-wallet
-          ref: ${{ env.SPV_WALLET_BRANCH }}
-          path: gwbtc-spv-wallet
           token: ${{ secrets.GH_PAT }}
 
       - name: Checkout gwbtc/urbit-mcp
@@ -187,12 +177,17 @@ jobs:
             gwbtc-urbit/pkg/arvo/ ./zod/gw-base/
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
+      - name: Build groundwire and spv-wallet desks
+        run: |
+          cd gwbtc-groundwire && make build && cd ..
+
       - name: Populate %groundwire desk
         run: |
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
-          cd gwbtc-groundwire && chmod +x build.sh && bash build.sh -p ../zod/groundwire && cd ..
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -201,7 +196,7 @@ jobs:
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-spv-wallet/desk/ ./zod/spv-wallet/
+            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -482,9 +477,9 @@ jobs:
         run: |
           MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          BOOTING_SHA=$(gh api "repos/gwbtc/booting/commits/${{ env.BOOTING_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
+          GROUNDWIRE_SHA=$(gh api "repos/gwbtc/groundwire/commits/${{ env.GROUNDWIRE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "onboard-key=gw-onboard-${{ matrix.target }}-${BOOTING_SHA}" >> "$GITHUB_OUTPUT"
+          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}-${{ hashFiles('.github/workflows/groundwire-build.yml') }}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -568,27 +563,28 @@ jobs:
           name: comet-miner-${{ matrix.target }}
           path: ./comet_miner
 
-      - name: Checkout gwbtc/booting
+      - name: Checkout gwbtc/groundwire (for onboarding script)
         if: steps.onboard-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
-          repository: gwbtc/booting
-          ref: ${{ env.BOOTING_BRANCH }}
-          path: gwbtc-booting
+          repository: gwbtc/groundwire
+          ref: ${{ env.GROUNDWIRE_BRANCH }}
+          path: gwbtc-groundwire-onboard
           token: ${{ secrets.GH_PAT }}
 
       - name: Build gw-onboard
         if: steps.onboard-cache.outputs.cache-hit != 'true'
         run: |
+          BOOTING_DIR=gwbtc-groundwire-onboard/onboarding/booting
           if [[ "$OSTYPE" == darwin* ]]; then
-            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
-            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
+            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           else
-            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' gwbtc-booting/gw-onboard.py
-            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' gwbtc-booting/gw-onboard.py
+            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
+            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           fi
-          pip install pyinstaller requests embit
-          pyinstaller --onefile --name gw-onboard gwbtc-booting/gw-onboard.py
+          pip install pyinstaller requests embit PyNaCl cffi
+          pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend --collect-all cffi "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
 
       - name: Save gw-onboard cache
@@ -695,7 +691,7 @@ jobs:
 
       - name: Package and publish release
         run: |
-          printf 'requests\nembit\n' > requirements.txt
+          printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
