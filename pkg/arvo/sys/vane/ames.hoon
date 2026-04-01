@@ -8138,7 +8138,7 @@
               |-  ^+  fine
               ?:  |(=(~ nex.keen) =(inx max))
                 fine
-              =^  =want  nex.keen  nex.keen
+              =^  =want  nex.keen  ?>  ?=(^ nex.keen)  nex.keen
               =.  last-sent.want   now
               =.      tries.want   +(tries.want)
               =.        wan.keen   (put:fi-mop wan.keen [fra .]:want)
@@ -12595,7 +12595,12 @@
             `+<.u.peer
           ?~  muth  [~ ~]
           ?.  =(life.u.muth u.her-lyf)  [~ ~]
-          ``azimuth-peer-state/!>(+.u.muth)
+          =/  ded
+            =/  msg  (jam open-packet)
+            =/  sig  (sign-raw:ed:crypto msg [sgn.pub sgn.sek]:saf.ames-state)
+            (jam sig msg)
+          :+  ~  ~
+          [%message !>(proof/ded)]
         ::  publisher-side, weight of a noun at .pat, as measured by .boq
         ::
         ++  peek-whey
