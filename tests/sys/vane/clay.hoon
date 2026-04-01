@@ -18,6 +18,18 @@
 =/  clay-gate  (clay-raw ~nul)
 =/  fusion  fusion:clay-gate
 ::
+=>  |%
+    ++  leak-to-deps
+      |=  =leak:fusion
+      ^-  (set mist:fusion)
+      %-  sy
+      |-  ^-  (list mist:fusion)
+      %-  zing
+      %+  turn  ~(tap in deps.leak)
+      |=  l=leak:fusion
+      :-  (pour-to-mist:fusion pour.l)
+      ^$(leak l)
+    --
 |%
 ++  test-parse-pile  ^-  tang
   =/  src  '.'
@@ -88,6 +100,8 @@
       files=(my [/lib/self/hoon &+hoon+source]~)
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
   (build-file:ford /lib/self/hoon)
 ::
@@ -101,12 +115,19 @@
       files=(my [/mar/mime/hoon &+hoon+mar-mime]~)
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-    =/  res=vase  (build-nave:ford %mime)
+    =/  [res=vase nub=state:ford:fusion]  (build-nave:ford %mime)
+    =/  =leak:fusion  leak:(~(got by sprig.nub) file+/mar/mime/hoon)
     ;:  weld
       %+  expect-eq
         !>(*mime)
         (slap res !,(*hoon *vale))
+    ::
+      %+  expect-eq
+        !>  (~(gas in *(set mist:fusion)) vale+/mar/mime/hoon ~)
+        !>  (leak-to-deps leak)
     ==
 ::
 ++  test-mar-udon  ^-  tang
@@ -121,12 +142,23 @@
       ==
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-    =/  res=vase  (build-nave:ford %udon)
+    =/  [res=vase nub=state:ford:fusion]  (build-nave:ford %udon)
+    =/  =leak:fusion  leak:(~(got by sprig.nub) file+/mar/udon/hoon)
     ;:  weld
       %+  expect-eq
         !>(*@t)
         (slap res !,(*hoon *vale))
+    ::
+      %+  expect-eq
+        !>  %-  ~(gas in *(set mist:fusion))
+        :~  vale+/mar/udon/hoon
+            vale+/lib/cram/hoon
+            file+/lib/cram/hoon
+        ==
+        !>  (leak-to-deps leak)
     ==
 ::
 ++  test-cast-html-mime  ^-  tang
@@ -140,8 +172,10 @@
       files
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-  =/  res=vase  (build-cast:ford %html %mime)
+  =/  [res=vase nub=state:ford:fusion]  (build-cast:ford %html %mime)
   %+  expect-eq
     (slam res !>('<html></html>'))
     !>  `mime`[/text/html 13 '<html></html>']
@@ -157,8 +191,10 @@
       files
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-  =/  res=vase  (build-file:ford /lib/foo/hoon)
+  =/  [res=vase nub=state:ford:fusion]  (build-file:ford /lib/foo/hoon)
   %+  expect-eq
     res
     !>  *mime
@@ -175,8 +211,10 @@
       files
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-  =/  res=vase  (build-file:ford /lib/foo/hoon)
+  =/  [res=vase nub=state:ford:fusion]  (build-file:ford /lib/foo/hoon)
   %+  expect-eq
     res
     !>  ''
@@ -187,12 +225,19 @@
       files=(my [/gen/hello/hoon &+hoon+gen-hello]~)
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-  =/  res=vase  (build-file:ford /gen/hello/hoon)
+  =/  [res=vase nub=state:ford:fusion]  (build-file:ford /gen/hello/hoon)
+  =/  =leak:fusion  leak:(~(got by sprig.nub) file+/gen/hello/hoon)
   ;:  weld
     %+  expect-eq
       !>  noun+'hello, bob'
       (slap res (ream '(+ [*^ [%bob ~] ~])'))
+  ::
+    %+  expect-eq
+      !>  (~(gas in *(set mist:fusion)) vale+/gen/hello/hoon ~)
+      !>  (leak-to-deps leak)
   ==
 ::
 ++  test-lib-strandio  ^-  tang
@@ -206,11 +251,24 @@
       ==
       file-store=~
       0
+      *flow:fusion
+      *flue:fusion
     ==
-  =/  res=vase  (build-file:ford /lib/strandio/hoon)
+  =/  [res=vase nub=state:ford:fusion]  (build-file:ford /lib/strandio/hoon)
+  =/  =leak:fusion  leak:(~(got by sprig.nub) file+/lib/strandio/hoon)
   ;:  weld
     %-  expect
     !>((slab %read %get-our -.res))
+  ::
+    %+  expect-eq
+      !>  %-  ~(gas in *(set mist:fusion))
+          :~  vale+/lib/strandio/hoon
+              file+/lib/strand/hoon
+              vale+/lib/strand/hoon
+              file+/sur/spider/hoon
+              vale+/sur/spider/hoon
+          ==
+      !>  (leak-to-deps leak)
   ==
 ::
 ::  |utilities: helper functions for testing
