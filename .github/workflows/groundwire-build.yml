@@ -12,7 +12,7 @@ env:
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
-  VERE_BRANCH: tinnus-test-hack
+  VERE_BRANCH: gw/next/kelvin/408
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
