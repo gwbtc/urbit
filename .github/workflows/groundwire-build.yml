@@ -9,7 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  URBIT_DEVELOP: develop
+  # urbit/urbit:develop
+  URBIT_DEVELOP: 314aaf04dd708b3777c9dde8a903bba8bdcbcebf
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
