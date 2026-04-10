@@ -688,7 +688,7 @@ jobs:
           pkill -f "gw-vere" || true
 
       - name: Install GitHub CLI
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           if ! command -v gh &>/dev/null; then
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -699,7 +699,7 @@ jobs:
           fi
 
       - name: Package and publish release
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
