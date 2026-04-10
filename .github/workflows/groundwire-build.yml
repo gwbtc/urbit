@@ -9,7 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  URBIT_DEVELOP: develop
+  # urbit/urbit:develop
+  URBIT_DEVELOP: 314aaf04dd708b3777c9dde8a903bba8bdcbcebf
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
@@ -17,6 +18,8 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
+  # tloncorp/tlon-apps:m/408-migrations
+  TLON_408: 4c5f0562da0a936a2eb8c728c81d5501ab2cc527
   TLONDESKS_BRANCH: polwex/tlondesks
 
 jobs:
@@ -81,15 +84,15 @@ jobs:
           repository: urbit/urbit
           ref: ${{ env.URBIT_DEVELOP }}
           path: urbit-urbit
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
-          repository: gwbtc/urbit
-          ref: ${{ env.URBIT_BRANCH }}
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || env.URBIT_BRANCH }}
           path: gwbtc-urbit
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v4
@@ -97,7 +100,7 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/urbit-mcp
         uses: actions/checkout@v4
@@ -105,7 +108,7 @@ jobs:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
           path: gwbtc-urbit-mcp
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/ursockets (nostrill desk)
         uses: actions/checkout@v4
@@ -113,7 +116,7 @@ jobs:
           repository: gwbtc/ursockets
           ref: ${{ env.URSOCKETS_BRANCH }}
           path: gwbtc-ursockets
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/ursockets tlondesks (landscape + groups)
         uses: actions/checkout@v4
@@ -121,21 +124,15 @@ jobs:
           repository: gwbtc/ursockets
           ref: ${{ env.TLONDESKS_BRANCH }}
           path: gwbtc-tlondesks
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
-#      - name: Checkout tloncorp/tlon-apps (groups desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/tlon-apps
-#          path: tlon-apps
-#          token: ${{ secrets.GH_PAT }}
-
-#      - name: Checkout tloncorp/landscape (landscape desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/landscape
-#          path: tloncorp-landscape
-#          token: ${{ secrets.GH_PAT }}
+      - name: Checkout tloncorp/tlon-apps (groups desk)
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/tlon-apps
+          ref: ${{ env.TLON_408 }}
+          path: tlon-apps
+          token: ${{ secrets.GH_PAT || github.token }}
 
       # -- Boot fake ~zod --
 
@@ -193,8 +190,7 @@ jobs:
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
+           cp -rL gwbtc-groundwire/dist-groundwire/* ./zod/groundwire/
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -202,8 +198,7 @@ jobs:
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          cp -rL gwbtc-groundwire/dist-spv/* ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -214,22 +209,21 @@ jobs:
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Populate %gwbtc-groups desk
+      - name: Populate %groups desk
         run: |
-          ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
-          ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
-          # Don't clear — groups needs base libs
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/groups/ ./zod/gwbtc-groups/
-          ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
+          ./automation/desk-create.sh groups "$CONN_SOCK"
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh groups ./zod
+          cp -rL tlon-apps/desk/* ./zod/groups/
+          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Populate %nostrill desk
         run: |
           ./automation/desk-create.sh nostrill "$CONN_SOCK"
           ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
           # Don't clear — nostrill needs base libs (default-agent, verb, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-ursockets/app/ ./zod/nostrill/
+          cp -rL gwbtc-ursockets/app/* ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
       - name: Populate %gw-landscape desk
@@ -237,32 +231,8 @@ jobs:
           ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
           ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
           # Don't clear — landscape needs base libs (default-agent, server, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/landscape/ ./zod/gw-landscape/
+          cp -rL gwbtc-tlondesks/tlon/landscape/* ./zod/gw-landscape/
           ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
-
-#      - name: Populate %groups desk
-#        run: |
-#          ./automation/desk-create.sh groups "$CONN_SOCK"
-#          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh groups ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tlon-apps/desk/ ./zod/groups/
-#          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-#          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
-#          # groups has ~487 files — wait for Clay to finish processing
-#          ./automation/wait-idle.sh "$CONN_SOCK"
-#
-#      - name: Populate %landscape desk
-#        run: |
-#          ./automation/desk-create.sh landscape "$CONN_SOCK"
-#          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh landscape ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tloncorp-landscape/desk/ ./zod/landscape/
-#          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-#          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -284,11 +254,11 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
+                [%groups /(scot %p our)/groups/(scot %da now)]
                 [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
-              =/  =pill:pill  (brass:pill sys dez & | | ~)
+              =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
                 %:  send-raw-card
                     %pass  /build
@@ -356,25 +326,7 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Get source commit SHAs for cache key
-        id: cache-key
-        run: |
-          VERE_SHA=$(gh api "repos/gwbtc/vere/commits/${{ env.VERE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          echo "key=vere-${{ matrix.target }}-${VERE_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-
-      - name: Check vere cache
-        id: vere-cache
-        if: false
-        uses: actions/cache/restore@v4
-        with:
-          path: ./gw-vere
-          key: ${{ steps.cache-key.outputs.key }}
-
       - name: Install Zig 0.15.2
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -383,7 +335,6 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -392,13 +343,11 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/vere
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/vere
@@ -407,12 +356,11 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build vere
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-vere
           for attempt in 1 2 3; do
             echo "Build attempt $attempt/3..."
-            if zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }}; then
+            if zig build -Doptimize=ReleaseFast -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }}; then
               break
             elif [ $attempt -eq 3 ]; then
               # Last resort: try vendoring zlib if GitHub is rate-limiting
@@ -430,7 +378,7 @@ jobs:
                      r'\1\n            .path = \"./ext/zlib-src\",', c)
           with open('build.zig.zon','w') as f: f.write(c)
           "
-                zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }} || exit 1
+                zig build -Doptimize=ReleaseFast -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }} || exit 1
               else
                 exit 1
               fi
@@ -444,13 +392,6 @@ jobs:
           cd ..
           chmod +x ./gw-vere
           ./gw-vere --version || true
-
-      - name: Save vere cache
-        if: steps.vere-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./gw-vere
-          key: ${{ steps.cache-key.outputs.key }}
 
       - name: Upload vere
         uses: actions/upload-artifact@v4
@@ -480,33 +421,7 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Get source commit SHAs for cache key
-        id: cache-key
-        run: |
-          MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          GROUNDWIRE_SHA=$(gh api "repos/gwbtc/groundwire/commits/${{ env.GROUNDWIRE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}-${{ hashFiles('.github/workflows/groundwire-build.yml') }}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-
-      - name: Check comet-miner cache
-        id: miner-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ./comet_miner
-          key: ${{ steps.cache-key.outputs.miner-key }}
-
-      - name: Check gw-onboard cache
-        id: onboard-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ./dist/gw-onboard
-          key: ${{ steps.cache-key.outputs.onboard-key }}
-
       - name: Install Zig 0.14.1
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -515,7 +430,6 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -524,13 +438,11 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/comet-miner
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/comet-miner
@@ -539,7 +451,6 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build comet-miner
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-comet-miner
           sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
@@ -558,13 +469,6 @@ jobs:
           cd ..
           chmod +x ./comet_miner
 
-      - name: Save comet-miner cache
-        if: steps.miner-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./comet_miner
-          key: ${{ steps.cache-key.outputs.miner-key }}
-
       - name: Upload comet-miner
         uses: actions/upload-artifact@v4
         with:
@@ -572,16 +476,14 @@ jobs:
           path: ./comet_miner
 
       - name: Checkout gwbtc/groundwire (for onboarding script)
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire-onboard
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build gw-onboard
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
         run: |
           BOOTING_DIR=gwbtc-groundwire-onboard/onboarding/booting
           if [[ "$OSTYPE" == darwin* ]]; then
@@ -594,13 +496,6 @@ jobs:
           pip install pyinstaller requests embit PyNaCl cffi
           pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend --collect-all cffi "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
-
-      - name: Save gw-onboard cache
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./dist/gw-onboard
-          key: ${{ steps.cache-key.outputs.onboard-key }}
 
       - name: Upload gw-onboard
         uses: actions/upload-artifact@v4
@@ -688,6 +583,7 @@ jobs:
           pkill -f "gw-vere" || true
 
       - name: Install GitHub CLI
+        if: github.event_name != 'pull_request'
         run: |
           if ! command -v gh &>/dev/null; then
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -698,6 +594,7 @@ jobs:
           fi
 
       - name: Package and publish release
+        if: github.event_name != 'pull_request'
         run: |
           printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
