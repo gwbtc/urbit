@@ -84,15 +84,15 @@ jobs:
           repository: urbit/urbit
           ref: ${{ env.URBIT_DEVELOP }}
           path: urbit-urbit
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
-          repository: gwbtc/urbit
-          ref: ${{ env.URBIT_BRANCH }}
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || env.URBIT_BRANCH }}
           path: gwbtc-urbit
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v4
@@ -100,7 +100,7 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/urbit-mcp
         uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
           path: gwbtc-urbit-mcp
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/ursockets (nostrill desk)
         uses: actions/checkout@v4
@@ -116,7 +116,7 @@ jobs:
           repository: gwbtc/ursockets
           ref: ${{ env.URSOCKETS_BRANCH }}
           path: gwbtc-ursockets
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/ursockets tlondesks (landscape + groups)
         uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
           repository: gwbtc/ursockets
           ref: ${{ env.TLONDESKS_BRANCH }}
           path: gwbtc-tlondesks
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout tloncorp/tlon-apps (groups desk)
         uses: actions/checkout@v4
@@ -132,7 +132,7 @@ jobs:
           repository: tloncorp/tlon-apps
           ref: ${{ env.TLON_408 }}
           path: tlon-apps
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       # -- Boot fake ~zod --
 
@@ -481,7 +481,7 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire-onboard
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build gw-onboard
         run: |
@@ -583,6 +583,7 @@ jobs:
           pkill -f "gw-vere" || true
 
       - name: Install GitHub CLI
+        if: github.event_name != 'pull_request'
         run: |
           if ! command -v gh &>/dev/null; then
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -593,6 +594,7 @@ jobs:
           fi
 
       - name: Package and publish release
+        if: github.event_name != 'pull_request'
         run: |
           printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
