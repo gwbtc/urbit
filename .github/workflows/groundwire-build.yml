@@ -288,7 +288,7 @@ jobs:
                 [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
-              =/  =pill:pill  (brass:pill sys dez & | | ~)
+              =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
                 %:  send-raw-card
                     %pass  /build
