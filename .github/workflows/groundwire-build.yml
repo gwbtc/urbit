@@ -190,8 +190,7 @@ jobs:
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
+           cp -rL gwbtc-groundwire/dist-groundwire/* ./zod/groundwire/
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -199,8 +198,7 @@ jobs:
           ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
           ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh spv-wallet ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          cp -rL gwbtc-groundwire/dist-spv/* ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -216,8 +214,7 @@ jobs:
           ./automation/desk-create.sh groups "$CONN_SOCK"
           ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groups ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            tlon-apps/desk/ ./zod/groups/
+          cp -rL tlon-apps/desk/* ./zod/groups/
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
           ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -226,8 +223,7 @@ jobs:
           ./automation/desk-create.sh nostrill "$CONN_SOCK"
           ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
           # Don't clear — nostrill needs base libs (default-agent, verb, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-ursockets/app/ ./zod/nostrill/
+          cp -rL gwbtc-ursockets/app/* ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
       - name: Populate %gw-landscape desk
@@ -235,8 +231,7 @@ jobs:
           ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
           ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
           # Don't clear — landscape needs base libs (default-agent, server, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/landscape/ ./zod/gw-landscape/
+          cp -rL gwbtc-tlondesks/tlon/landscape/* ./zod/gw-landscape/
           ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
