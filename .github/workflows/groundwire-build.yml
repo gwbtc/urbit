@@ -218,7 +218,6 @@ jobs:
           ./automation/desk-populate.sh groups ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             tlon-apps/desk/ ./zod/groups/
-          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
           ./automation/wait-idle.sh "$CONN_SOCK"
 
