@@ -18,6 +18,8 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
+  # tloncorp/tlon-apps:m/408-migrations
+  TLON_408: 4c5f0562da0a936a2eb8c728c81d5501ab2cc527
   TLONDESKS_BRANCH: polwex/tlondesks
 
 jobs:
@@ -124,19 +126,13 @@ jobs:
           path: gwbtc-tlondesks
           token: ${{ secrets.GH_PAT }}
 
-#      - name: Checkout tloncorp/tlon-apps (groups desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/tlon-apps
-#          path: tlon-apps
-#          token: ${{ secrets.GH_PAT }}
-
-#      - name: Checkout tloncorp/landscape (landscape desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/landscape
-#          path: tloncorp-landscape
-#          token: ${{ secrets.GH_PAT }}
+      - name: Checkout tloncorp/tlon-apps (groups desk)
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/tlon-apps
+          ref: ${{ env.TLON_408 }}
+          path: tlon-apps
+          token: ${{ secrets.GH_PAT }}
 
       # -- Boot fake ~zod --
 
@@ -215,14 +211,16 @@ jobs:
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Populate %gwbtc-groups desk
+      - name: Populate %groups desk
         run: |
-          ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
-          ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
-          # Don't clear — groups needs base libs
+          ./automation/desk-create.sh groups "$CONN_SOCK"
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh groups ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/groups/ ./zod/gwbtc-groups/
-          ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
+            tlon-apps/desk/ ./zod/groups/
+          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
+          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Populate %nostrill desk
         run: |
@@ -241,29 +239,6 @@ jobs:
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-tlondesks/tlon/landscape/ ./zod/gw-landscape/
           ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
-
-#      - name: Populate %groups desk
-#        run: |
-#          ./automation/desk-create.sh groups "$CONN_SOCK"
-#          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh groups ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tlon-apps/desk/ ./zod/groups/
-#          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-#          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
-#          # groups has ~487 files — wait for Clay to finish processing
-#          ./automation/wait-idle.sh "$CONN_SOCK"
-#
-#      - name: Populate %landscape desk
-#        run: |
-#          ./automation/desk-create.sh landscape "$CONN_SOCK"
-#          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh landscape ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tloncorp-landscape/desk/ ./zod/landscape/
-#          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-#          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -285,7 +260,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
+                [%groups /(scot %p our)/groups/(scot %da now)]
                 [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
