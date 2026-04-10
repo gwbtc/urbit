@@ -421,24 +421,7 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Get source commit SHAs for cache key
-        id: cache-key
-        run: |
-          MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-
-      - name: Check comet-miner cache
-        id: miner-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ./comet_miner
-          key: ${{ steps.cache-key.outputs.miner-key }}
-
       - name: Install Zig 0.14.1
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -447,7 +430,6 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -456,13 +438,11 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/comet-miner
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/comet-miner
@@ -471,7 +451,6 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build comet-miner
-        if: steps.miner-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-comet-miner
           sed -i.bak 's/printf("tries: %llu\\n"/printf("tries: %" PRIu64 "\\n"/g' pkg/vere/comet_miner.c
@@ -489,13 +468,6 @@ jobs:
           cp "$MINER_BIN" ../comet_miner
           cd ..
           chmod +x ./comet_miner
-
-      - name: Save comet-miner cache
-        if: steps.miner-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./comet_miner
-          key: ${{ steps.cache-key.outputs.miner-key }}
 
       - name: Upload comet-miner
         uses: actions/upload-artifact@v4
