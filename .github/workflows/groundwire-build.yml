@@ -426,9 +426,7 @@ jobs:
         run: |
           MINER_SHA=$(gh api "repos/gwbtc/comet-miner/commits/${{ env.COMET_MINER_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          GROUNDWIRE_SHA=$(gh api "repos/gwbtc/groundwire/commits/${{ env.GROUNDWIRE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
           echo "miner-key=comet-miner-${{ matrix.target }}-${MINER_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "onboard-key=gw-onboard-${{ matrix.target }}-${GROUNDWIRE_SHA}-${{ hashFiles('.github/workflows/groundwire-build.yml') }}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -438,13 +436,6 @@ jobs:
         with:
           path: ./comet_miner
           key: ${{ steps.cache-key.outputs.miner-key }}
-
-      - name: Check gw-onboard cache
-        id: onboard-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ./dist/gw-onboard
-          key: ${{ steps.cache-key.outputs.onboard-key }}
 
       - name: Install Zig 0.14.1
         if: steps.miner-cache.outputs.cache-hit != 'true'
@@ -513,7 +504,6 @@ jobs:
           path: ./comet_miner
 
       - name: Checkout gwbtc/groundwire (for onboarding script)
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
@@ -522,7 +512,6 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Build gw-onboard
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
         run: |
           BOOTING_DIR=gwbtc-groundwire-onboard/onboarding/booting
           if [[ "$OSTYPE" == darwin* ]]; then
@@ -535,13 +524,6 @@ jobs:
           pip install pyinstaller requests embit PyNaCl cffi
           pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend --collect-all cffi "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
-
-      - name: Save gw-onboard cache
-        if: steps.onboard-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./dist/gw-onboard
-          key: ${{ steps.cache-key.outputs.onboard-key }}
 
       - name: Upload gw-onboard
         uses: actions/upload-artifact@v4
