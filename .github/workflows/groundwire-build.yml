@@ -17,7 +17,6 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: develop
-  TLONDESKS_BRANCH: polwex/tlondesks
 
 jobs:
   # =============================================================
@@ -115,13 +114,6 @@ jobs:
           path: gwbtc-ursockets
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Checkout gwbtc/ursockets tlondesks (landscape + groups)
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/ursockets
-          ref: ${{ env.TLONDESKS_BRANCH }}
-          path: gwbtc-tlondesks
-          token: ${{ secrets.GH_PAT || github.token }}
 
 #      - name: Checkout tloncorp/tlon-apps (groups desk)
 #        uses: actions/checkout@v4
@@ -214,15 +206,6 @@ jobs:
           cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
           ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
 
-      - name: Populate %gwbtc-groups desk
-        run: |
-          ./automation/desk-create.sh gwbtc-groups "$CONN_SOCK"
-          ./automation/desk-mount.sh gwbtc-groups ./zod "$CONN_SOCK"
-          # Don't clear — groups needs base libs
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/groups/ ./zod/gwbtc-groups/
-          ./automation/desk-commit.sh gwbtc-groups ./zod "$CONN_SOCK"
-
       - name: Populate %nostrill desk
         run: |
           ./automation/desk-create.sh nostrill "$CONN_SOCK"
@@ -232,14 +215,6 @@ jobs:
             gwbtc-ursockets/app/ ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
-      - name: Populate %gw-landscape desk
-        run: |
-          ./automation/desk-create.sh gw-landscape "$CONN_SOCK"
-          ./automation/desk-mount.sh gw-landscape ./zod "$CONN_SOCK"
-          # Don't clear — landscape needs base libs (default-agent, server, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-tlondesks/tlon/landscape/ ./zod/gw-landscape/
-          ./automation/desk-commit.sh gw-landscape ./zod "$CONN_SOCK"
 
 #      - name: Populate %groups desk
 #        run: |
@@ -284,9 +259,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%groups /(scot %p our)/gwbtc-groups/(scot %da now)]
                 [%nostrill /(scot %p our)/nostrill/(scot %da now)]
-                [%landscape /(scot %p our)/gw-landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
