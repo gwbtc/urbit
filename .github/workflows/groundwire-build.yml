@@ -63,13 +63,6 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      - name: Install peru
-        run: |
-          sudo apt-get install -y pipx
-          pipx ensurepath
-          pipx install peru
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       # -- Checkout all desk source repos --
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
