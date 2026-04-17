@@ -15,7 +15,6 @@ env:
   URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: gw/next/kelvin/408
   COMET_MINER_BRANCH: tinnus-feed
-  URSOCKETS_BRANCH: develop
 
 jobs:
   # =============================================================
@@ -97,14 +96,6 @@ jobs:
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Checkout gwbtc/ursockets (nostrill desk)
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/ursockets
-          ref: ${{ env.URSOCKETS_BRANCH }}
-          path: gwbtc-ursockets
-          token: ${{ secrets.GH_PAT || github.token }}
-
       # -- Boot fake ~zod --
 
       - name: Boot fake ~zod with kelvin 408 arvo
@@ -174,15 +165,6 @@ jobs:
             gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
-      - name: Populate %nostrill desk
-        run: |
-          ./automation/desk-create.sh nostrill "$CONN_SOCK"
-          ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
-          # Don't clear — nostrill needs base libs (default-agent, verb, etc.)
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-ursockets/app/ ./zod/nostrill/
-          ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
-
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -202,7 +184,6 @@ jobs:
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
-                [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
