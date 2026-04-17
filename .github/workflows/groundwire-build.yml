@@ -105,21 +105,6 @@ jobs:
           path: gwbtc-ursockets
           token: ${{ secrets.GH_PAT || github.token }}
 
-
-#      - name: Checkout tloncorp/tlon-apps (groups desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/tlon-apps
-#          path: tlon-apps
-#          token: ${{ secrets.GH_PAT }}
-
-#      - name: Checkout tloncorp/landscape (landscape desk)
-#        uses: actions/checkout@v4
-#        with:
-#          repository: tloncorp/landscape
-#          path: tloncorp-landscape
-#          token: ${{ secrets.GH_PAT }}
-
       # -- Boot fake ~zod --
 
       - name: Boot fake ~zod with kelvin 408 arvo
@@ -197,30 +182,6 @@ jobs:
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-ursockets/app/ ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
-
-
-#      - name: Populate %groups desk
-#        run: |
-#          ./automation/desk-create.sh groups "$CONN_SOCK"
-#          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh groups ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tlon-apps/desk/ ./zod/groups/
-#          echo '[%zuse 408]' > ./zod/groups/sys.kelvin
-#          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
-#          # groups has ~487 files — wait for Clay to finish processing
-#          ./automation/wait-idle.sh "$CONN_SOCK"
-#
-#      - name: Populate %landscape desk
-#        run: |
-#          ./automation/desk-create.sh landscape "$CONN_SOCK"
-#          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/desk-populate.sh landscape ./zod
-#          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-#            tloncorp-landscape/desk/ ./zod/landscape/
-#          echo '[%zuse 408]' > ./zod/landscape/sys.kelvin
-#          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
-#          ./automation/wait-idle.sh "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
