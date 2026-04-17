@@ -9,7 +9,6 @@ on:
   workflow_dispatch:
 
 env:
-  URBIT_DEVELOP: develop
   URBIT_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
@@ -72,14 +71,6 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # -- Checkout all desk source repos --
-      - name: Checkout urbit/urbit
-        uses: actions/checkout@v4
-        with:
-          repository: urbit/urbit
-          ref: ${{ env.URBIT_DEVELOP }}
-          path: urbit-urbit
-          token: ${{ secrets.GH_PAT || github.token }}
-
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
@@ -98,12 +89,14 @@ jobs:
 
       # -- Boot fake ~zod --
 
+      - name: Download pill builder pill
+        run: |
+          curl -fL -o ./gw-pill-builder.pill \
+            https://groundwire.nyc3.cdn.digitaloceanspaces.com/CI/gw-pill-builder.pill
+
       - name: Boot fake ~zod with kelvin 408 arvo
         run: |
-          # Stock vere rejects kelvin 408 (expects hoon 136, we have 135).
-          # Custom vere from gwbtc/vere supports the new kelvins.
-          # -A flag loads arvo directly, bypassing mount/commit for %base.
-          urbit -d -F zod -A urbit-urbit/pkg/arvo/ -c zod
+          urbit -d -F zod -B ./gw-pill-builder.pill -c zod
 
       - name: Wait for ~zod to be idle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
