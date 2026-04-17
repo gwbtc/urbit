@@ -248,16 +248,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
-      - name: Check vere cache
-        id: vere-cache
-        if: false
-        uses: actions/cache/restore@v4
-        with:
-          path: ./gw-vere
-          key: ${{ steps.cache-key.outputs.key }}
-
       - name: Install Zig 0.15.2
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
           tar xf "${{ matrix.zig_archive }}"
@@ -266,7 +257,6 @@ jobs:
           echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Checkout gwbtc/urcrypt
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/urcrypt
@@ -275,13 +265,11 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Prepare urcrypt
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           rm -f gwbtc-urcrypt/build.zig gwbtc-urcrypt/build.zig.zon
           ln -sf $(pwd)/gwbtc-urcrypt $(pwd)/urcrypt
 
       - name: Checkout gwbtc/vere
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: gwbtc/vere
@@ -290,7 +278,6 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Build vere
-        if: steps.vere-cache.outputs.cache-hit != 'true'
         run: |
           cd gwbtc-vere
           for attempt in 1 2 3; do
@@ -327,13 +314,6 @@ jobs:
           cd ..
           chmod +x ./gw-vere
           ./gw-vere --version || true
-
-      - name: Save vere cache
-        if: steps.vere-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ./gw-vere
-          key: ${{ steps.cache-key.outputs.key }}
 
       - name: Upload vere
         uses: actions/upload-artifact@v4
