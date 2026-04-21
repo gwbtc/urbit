@@ -239,15 +239,6 @@ jobs:
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Get source commit SHAs for cache key
-        id: cache-key
-        run: |
-          VERE_SHA=$(gh api "repos/gwbtc/vere/commits/${{ env.VERE_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          URCRYPT_SHA=$(gh api "repos/gwbtc/urcrypt/commits/${{ env.URCRYPT_BRANCH }}" --jq '.sha' 2>/dev/null | head -c 12)
-          echo "key=vere-${{ matrix.target }}-${VERE_SHA}-${URCRYPT_SHA}" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-
       - name: Install Zig 0.15.2
         run: |
           curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
