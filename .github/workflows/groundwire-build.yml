@@ -506,8 +506,7 @@ jobs:
             sudo apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gh
           fi
 
-      - name: Package and publish release
-        if: ${{ github.event_name != 'pull_request' }}
+      - name: Package release artifacts
         run: |
           printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
@@ -522,6 +521,9 @@ jobs:
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
           done
 
+      - name: Publish release
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
           TAG="groundwire-alpha-${DATE_BASE}"
           TITLE="groundwire-alpha ${DATE_BASE}"
