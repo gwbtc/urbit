@@ -406,8 +406,23 @@ jobs:
             sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
             sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
           fi
-          pip install pyinstaller requests embit PyNaCl cffi
-          pyinstaller --onefile --name gw-onboard --hidden-import _cffi_backend --collect-all cffi "$BOOTING_DIR/gw-onboard.py"
+          pip install pyinstaller requests embit PyNaCl cffi mmh3 bitstring bitarray
+          pyinstaller --onefile --name gw-onboard \
+            --hidden-import _cffi_backend \
+            --collect-all cffi \
+            --hidden-import nacl.bindings \
+            --hidden-import nacl._sodium \
+            --hidden-import embit.util.secp256k1 \
+            --hidden-import bitstring.bitstore_bitarray \
+            --hidden-import bitstring.bitstore_bitarray_helpers \
+            --hidden-import bitstring.bitstore_common_helpers \
+            --hidden-import bitstring.bitstore_tibs \
+            --hidden-import bitstring.bitstore_tibs_helpers \
+            --hidden-import bitarray \
+            --hidden-import bitarray._bitarray \
+            --hidden-import bitarray._util \
+            --hidden-import mmh3 \
+            "$BOOTING_DIR/gw-onboard.py"
           chmod +x dist/gw-onboard
 
       - name: Upload gw-onboard
