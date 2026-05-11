@@ -95,6 +95,18 @@
       mime=(slap zuse !,(*hoon mime))
       cass=(slap zuse !,(*hoon cass:clay))
   ==
+::  virtualization gates without access to namespace
+::
+=/  mule  ~(mule vi |)
+=/  mole  ~(mole vi |)
+=/  road
+  |*  =(trap *)
+  ^+  $:trap
+  =/  res  (mule trap)
+  ?-  -.res
+    %&  p.res
+    %|  (mean p.res)
+  ==
 ::
 |=  our=ship
 =,  clay
@@ -465,6 +477,13 @@
     %1       peg.fell
   ==
 ::
+++  has-arm
+  |=  [arm=@tas =mark core=vase]
+  ^-  ?
+  ?.  (slob arm p.core)  |
+  ?~  rib=(mole |.((slub core [%wing ~[arm]])))  |
+  (slob mark p.u.rib)
+::
 ++  rave-to-rove
   |=  rav=rave
   ^-  rove
@@ -634,8 +653,170 @@
           $:  files=(map path (each page lobe))
               file-store=(map lobe page)
               verb=@
-              cache=flow
-              flue
+          ==
+        ::
+        +$  bush
+          $%  [%file =cage]
+              [%hoon text=@t deps=(list (pair (unit term) bush)) =path]
+              [%arch =spec files=(map @ta bush) =path]
+              [%mark grad=(unit (trel bush bush bush)) cor=vase =mark]
+              $:  %tube
+                  $=  p
+                  $@  ?(%same %mime)  ::  identity / (mime -> hoon)
+                  [a=[=mark bush=(unit bush)] b=[=mark bush=(unit bush)]]
+          ==  ==
+        ::
+        +$  bush-node
+          $%  [%hoon =path]
+              [%file =mark =path]  :: leaf
+              [%mark =mark]
+              [%tube =mars]
+              [%arch =spec =path]
+          ==
+        --
+    =>  |%
+        ++  bush-to-vase
+          =/  only-prelude=?  |
+          =|  sut=vase
+          |=  =bush
+          ^-  vase
+          =*  b2v-buc  $
+          ?-    -.bush
+              %file
+            q.cage.bush
+          ::
+              %hoon
+            =.  sut  zuse.bud
+            =;  tus=vase
+              ?:  only-prelude  tus
+              ~>  %memo./clay/ford
+              :: %-  (trace 1 |.("make: hoon: {(spud path.bush)}"))
+              (slub tus hoon:(parse-pile path.bush text.bush))
+            =.  only-prelude  |
+            ~>  %memo./clay/ford
+            |-  ^-  vase
+            ?~  deps.bush  sut
+            =/  dep=vase  b2v-buc(bush q.i.deps.bush, only-prelude |)
+            =?  p.dep  ?=(^ p.i.deps.bush)  [%face u.p.i.deps.bush p.dep]
+            $(deps.bush t.deps.bush, sut (slop dep sut))
+          ::
+              %arch
+            ~>  %memo./clay/ford
+            :: %-  (trace 1 |.("make: arch: {(spud path.bush)}"))
+            =/  [type-val=type type-map=type]
+              =>  [sut=sut spec=spec.bush ..ut]
+              ~>  %memo./clay/ford
+              :-  (~(play ut p.sut) [%kttr spec])
+              %-  ~(play ut p.sut)
+              [%kttr %make [%wing ~[%map]] ~[[%base %atom %ta] spec]]
+            ::
+            =.  sut  *vase
+            ~>  %memo./clay/ford
+            =/  res=(map @ta vase)
+              (~(run by files.bush) bush-to-vase)
+            ::
+            :-  type-map
+            |-
+            ?~  res  ~
+            ?.  (~(nest ut type-val) | p.q.n.res)
+              ~|  [%nest-fail path.bush p.n.res]
+              !!
+            :-  [p.n.res q.q.n.res]
+            [$(res l.res) $(res r.res)]
+          ::
+              %mark
+            =.  sut  *vase
+            ~>  %memo./clay/ford
+            :: %-  (trace 1 |.("make: mark: %{(trip mark.bush)}"))
+            =*  cor  cor.bush
+            ?~  grad.bush
+              %+  slub  (slop (with-face cor+cor) zuse.bud)
+              !,  *hoon
+              =/  typ  _+<.cor
+              =/  dif  _*diff:grad:cor
+              ^-  (nave:clay typ dif)
+              |%
+              ++  diff  |=([old=typ new=typ] (diff:~(grad cor old) new))
+              ++  form  form:grad:cor
+              ++  join
+                |=  [a=dif b=dif]
+                ^-  (unit (unit dif))
+                ?:  =(a b)
+                  ~
+                `(join:grad:cor a b)
+              ++  mash
+                |=  [a=[=ship =desk =dif] b=[=ship =desk =dif]]
+                ^-  (unit dif)
+                ?:  =(dif.a dif.b)
+                  ~
+                `(mash:grad:cor a b)
+              ++  pact  |=([v=typ d=dif] (pact:~(grad cor v) d))
+              ++  vale  noun:grab:cor
+              --
+            =/  deg=vase  (bush-to-vase p.u.grad.bush)
+            =/  tub=vase  (bush-to-vase q.u.grad.bush)
+            =/  but=vase  (bush-to-vase r.u.grad.bush)
+            %+  slub
+              (with-faces deg+deg tub+tub but+but cor+cor nave+nave.bud ~)
+            !,  *hoon
+            =/  typ  _+<.cor
+            =/  dif  _*diff:deg
+            ^-  (nave typ dif)
+            |%
+            ++  diff
+              |=  [old=typ new=typ]
+              ^-  dif
+              (diff:deg (tub old) (tub new))
+            ++  form  form:deg
+            ++  join  join:deg
+            ++  mash  mash:deg
+            ++  pact
+              |=  [v=typ d=dif]
+              ^-  typ
+              (but (pact:deg (tub v) d))
+            ++  vale  noun:grab:cor
+            --
+          ::
+              %tube
+            =.  sut  *vase
+            ~>  %memo./clay/ford
+            ?@  p.bush
+              ?-    p.bush
+                  %same
+                :: %-  (trace 4 |.("make: tube: identity shortcircuit"))
+                same.bud
+              ::
+                  %mime
+                :: %-  (trace 4 |.("make: tube: hoon -> mime"))
+                =>(..zuse !>(|=(m=mime q.q.m)))
+              ==
+            =/  a  a.p.bush
+            =/  b  b.p.bush
+            :: %-  (trace 1 |.("make: tube: %{(trip mark.a)} -> %{(trip mark.b)}"))
+            =/  old=(unit vase)  (bind bush.a bush-to-vase)
+            ?:  &(?=(^ old) (has-arm %grow mark.b u.old))
+              :: %-  (trace 4 |.("+grow:{(trip mark.a)}"))
+              %+  slub  (with-faces cor+u.old ~)
+              :+  %brcl  !,(*hoon v=+<.cor)
+              :+  %sggr
+                [%spin %cltr [%sand %t (crip "grow-{<mark.a>}->{<mark.b>}")] ~]
+              :+  %tsgl  limb/mark.b
+              !,(*hoon ~(grow cor v))
+            =/  new=(unit vase)  (bind bush.b bush-to-vase)
+            ?:  &(?=(^ new) (has-arm %grab mark.a u.new))
+              :: %-  (trace 4 |.("+grab:{(trip mark.b)}"))
+              =;  v=vase
+                ?^  q.v  v
+                ~_('clay: @ product of +grab not supported' !!)
+              %+  slub  u.new
+              :+  %sggr
+                [%spin %cltr [%sand %t (crip "grab-{<mark.a>}->{<mark.b>}")] ~]
+              tsgl/[limb/mark.a limb/%grab]
+            ?:  ?=(%noun mark.b)
+              :: %-  (trace 4 |.("default"))
+              same.bud
+            ~|(no-cast-between+[mark.a mark.b] !!)  ::  XX +jump arm
+          ::
           ==
         --
     ~%  %ford-gate  ..ford  ~
@@ -648,6 +829,182 @@
     =.  sprig.nub  sprig
     ~%  %ford-core  ..$  ~
     |%
+    ::  Chapter for constructing $bush (dependency graph of a file) given its
+    ::  desk-wide identifier
+    ::
+    +|  %bush-construction
+    ::
+    ++  parse-header
+      |=  [pax=path txt=@t]
+      ^-  (list (pair (unit term) bush-node))
+      ~>  %memo./clay/ford
+      =*  out  (list (pair (unit term) bush-node))
+      =/  [=hair res=(unit [=out =nail])]
+        (header-rule [1 1] (trip txt))
+      ?^  res  out.u.res
+      (report-error pax txt hair)
+    ::
+    ++  header-rule
+      |^
+      =,  parsing-rules
+      %+  cook  pile-header-to-bush
+      %+  ifix
+        :_  gay
+        ::  parse optional /? and ignore
+        ::
+        ;~(plug gay (punt ;~(plug fas wut gap dem gap)))
+      ;~  plug
+        %+  cook  (bake zing (list (list taut)))
+        %+  rune  hep
+        (most ;~(plug com gaw) taut-rule)
+      ::
+        %+  cook  (bake zing (list (list taut)))
+        %+  rune  lus
+        (most ;~(plug com gaw) taut-rule)
+      ::
+        %+  rune  tis
+        ;~(plug sym ;~(pfix gap stap))
+      ::
+        %+  rune  sig
+        ;~((glue gap) sym wyde:vast stap)
+      ::
+        %+  rune  cen
+        ;~(plug sym ;~(pfix gap ;~(pfix cen sym)))
+      ::
+        %+  rune  buc
+        ;~  (glue gap)
+          sym
+          ;~(pfix cen sym)
+          ;~(pfix cen sym)
+        ==
+      ::
+        %+  rune  tar
+        ;~  (glue gap)
+          sym
+          ;~(pfix cen sym)
+          ;~(pfix stap)
+        ==
+      ==
+      ::
+      ++  pile-header-to-bush
+        |=  $:  sur=(list taut)
+                lib=(list taut)
+                raw=(list [face=term =path])
+                raz=(list [face=term =spec =path])
+                maz=(list [face=term =mark])
+                caz=(list [face=term =mars])
+                bar=(list [face=term =mark =path])
+            ==
+        ^-  (list (pair (unit term) bush-node))
+        %-  zing
+        ^-  (list (list (pair (unit term) bush-node)))
+        :~
+          (turn sur (taut-to-bush-node %sur))
+          (turn lib (taut-to-bush-node %lib))
+          (turn raw |=([face=term =path] [`face hoon+(snoc path %hoon)]))
+          (turn raz |=([face=term =spec =path] [`face arch+[spec path]]))
+          (turn maz |=([face=term =mark] [`face mark+mark]))
+          (turn caz |=([face=term =mars] [`face tube+mars]))
+          (turn bar |=([face=term =mark =path] [`face file+[mark path]]))
+        ==
+      ::
+      ++  taut-to-bush-node
+        |=  prefix=term
+        |=  =taut
+        ^-  (pair (unit term) bush-node)
+        :-  face.taut
+        [%hoon (fit-path prefix pax.taut)]
+      --
+    ::
+    ++  build-bush
+      |=  nod=bush-node
+      ^-  bush
+      ::  the cycle set below catches dependency cycles in the bush,
+      ::  but it can't catch cycles which are reentrant through read-file
+      ::  or cast-path. for those cases, we use loop detection
+      ::  as implemented in the runtime.
+      ::  example:
+      ::  1. copy a mark (e.g. noun.hoon) as foo.hoon
+      ::  2. commit a %foo page directly to clay: *%/foo/foo &foo 42
+      ::  3. add a /* import to the mark definition: /*  foo  %foo  /foo/foo
+      ::  4. try scrying for that file: .^(* %cx %/foo/foo)
+      ::
+      ~>  %loop.'clay: loop detected'
+      ~>  %memo./clay/ford
+      %-  %+  trace  1  |.
+          ?-  -.nod
+            %hoon  "bush: hoon: {(spud path.nod)}"
+            %file  "bush: file: mar=%{(trip mark.nod)} {(spud path.nod)}"
+            %mark  "bush: mark: %{(trip mark.nod)}"
+            %tube  "bush: tube: %{(trip a.mars.nod)} -> %{(trip b.mars.nod)}"
+            %arch  "bush: arch: {(spud path.nod)}"
+          ==
+      =|  cycle=(set bush-node)
+      |-  ^-  bush
+      =*  bush-loop  $
+      ?:  (~(has in cycle) nod)  ~|  [cycle+nod cycle]  !!
+      =.  cycle  (~(put in cycle) nod)
+      ?-    -.nod
+          %file
+        =/  file=cage  (cast-path path.nod mark.nod)
+        [%file file]
+      ::
+          %hoon
+        =/  file=cage  (read-file path.nod)
+        ?>  =(%hoon p.file)
+        =+  !<(src=@t q.file)
+        =/  deps=(list (pair (unit term) bush-node))
+          (parse-header path.nod src)
+        ::
+        :^  %hoon  src
+          %+  turn  deps
+          |=  [u=(unit term) don=bush-node]
+          [u bush-loop(nod don)]
+        path.nod
+      ::
+          %mark
+        =/  cor=vase  (build-fit %mar mark.nod)
+        =/  gad=vase  (slap cor limb/%grad)
+        ?^  q.gad  [%mark ~ cor mark.nod]
+        =/  deg  bush-loop(nod mark+q.gad)
+        =/  tub  bush-loop(nod tube+[mark.nod q.gad])
+        =/  but  bush-loop(nod tube+[q.gad mark.nod])
+        [%mark `[deg tub but] cor mark.nod]
+      ::
+          %tube
+        ?:  =(a.mars.nod b.mars.nod)  tube+%same
+        ?:  =([%mime %hoon] [a.mars.nod b.mars.nod])  tube+%mime
+        :+  %tube
+          =/  pax=(unit path)  (try-fit-path %mar a.mars.nod)
+          [a.mars.nod ?~(pax ~ `bush-loop(nod hoon+u.pax))]
+        =/  pax=(unit path)  (try-fit-path %mar b.mars.nod)
+        [b.mars.nod ?~(pax ~ `bush-loop(nod hoon+u.pax))]
+      ::
+          %arch
+        =/  fiz=(list @ta)
+          =/  len  (lent path.nod)
+          %+  murn  ~(tap by files)
+          |=  [pax=path *]
+          ^-  (unit @ta)
+          ?.  =(path.nod (scag len pax))
+            ~
+          =/  pat  (slag len pax)
+          ?:  ?=([@ %hoon ~] pat)
+            `i.pat
+          ~
+        ::
+        =|  rez=(map @ta bush)
+        |-
+        ?~  fiz
+          [%arch spec.nod rez path.nod]
+        =*  nom=@ta   i.fiz
+        =/  pax=path  (weld path.nod nom %hoon ~)
+        =/  res=bush  bush-loop(nod hoon+pax)
+        $(fiz t.fiz, rez (~(put by rez) nom res))
+      ==
+    ::
+    +|  %external-interface
+    ::
     ::  +read-file: retrieve marked, validated file contents at path
     ::
     ++  read-file
@@ -1128,13 +1485,19 @@
     ++  fit-path
       |=  [pre=@tas pax=@tas]
       ^-  path
+      ~_  leaf/"clay: no files match /{(trip pre)}/{(trip pax)}/hoon"
+      (need (try-fit-path pre pax))
+    ::
+    ::
+    ++  try-fit-path
+      |=  [pre=@tas pax=@tas]
+      ^-  (unit path)
       =/  paz  (segments pax)
-      |-  ^-  path
-      ?~  paz
-        ~_(leaf/"clay: no files match /{(trip pre)}/{(trip pax)}/hoon" !!)
+      |-  ^-  (unit path)
+      ?~  paz  ~
       =/  pux=path  pre^(snoc i.paz %hoon)
       ?:  (~(has by files) pux)
-        pux
+        `pux
       $(paz t.paz)
     ::
     ++  all-fits
@@ -4732,11 +5095,9 @@
         %+  turn  sat
         |=  [=desk =bill]
         leaf+"goad: output: {<desk>}: {<bill>}"
-    =^  agents  ..abet  (build-agents sat)
-    ::  TODO: enable if we can reduce memory usage
+    =/  agents  (build-agents sat)
     ::
-    ::  =.  ..abet
-    ::    (build-marks (turn (skip sat |=([desk =bill] =(bill ~))) head))
+    =+  (build-marks (turn (skip sat |=([desk =bill] =(bill ~))) head))
     ::
     =.  ..abet  tare                                    ::  [tare] >
     (emit hen %pass /lu/load %g %load agents)
