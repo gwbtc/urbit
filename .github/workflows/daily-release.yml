@@ -216,10 +216,10 @@ jobs:
           echo "Pill build triggered."
 
       - name: Wait for pill to appear
-        timeout-minutes: 60
+        timeout-minutes: 120
         run: |
-          # 1200 * 3s = 3600s (60 minutes)
-          for i in $(seq 1 1200); do
+          # 2400 * 3s = 7200s (120 minutes)
+          for i in $(seq 1 2400); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
