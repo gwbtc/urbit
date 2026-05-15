@@ -149,11 +149,15 @@ jobs:
 
       - name: Populate %mcp desk
         run: |
-          ./automation/desk-create.sh mcp "$CONN_SOCK"
-          ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh mcp ./zod
-          cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
-          ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" mcp "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" mcp "${ROOT}/zod"
+          pushd "${ROOT}/gwbtc-urbit-mcp"
+          chmod +x build.sh
+          bash build.sh -p "${ROOT}/zod/mcp"
+          popd
+          "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Populate %nostrill desk
         run: |
