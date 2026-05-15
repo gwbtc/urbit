@@ -1,42 +1,22 @@
-name: Bleeding-Edge Release
+name: Daily Release
+
 on:
-  push:
-    branches:
-      - gw/next/kelvin/408
-  pull_request:
-    branches:
-      - gw/next/kelvin/408
+  schedule:
+    - cron: '0 12 * * 1-5'
   workflow_dispatch:
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
+  VERE_BRANCH: gw/next/kelvin/408
   GROUNDWIRE_BRANCH: main
   URCRYPT_BRANCH: gw/cmp-pub
-  VERE_BRANCH: gw/next/kelvin/408
   COMET_MINER_BRANCH: tinnus-feed
+  URBIT_MCP_BRANCH: main
+  URSOCKETS_BRANCH: master
 
 jobs:
   # =============================================================
-  # Build the bleeding-edge brass pill on a fake ~zod
-  #
-  # Channel:
-  #   - This workflow is the developer/bleeding-edge release lane.
-  #   - The slower onboarding lane is in daily-release.yml and publishes
-  #     groundwire-daily-* tags.
-  #
-  # Flow:
-  #   1. Boot fake ~zod with custom vere + kelvin 408 arvo (-A flag)
-  #   2. For each desk: create from %base, mount, clear, populate, commit
-  #   3. Write each desk's agent list to Clay via %info (filesystem commits are unreliable)
-  #   4. Build brass pill via fyrd, wait for it to appear on filesystem
-  #
-  # Key gotchas:
-  #   - desk-create.sh copies ALL of %base (including desk.bill with
-  #     %acme etc). Must clear and replace before pill build.
-  #   - Filesystem commits need mark files (mar/bill.hoon etc) to work.
-  #     desk-populate.sh preserves mar/ when clearing.
-  #   - Even with marks, filesystem commits can be unreliable. The %info
-  #     step writes desk.bill directly to Clay as a safety net.
+  # Build the brass pill on a fake ~zod
   # =============================================================
   build-pill:
     name: Build pill
@@ -68,12 +48,11 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      # -- Checkout all desk source repos --
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || env.URBIT_BRANCH }}
+          repository: gwbtc/urbit
+          ref: ${{ env.URBIT_BRANCH }}
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT || github.token }}
 
@@ -85,7 +64,21 @@ jobs:
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT || github.token }}
 
-      # -- Boot fake ~zod --
+      - name: Checkout gwbtc/urbit-mcp
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/urbit-mcp
+          ref: ${{ env.URBIT_MCP_BRANCH }}
+          path: gwbtc-urbit-mcp
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout gwbtc/ursockets (nostrill desk)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.URSOCKETS_BRANCH }}
+          path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Download pill builder pill
         run: |
@@ -105,7 +98,9 @@ jobs:
           read -r -d '' SCRY_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              :_  :~  /sur/spider/hoon
+                      /lib/strandio/hoon
+                  ==
               '''
               =/  m  (strand ,vase)
               ^-  form:m
@@ -121,10 +116,6 @@ jobs:
 
       - name: Mount %base desk
         run: ./automation/desk-mount.sh base ./zod "$CONN_SOCK"
-
-      # -- Populate desks --
-      # Each desk: create from %base → mount → clear (preserving marks)
-      # → copy desk-specific content → ensure kelvin/bill → commit
 
       - name: Populate %gw-base desk
         run: |
@@ -156,6 +147,23 @@ jobs:
             gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
+      - name: Populate %mcp desk
+        run: |
+          ./automation/desk-create.sh mcp "$CONN_SOCK"
+          ./automation/desk-mount.sh mcp ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh mcp ./zod
+          cd gwbtc-urbit-mcp && chmod +x build.sh && bash build.sh -p ../zod/mcp && cd ..
+          ./automation/desk-commit.sh mcp ./zod "$CONN_SOCK"
+
+      - name: Populate %nostrill desk
+        run: |
+          ./automation/desk-create.sh nostrill "$CONN_SOCK"
+          ./automation/desk-mount.sh nostrill ./zod "$CONN_SOCK"
+          # Don't clear: nostrill depends on base libs like default-agent and verb.
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-ursockets/app/ ./zod/nostrill/
+          ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -165,7 +173,9 @@ jobs:
           read -r -d '' BUILD_PILL_FYRD << 'HOON' || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
-              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  /lib/pill/hoon  ==
+              :_  :~  /sur/spider/hoon
+                      /lib/strandio/hoon
+                  ==
               '''
               =/  m  (strand ,vase)
               ^-  form:m
@@ -175,6 +185,8 @@ jobs:
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                 [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+                [%mcp /(scot %p our)/mcp/(scot %da now)]
+                [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
@@ -281,7 +293,6 @@ jobs:
             if zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }}; then
               break
             elif [ $attempt -eq 3 ]; then
-              # Last resort: try vendoring zlib if GitHub is rate-limiting
               HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" \
                 "https://github.com/allyourcodebase/zlib/archive/61e7df7e996ec5a5f13a653db3c419adb340d6ef.tar.gz")
               if [ "$HTTP_CODE" != "200" ]; then
@@ -292,8 +303,8 @@ jobs:
                 python3 -c "
           import re
           with open('build.zig.zon') as f: c = f.read()
-          c = re.sub(r'(\.zlib\s*=\s*\.\{)\s*\.url\s*=\s*\"[^\"]+\",\s*\.hash\s*=\s*\"[^\"]+\",',
-                     r'\1\n            .path = \"./ext/zlib-src\",', c)
+          c = re.sub(r'(\\.zlib\\s*=\\s*\\.\\{)\\s*\\.url\\s*=\\s*\"[^\"]+\",\\s*\\.hash\\s*=\\s*\"[^\"]+\",',
+                     r'\\1\\n            .path = \"./ext/zlib-src\",', c)
           with open('build.zig.zon','w') as f: f.write(c)
           "
                 zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }} || exit 1
@@ -436,7 +447,6 @@ jobs:
           name: gw-onboard-${{ matrix.target }}
           path: dist/gw-onboard
 
-
   # =============================================================
   # Validate the pill boots, then publish release
   # =============================================================
@@ -491,14 +501,12 @@ jobs:
 
       - name: "Validate: comet boot with wallet"
         run: |
-          # Mine a comet identity for the wallet test
           COMET=$(./comet_miner 2>/dev/null | grep -oP '~[a-z-]+' | head -1)
           if [ -z "$COMET" ]; then
             echo "WARNING: comet_miner did not produce a comet, skipping wallet test"
             exit 0
           fi
           echo "Mined comet: $COMET"
-          # Generate a dummy feed key for testing
           FEED=$(openssl rand -hex 32)
           ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet
           ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
@@ -516,7 +524,6 @@ jobs:
           pkill -f "gw-vere" || true
 
       - name: Install GitHub CLI
-        if: ${{ github.event_name != 'pull_request' }}
         run: |
           if ! command -v gh &>/dev/null; then
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
@@ -542,15 +549,14 @@ jobs:
           done
 
       - name: Publish release
-        if: ${{ github.event_name != 'pull_request' }}
         run: |
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
-          TAG="groundwire-alpha-${DATE_BASE}"
-          TITLE="groundwire-alpha ${DATE_BASE}"
+          TAG="groundwire-daily-${DATE_BASE}"
+          TITLE="groundwire-daily ${DATE_BASE}"
           SUFFIX=2
           while gh release view "$TAG" --repo gwbtc/urbit &>/dev/null; do
-            TAG="groundwire-alpha-${DATE_BASE}_${SUFFIX}"
-            TITLE="groundwire-alpha ${DATE_BASE}_${SUFFIX}"
+            TAG="groundwire-daily-${DATE_BASE}_${SUFFIX}"
+            TITLE="groundwire-daily ${DATE_BASE}_${SUFFIX}"
             SUFFIX=$((SUFFIX + 1))
           done
 
@@ -559,15 +565,17 @@ jobs:
             groundwire-linux-aarch64.tar.gz \
             groundwire-macos-aarch64.tar.gz \
             --repo gwbtc/urbit \
-            --prerelease \
             --title "$TITLE" \
-            --notes "Automated bleeding-edge developer build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
+            --notes "Automated daily onboarding build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
 
-          Release channel: \`bleeding-edge\`
-          Tag format: \`groundwire-alpha-*\`
-          Daily onboarding channel tags: \`groundwire-daily-*\`
+          This daily release includes preloaded desks for onboarding:
+          - \`gw-base\`
+          - \`groundwire\`
+          - \`spv-wallet\`
+          - \`mcp\`
+          - \`nostrill\`
 
-          Each tarball contains everything needed to onboard:
+          Each tarball contains:
           - \`gw-vere\` — Urbit runtime
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
@@ -577,6 +585,8 @@ jobs:
           Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
-          - \`groundwire-macos-aarch64.tar.gz\`"
+          - \`groundwire-macos-aarch64.tar.gz\`
+
+          Bleeding-edge artifacts continue to publish under \`groundwire-alpha-*\` tags."
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
