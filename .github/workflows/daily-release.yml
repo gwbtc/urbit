@@ -216,7 +216,7 @@ jobs:
           echo "Pill build triggered."
 
       - name: Wait for pill to appear
-        timeout-minutes: 45
+        timeout-minutes: 60
         run: |
           for i in $(seq 1 900); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
