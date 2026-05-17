@@ -36,6 +36,7 @@
 =>  |%
 +$  state-4
   $:  %4
+      dos=(map @tas [term path])           
       pki=state-pki-4                                   ::
       etn=state-eth-node                                ::  eth connection state
       tim=[%plea (unit resend-timer)]                   ::  nacked plea timer
@@ -283,6 +284,15 @@
     ::        srcs=(list [p=term q=*])
     ::    ==
     ::
+        %anex
+      ?>  !(~(has by dos) dom.tac)
+      (emit-peer(dos (~(put by dos) dom.tac [dap.tac pax.tac])) hen dom.tac pax.tac)
+      :: punt on validation of dap
+      ::
+        %writ
+      =/  agent=term  (~(get by dos) dom.tac)
+      (poke-watch hen agent [%jael-writ dom.tac ship.tac pass.tac])
+      ::
         %dawn
       ::  single-homed
       ::
