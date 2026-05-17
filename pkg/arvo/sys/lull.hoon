@@ -4332,6 +4332,8 @@
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
         [%public-keys ships=(set ship)]               ::  sub to publics
+        [%writ dom=@tas =ship =pass]                  ::  send pki attestation for validation eg. [$comet %bitcoin (jam txid-etc)]
+        [%anex dom=@tas dap=term pax=path]            ::  register new pki domain eg. [%bitcoin %urb-watcher]
         [%fief ships=(set ship)]                      ::  sub to routes
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key
