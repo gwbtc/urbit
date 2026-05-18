@@ -197,9 +197,9 @@ jobs:
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
-                [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
-                [%mcp /(scot %p our)/mcp/(scot %da now)]
-                [%nostrill /(scot %p our)/nostrill/(scot %da now)]
+                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+                    [%mcp /(scot %p our)/mcp/(scot %da now)]
+                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
