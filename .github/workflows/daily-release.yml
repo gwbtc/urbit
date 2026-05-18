@@ -107,6 +107,7 @@ jobs:
               %fyrd  %base  %khan-eval  %noun  %ted-eval
               :_  :~  /sur/spider/hoon
                       /lib/strandio/hoon
+                      /lib/pill/hoon
                   ==
               '''
               =/  m  (strand ,vase)
@@ -186,6 +187,7 @@ jobs:
               %fyrd  %base  %khan-eval  %noun  %ted-eval
               :_  :~  /sur/spider/hoon
                       /lib/strandio/hoon
+                      /lib/pill/hoon
                   ==
               '''
               =/  m  (strand ,vase)
@@ -216,10 +218,10 @@ jobs:
           echo "Pill build triggered."
 
       - name: Wait for pill to appear
-        timeout-minutes: 120
+        timeout-minutes: 60
         run: |
-          # 2400 * 3s = 7200s (120 minutes)
-          for i in $(seq 1 2400); do
+          # 1200 * 3s = 3600s (60 minutes)
+          for i in $(seq 1 1200); do
             PILL_FILE=$(find ./zod/base/ -name "*.pill" -type f 2>/dev/null | head -1)
             if [ -n "$PILL_FILE" ]; then
               echo "Found pill at: $PILL_FILE"
