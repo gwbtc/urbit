@@ -13,6 +13,7 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: master
+  LANDSCAPE_BRANCH: mp/next/kelvin/408
 
 jobs:
   # =============================================================
@@ -85,6 +86,14 @@ jobs:
           repository: gwbtc/ursockets
           ref: ${{ env.URSOCKETS_BRANCH }}
           path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout tloncorp/landscape
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/landscape
+          ref: ${{ env.LANDSCAPE_BRANCH }}
+          path: gwbtc-landscape
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Download pill builder pill
@@ -176,6 +185,16 @@ jobs:
             gwbtc-ursockets/app/ ./zod/nostrill/
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
+      - name: Populate %landscape desk
+        run: |
+          ./automation/desk-create.sh landscape "$CONN_SOCK"
+          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh landscape ./zod
+          cp -r gwbtc-landscape/desk/* ./zod/landscape/
+          cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
+          cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
+          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -200,6 +219,7 @@ jobs:
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%nostrill /(scot %p our)/nostrill/(scot %da now)]
+                    [%landscape /(scot %p our)/landscape/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
