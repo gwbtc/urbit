@@ -13,7 +13,8 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: master
-  LANDSCAPE_BRANCH: mp/next/kelvin/408
+  # landscape branch mp/next/kelvin/408
+  LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
 
 jobs:
   # =============================================================
