@@ -1251,9 +1251,10 @@
     ?>  ?=(^ c)
     c(l a(r l.c))
   ::
-  ++  del                                               ::  b without any a
+  ++  del                                               ::  a without any b
     ~/  %del
     |*  b=*
+    =>  .(b `_?>(?=(^ a) n.a)`b)
     |-  ^+  a
     ?~  a
       ~
@@ -1460,6 +1461,7 @@
   ++  del                                               ::  delete at key b
     ~/  %del
     |*  b=*
+    =>  .(b `_?>(?=(^ a) p.n.a)`b)
     |-  ^+  a
     ?~  a
       ~
@@ -6525,6 +6527,7 @@
     [%ktwt p=hoon]                                      ::  ^?  bivariant
     [%kttr p=spec]                                      ::  ^*  example
     [%ktcl p=spec]                                      ::  ^:  filter
+    [%ktcb p=hoon q=hoon]                               ::  ^_  test
   ::                                            ::::::  hints
     [%sgbr p=hoon q=hoon]                               ::  ~|  sell on trace
     [%sgcb p=hoon q=hoon]                               ::  ~_  tank on trace
@@ -8306,7 +8309,7 @@
   ++  feck
     |-  ^-  (unit term)
     ?-  gen
-      [%sand %tas @]  [~ q.gen]
+      [%rock %tas @]  [~ q.gen]
       [%dbug *]       $(gen q.gen)
       *               ~
     ==
@@ -8659,12 +8662,14 @@
         [%tskt *]                                       ::                  =^
       =+  wuy=(weld q.gen `wing`[%v ~])                 ::
       :+  %tsgr  [%ktts %v %$ 1]                        ::  =>  v=.
-      :+  %tsls  [%ktts %a %tsgr [%limb %v] r.gen]      ::  =+  a==>(v \r.gen)
-      :^  %tsdt  wuy  [%tsgl [%$ 3] [%limb %a]]
-      :+  %tsgr  :-  :+  %ktts  [%over [%v ~] p.gen]
-                     [%tsgl [%$ 2] [%limb %a]]
-                 [%limb %v]
-      s.gen
+      :+  %tsls  :+  %ktts  %a                          ::  =+  ^=  a
+                 :+  %tsgr  [%limb %v]                  ::    =>  v
+                 [%ktcb [%kttr %base %cell] r.gen]      ::    ^_(*^ R.GEN)
+      :^  %tsdt  wuy  [%tsgl [%$ 3] [%limb %a]]         ::  =.  Q.GEN.v  +.a
+      :+  %tsgr  :-  :+  %ktts  [%over [%v ~] p.gen]    ::  =>  [P.GEN=-.a v]
+                     [%tsgl [%$ 2] [%limb %a]]          ::
+                 [%limb %v]                             ::
+      s.gen                                             ::  S.GEN
     ::
         [%tsgl *]  [%tsgr q.gen p.gen]
         [%tsls *]  [%tsgr [p.gen [%$ 1]] q.gen]
@@ -9763,6 +9768,8 @@
       |-(?~(p.gen sut $(p.gen t.p.gen, sut ^$(gen i.p.gen))))
     ?:  ?&(!how ?=([%wtbr *] gen))
       |-(?~(p.gen sut $(p.gen t.p.gen, sut ^$(gen i.p.gen))))
+    ?:  ?=([%wtzp *] gen)
+      $(how !how, gen p.gen)
     =+  neg=~(open ap gen)
     ?:(=(neg gen) sut $(gen neg))
   ::
@@ -10000,6 +10007,9 @@
         [%ktls *]
       =+(hif=(nice (play p.gen)) [hif q:$(gen q.gen, gol hif)])
     ::
+        [%ktcb *]
+      =+(hif=(nice (play p.gen)) $(gen q.gen, gol hif))
+    ::
         [%ktpm *]  =+(vat=$(gen p.gen) [(nice (wrap(sut p.vat) %zinc)) q.vat])
         [%ktsg *]  (blow gol p.gen)
         [%tune *]  [(face p.gen sut) [%0 %1]]
@@ -10178,6 +10188,10 @@
         [%ktls *]
       =+  hif=[p=(nice (play p.gen)) q=(play(sut dox) p.gen)]
       =+($(gen q.gen, gol p.hif) hif)
+    ::
+        [%ktcb *]
+      =+  hif=[p=(nice (play p.gen)) q=(play(sut dox) p.gen)]
+      $(gen q.gen, gol p.hif)
     ::
         [%ktpm *]
       =+(vat=$(gen p.gen) [(wrap(sut p.vat) %zinc) (wrap(sut q.vat) %zinc)])
@@ -10545,6 +10559,7 @@
       [%dtwt *]  bool
       [%hand *]  p.gen
       [%ktbr *]  (wrap(sut $(gen p.gen)) %iron)
+      [%ktcb *]  $(gen q.gen)
       [%ktls *]  $(gen p.gen)
       [%ktpm *]  (wrap(sut $(gen p.gen)) %zinc)
       [%ktsg *]  $(gen p.gen)
@@ -13195,6 +13210,7 @@
                   ['?' (rune wut %ktwt expa)]
                   ['*' (rune tar %kttr exqa)]
                   [':' (rune col %ktcl exqa)]
+                  ['#' (rune hax %ktcb expb)]
               ==
             ==
           :-  '~'
@@ -13901,12 +13917,37 @@
 ::
 ++  h135  .
 ++  h136
+  =,  h135
+  |%
+  ::  hoon 136 omitted leading zeroes from @da's date rendering. these helpers
+  ::  are provided to make rendering in the old style easier.
+  ::
+  ++  scot  |=(mol=dime ~(rent co %$ mol))
+  ++  scow  |=(mol=dime ~(rend co %$ mol))
+  ++  co
+    =>  [+>:co:h135 .]
+    |_  lot=coin
+    +*  co135  ~(. co:h135 lot)
+    ++  rear  rear:co135
+    ++  rent  ~+  `@ta`(rap 3 rend)
+    ++  rend
+      ^-  tape
+      ?.  ?=([%$ %da @] lot)  rend:co135
+      =+  yod=(yore q.p.lot)
+      =?  rep  ?=(^ f.t.yod)  ['.' (s-co f.t.yod)]
+      =?  rep  !&(?=(~ f) =(0 h) =(0 m) =(0 s)):t.yod
+        =.  rep  ['.' (y-co s.t.yod)]
+        =.  rep  ['.' (y-co m.t.yod)]
+        ['.' '.' (y-co h.t.yod)]
+      =.  rep  ['.' (a-co d.t.yod)]
+      =.  rep  ['.' (a-co m.yod)]
+      =?  rep  !a.yod  ['-' rep]
+      ['~' (a-co y.yod)]
+    --
   ::  hoon 136 had doccords, in $spec's %gist, $skin's and $note's %help,
   ::  and in $tome. dropped types replaced with * below for brevity.
   ::  migration helpers at the end of this core.
   ::
-  =,  h135
-  |%
   +$  abel  typo                                          ::  original sin: type
   +$  alas  (list (pair term hoon))                       ::  alias list
   +$  woof  $@(@ [~ p=hoon])                              ::  simple embed

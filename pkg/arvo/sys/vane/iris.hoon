@@ -528,7 +528,6 @@
   |=  [wire=(pole knot) =duct dud=(unit goof) hin=sign-arvo]
   ^-  [(list move) _iris-gate]
   ~>  %spin.['take/iris']
-  ~&  iris-take=[wire duct]
   ?<  ?=(^ dud)
   :_  iris-gate
   ?+    wire  ~
@@ -660,7 +659,6 @@
       ==
     ``mass+!>(maz)
   ::
-  ~&  iris-ws-scry-id=tyl
   ?.  &(?=(%x ren) ?=(%$ syd))  ~
   ?+    tyl  ~
       [%ws ~]   ``noun+!>(sockets.state.ax)
