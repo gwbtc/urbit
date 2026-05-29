@@ -5487,7 +5487,7 @@
             =/  ship-state  (~(get by peers.ames-state) u.ship)
             ?:  ?=([~ %known *] ship-state)
               event-core
-            ?:  ?=(%pawn (clan:title u.ship))
+            ?.  ?=(%pawn (clan:title u.ship))
               event-core
             (fetch-comet-pki u.ship)
           ::
