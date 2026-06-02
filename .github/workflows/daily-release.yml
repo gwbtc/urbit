@@ -100,7 +100,7 @@ jobs:
       - name: Download pill builder pill
         run: |
           curl -fL -o ./gw-pill-builder.pill \
-            https://groundwire.nyc3.cdn.digitaloceanspaces.com/CI/rc1-408-pill-builder.pill
+            https://groundwire.nyc3.cdn.digitaloceanspaces.com/CI/408k-rc1.pill
 
       - name: Boot fake ~zod with kelvin 408 arvo
         run: |
