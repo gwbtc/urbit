@@ -641,24 +641,6 @@
   |=  [wid=@u tan=tang]
   ^-  wall
   (zing (turn tan |=(a=tank (wash 0^wid a))))
-::  +wall-to-octs: text to binary output
-::
-++  wall-to-octs
-  |=  =wall
-  ^-  (unit octs)
-  ::
-  ?:  =(~ wall)
-    ~
-  ::
-  :-  ~
-  %-  as-octs:mimes:html
-  %-  crip
-  %-  zing  ^-  ^wall
-  %-  zing  ^-  (list ^wall)
-  %+  turn  wall
-  |=  t=tape
-  ^-  ^wall
-  ~[t "\0a"]
 ::  +internal-server-error: 500 page, with a tang
 ::
 ++  internal-server-error
@@ -823,7 +805,7 @@
     =^  ?(invalid=@uv [suv=@uv =identity som=(list move)])  state
       (session-for-request:authentication request)
     ?@  -
-      ::  the request provided a session coocokie that's not (or no longer)
+      ::  the request provided a session cookie that's not (or no longer)
       ::  valid. to make sure they're aware, tell them 401
       ::
       ::NOTE  some code duplication with below, but request handling deserves
@@ -1331,7 +1313,7 @@
         (rsh 3 (spat p.mime))  q.mime
     ::  attempt to find conversion gate to mime
     ::
-    =/  tub=(unit [tub=tube:clay mov=move])
+    =/  tub=(unit tub=tube:clay)
       (find-tube i.site.req mark %mime)
     ?~  tub  (error-response 500 "no tube from {(trip mark)} to mime")
     ::  attempt conversion, then send results
@@ -1344,11 +1326,11 @@
         %&  %+  return-static-data-on-duct  200
             [(rsh 3 (spat p.p.mym)) q.p.mym]
       ==
-    [[mov.u.tub cards] state]
+    [cards state]
     ::
     ++  find-tube
       |=  [dap=term from=mark to=mark]
-      ^-  (unit [tube:clay move])
+      ^-  (unit tube:clay)
       =/  des=(unit (unit cage))
         (do-scry %gd dap /$)
       ?.  ?=([~ ~ *] des)  ~
@@ -1357,9 +1339,7 @@
         (do-scry %cc desk /[from]/[to])
       ?.  ?=([~ ~ %tube *] tub)  ~
       :-  ~
-      :-  !<(tube:clay q.u.u.tub)
-      :^  duct  %pass  /conversion-cache/[from]
-      [%c %warp our desk `[%sing %c da+now /[from]/[to]]]
+      !<(tube:clay q.u.u.tub)
     ::
     ++  do-scry
       |=  [care=term =desk =path]
@@ -2499,7 +2479,7 @@
       ::
       =/  mode=?(%json %jam)
         (find-channel-mode %'GET' header-list.request)
-      =^  [exit=? =wall moves=(list move)]  state
+      =^  [exit=? c=cord moves=(list move)]  state
         ::  the request may include a 'Last-Event-Id' header
         ::
         =/  maybe-last-event-id=(unit @ud)
@@ -2517,7 +2497,7 @@
           =^  mos  state
             %^  return-static-data-on-duct  403  'text/html'
             (error-page 403 | url.request ~)
-          [[& ~ mos] state]
+          [[& '' mos] state]
         ::  make sure the request "mode" doesn't conflict with a prior request
         ::
         ::TODO  or could we change that on the spot, given that only a single
@@ -2527,7 +2507,7 @@
             %^  return-static-data-on-duct  406  'text/html'
             =;  msg=tape  (error-page 406 %.y url.request msg)
             "channel already established in {(trip mode.channel)} mode"
-          [[& ~ mos] state]
+          [[& '' mos] state]
         ::  when opening an event-stream, we must cancel our timeout timer
         ::  if there's no duct already bound. else, kill the old request,
         ::  we will replace its duct at the end of this arm
@@ -2556,12 +2536,12 @@
         ::
         ::  combine the remaining queued events to send to the client
         ::
-        =;  event-replay=wall
+        =;  event-replay=cord
           [[| - cancel-moves] state]
-        %-  zing
-        %-  flop
+        %-  roll  :_
+          |=([a=cord b=cord] (cat 3 a b))
         =/  queue  events.channel
-        =|  events=(list wall)
+        =|  events=(list cord)
         |-
         ^+  events
         ?:  =(~ queue)
@@ -2572,9 +2552,9 @@
         ::      since conversion failure also gets caught during first receive.
         ::      we can't do anything about this, so consider it unsupported.
         =/  said
-          (channel-event-to-tape channel request-id channel-event)
+          (channel-event-to-cord channel request-id channel-event)
         ?~  said  $
-        $(events [(event-tape-to-wall id +.u.said) events])
+        $(events [(event-cord-to-event-stream id u.said) events])
       ?:  exit  [moves state]
       ::  send the start event to the client
       ::
@@ -2591,7 +2571,7 @@
             ::  instead. some clients won't consider the connection established
             ::  until they've heard some bytes come over the wire.
             ::
-            ?.  =(~ wall)  (wall-to-octs wall)
+            ?.  =(~ c)  (some (as-octs:mimes:html c))
             (some (as-octs:mimes:html ':\0a'))
           ::
             complete=%.n
@@ -2899,10 +2879,8 @@
         (sign-to-channel-event sign u.channel request-id)
       ?~  maybe-channel-event  [~ state]
       =/  =channel-event  u.maybe-channel-event
-      =/  said=(unit (quip move tape))
-        (channel-event-to-tape u.channel request-id channel-event)
-      =?  moves  ?=(^ said)
-        (weld moves -.u.said)
+      =/  said=(unit cord)
+        (channel-event-to-cord u.channel request-id channel-event)
       =*  sending  &(?=([%| *] state.u.channel) ?=(^ said))
       ::
       =/  next-id  next-id.u.channel
@@ -2923,8 +2901,9 @@
         :*  %response  %continue
         ::
             ^=  data
-            %-  wall-to-octs
-            (event-tape-to-wall next-id +:(need said))
+            :-  ~
+            %-  as-octs:mimes:html
+            (event-cord-to-event-stream next-id (need said))
         ::
             complete=%.n
         ==
@@ -2985,9 +2964,10 @@
         :*  %response  %continue
         ::
             ^=  data
-            %-  wall-to-octs
-            %+  event-tape-to-wall  next-id
-            +:(need (channel-event-to-tape u.channel request-id %kick ~))
+            :-  ~
+            %-  as-octs:mimes:html
+            %+  event-cord-to-event-stream  next-id
+            (need (channel-event-to-cord u.channel request-id %kick ~))
         ::
             complete=%.n
         ==
@@ -3021,15 +3001,15 @@
       ?.  ?=([~ ~ *] des)
         ((trace 0 |.("no desk for app {<app.u.sub>}")) ~)
       `!<(=desk q.u.u.des)
-    ::  +channel-event-to-tape: render channel-event from request-id in specified mode
+    ::  +channel-event-to-cord: render channel-event from request-id in specified mode
     ::
-    ++  channel-event-to-tape
+    ++  channel-event-to-cord
       |=  [=channel request-id=@ud =channel-event]
-      ^-  (unit (quip move tape))
+      ^-  (unit cord)
       ?-  mode.channel
         %json  %+  bind  (channel-event-to-json channel request-id channel-event)
-               |=((quip move json) [+<- (trip (en:json:html +<+))])
-        %jam   =-  `[~ (scow %uw (jam -))]
+               |=(j=json (en:json:html j))
+        %jam   =-  `(scot %uw (jam -))
                [request-id channel-event]
       ==
     ::  +channel-event-to-json: render channel event as json channel event
@@ -3037,7 +3017,7 @@
     ++  channel-event-to-json
       ~%  %eyre-channel-event-to-json  ..part  ~
       |=  [=channel request-id=@ud event=channel-event]
-      ^-  (unit (quip move json))
+      ^-  (unit json)
       ::  for facts, we try to convert the result to json
       ::
       =/  [from=(unit [=desk =mark]) jsyn=(unit sign:agent:gall)]
@@ -3062,10 +3042,6 @@
         [`[desk.event have] `[%fact %json (slym u.convert noun.event)]]
       ?~  jsyn  ~
       %-  some
-      :-  ?~  from  ~
-          :_  ~
-          :^  duct  %pass  /conversion-cache/[mark.u.from]
-          [%c %warp our desk.u.from `[%sing %f da+now /[mark.u.from]/json]]
       =*  sign  u.jsyn
       =,  enjs:format
       %-  pairs
@@ -3102,14 +3078,13 @@
         ==
       ==
     ::
-    ++  event-tape-to-wall
-      ~%  %eyre-tape-to-wall  ..part  ~
-      |=  [event-id=@ud =tape]
-      ^-  wall
-      :~  (weld "id: " (a-co:co event-id))
-          (weld "data: " tape)
-          ""
-      ==
+    ++  event-cord-to-event-stream
+      ~%  %eyre-cord-to-event-stream  ..part  ~
+      |=  [event-id=@ud data=cord]
+      ^-  cord
+      %^  cat  3
+      (cat 3 (cat 3 'id: ' (crip (a-co:co event-id))) '\0a')
+      (cat 3 (cat 3 'data: ' data) '\0a\0a')
     ::
     ++  on-channel-heartbeat
       |=  channel-id=@t
@@ -3234,7 +3209,6 @@
   ::    through this interface because we want to have one centralized place
   ::    where we perform logging and state cleanup for connections that we're
   ::    done with.
-  ::
   ::
   ++  handle-response
     |=  =http-event:http
@@ -3678,6 +3652,7 @@
   ~/  %eyre-call
   |=  [=duct dud=(unit goof) wrapped-task=(hobo task)]
   ^-  [(list move) _http-server-gate]
+  ~>  %spin.['call/eyre']
   ::
   =/  task=task  ((harden task) wrapped-task)
   ::
@@ -3989,6 +3964,7 @@
   ~/  %eyre-take
   |=  [=wire =duct dud=(unit goof) =sign]
   ^-  [(list move) _http-server-gate]
+  ~>  %spin.['take/eyre']
   =>  %=    .
           sign
         ?:  ?=(%gall -.sign)
@@ -4067,7 +4043,6 @@
     ?>  ?=([%gall %unto *] sign)
     ::
     ::
-    :: ~&  run-app-req-eyre=p.sign
     ?>  ?=([%poke-ack *] p.sign)
     ?>  ?=([@ *] t.wire)
     ?~  p.p.sign
@@ -4095,7 +4070,6 @@
         [~ http-server-gate]
       ::  we have an error; propagate it to the client
       ::
-      ~&  eyre-watch-response-gall-error=duct
       =/  handle-gall-error
         handle-gall-error:(per-server-event event-args)
       =^  moves  server-state.ax  (handle-gall-error u.p.p.sign)
@@ -4442,6 +4416,7 @@
       --
   |=  old=axle-any
   ^+  http-server-gate
+  ~>  %spin.['load/eyre']
   ?-    -.old
   ::
   ::  adds /~/name
@@ -4580,6 +4555,7 @@
   ^-  roon
   |=  [lyc=gang pov=path car=term bem=beam]
   ^-  (unit (unit cage))
+  ~>  %spin.['scry/eyre']
   =*  ren  car
   =*  why=shop  &/p.bem
   =*  syd  q.bem
@@ -4643,9 +4619,9 @@
         ['content-range' (cat 3 'bytes */' (crip (a-co:co p.q.mime)))]^~
       `(as-octs:mimes:html 'requested range not satisfiable')
     ::
+    =/  len  +((sub q.u.range p.u.range))
     =/  =octs
-      %-  as-octs:mimes:html
-      (cut 3 [p.u.range +((sub q.u.range p.u.range))] q.q.mime)
+      [len (cut 3 [p.u.range len] q.q.mime)]
     :^  ~  ~  %noun
     !>  ^-  cache-entry
     :-  ?=(^ lyc)
