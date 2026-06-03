@@ -173,8 +173,7 @@ jobs:
               ;<  now=@da  bind:m  get-time
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
-                :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
-                ==
+                ~
               ::  :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
               ::  [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
               ::  ==
