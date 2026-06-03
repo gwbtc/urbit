@@ -174,8 +174,10 @@ jobs:
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
-                [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                 ==
+              ::  :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
+              ::  [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+              ::  ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
                 %:  send-raw-card
