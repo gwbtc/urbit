@@ -235,8 +235,13 @@ jobs:
               '''
           ==
           HOON
-          fire_and_forget_fyrd "$BUILD_PILL_FYRD"
-          echo "Pill build triggered."
+          RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
+          echo "$RESULT"
+          if echo "$RESULT" | grep -Fxq "brass: cache entries: 0"; then
+            echo "ERROR: Failed to build a brass pill."
+            exit 1
+          fi
+          echo "Pill build completed."
 
       - name: Wait for pill to appear
         timeout-minutes: 60
