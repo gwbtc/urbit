@@ -15,6 +15,7 @@ env:
   URSOCKETS_BRANCH: master
   # landscape branch mp/next/kelvin/408
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
+  DESK_DISTER: ${{ vars.DESK_DISTER }}
 
 jobs:
   # =============================================================
@@ -141,6 +142,7 @@ jobs:
           ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh gw-base ./zod
           cp -rL gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
+          printf '%s\n' "${{ env.DESK_DISTER }}" > ./zod/gw-base/desk.ship
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
       - name: Build groundwire and spv-wallet desks
@@ -154,6 +156,7 @@ jobs:
           ./automation/desk-populate.sh groundwire ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
+          printf '%s\n' "${{ env.DESK_DISTER }}" > ./zod/groundwire/desk.ship
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -163,6 +166,7 @@ jobs:
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          printf '%s\n' "${{ env.DESK_DISTER }}" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -175,6 +179,7 @@ jobs:
           chmod +x build.sh
           bash build.sh -p "${ROOT}/zod/mcp"
           popd
+          printf '%s\n' "${{ env.DESK_DISTER }}" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Populate %nostrill desk
@@ -184,6 +189,7 @@ jobs:
           # Don't clear: nostrill depends on base libs like default-agent and verb.
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-ursockets/app/ ./zod/nostrill/
+          printf '%s\n' "${{ env.DESK_DISTER }}" > ./zod/nostrill/desk.ship
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
       - name: Populate %landscape desk
@@ -194,6 +200,7 @@ jobs:
           cp -r gwbtc-landscape/desk/* ./zod/landscape/
           cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
           cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
+          printf '%s\n' "${{ env.DESK_DISTER }}" > ./zod/landscape/desk.ship
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
