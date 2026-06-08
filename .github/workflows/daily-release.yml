@@ -155,8 +155,6 @@ jobs:
           ./automation/desk-populate.sh groundwire ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
-          touch ./zod/groundwire/desk.ship
-          echo "$DESK_DISTER" > ./zod/groundwire/desk.ship
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
@@ -166,8 +164,6 @@ jobs:
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
-          touch ./zod/spv-wallet/desk.ship
-          echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
@@ -180,8 +176,6 @@ jobs:
           chmod +x build.sh
           bash build.sh -p "${ROOT}/zod/mcp"
           popd
-          touch "${ROOT}/zod/mcp/desk.ship"
-          echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Populate %nostrill desk
@@ -191,8 +185,6 @@ jobs:
           # Don't clear: nostrill depends on base libs like default-agent and verb.
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-ursockets/app/ ./zod/nostrill/
-          touch ./zod/nostrill/desk.ship
-          echo "$DESK_DISTER" > ./zod/nostrill/desk.ship
           ./automation/desk-commit.sh nostrill ./zod "$CONN_SOCK"
 
       - name: Populate %landscape desk
@@ -203,8 +195,6 @@ jobs:
           cp -r gwbtc-landscape/desk/* ./zod/landscape/
           cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
           cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
-          touch ./zod/landscape/desk.ship
-          echo "$DESK_DISTER" > ./zod/landscape/desk.ship
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
