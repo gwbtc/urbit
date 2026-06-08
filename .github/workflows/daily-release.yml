@@ -142,8 +142,6 @@ jobs:
           ./automation/desk-mount.sh gw-base ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh gw-base ./zod
           cp -rL gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
-          touch ./zod/gw-base/desk.ship
-          echo "$DESK_DISTER" > ./zod/gw-base/desk.ship
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
       - name: Build groundwire and spv-wallet desks
