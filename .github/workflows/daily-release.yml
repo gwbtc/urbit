@@ -212,6 +212,24 @@ jobs:
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
+      - name: Inspect pill desk metadata
+        run: |
+          for desk in gw-base groundwire spv-wallet mcp landscape; do
+            echo "=== %${desk} ==="
+            if [ -f "./zod/${desk}/desk.ship" ]; then
+              echo "desk.ship:"
+              cat "./zod/${desk}/desk.ship"
+            else
+              echo "desk.ship: missing"
+            fi
+            if [ -f "./zod/${desk}/desk.bill" ]; then
+              echo "desk.bill:"
+              cat "./zod/${desk}/desk.bill"
+            else
+              echo "desk.bill: missing"
+            fi
+          done
+
       - name: Build brass pill
         run: |
           source ./automation/fyrd.sh
