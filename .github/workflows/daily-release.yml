@@ -148,7 +148,7 @@ jobs:
 
       - name: Build groundwire and spv-wallet desks
         run: |
-          cd gwbtc-groundwire && make build && cd ..
+          cd gwbtc-groundwire && make groundwire spv && cd ..
 
       - name: Populate %groundwire desk
         run: |
