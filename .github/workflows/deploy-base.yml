@@ -1,0 +1,41 @@
+name: Deploy base to distribution ship
+on:
+  push:
+    branches:
+      - gw/next/kelvin/408
+    paths:
+      - 'pkg/arvo/**'
+      - '.github/workflows/deploy-base.yml'
+
+env:
+  DESK:      base
+  TMUX_TAB:  sponsor
+  SHIP_HOST: root@143.198.70.9
+  PIER_PATH: /root/.local/share/groundwire-alpha
+  DIST_PIER: watwyd-bannyt-parmep-sivpes--motweb-dovfet-nilrec-daplyd
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create desk.ship
+        run: printf '%s\n' "~${DIST_PIER}" > pkg/arvo/desk.ship
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 143.198.70.9 >> ~/.ssh/known_hosts
+
+      - name: Clear deployed desk
+        run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${DIST_PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
+
+      - name: Deploy desk
+        run: scp -r pkg/arvo/* ${SHIP_HOST}:${PIER_PATH}/${DIST_PIER}/${DESK}/
+
+      - name: Commit desk on ship
+        run: ssh ${SHIP_HOST} "tmux send-keys -t ${TMUX_TAB} '|commit %${DESK}' Enter"
