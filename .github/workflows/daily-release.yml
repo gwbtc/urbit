@@ -390,7 +390,7 @@ jobs:
       matrix:
         include:
           - target: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             zig_archive: zig-x86_64-linux-0.14.1.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
@@ -464,6 +464,11 @@ jobs:
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire-onboard
           token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Set up Python for PyInstaller
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Build gw-onboard
         run: |
