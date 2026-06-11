@@ -41,14 +41,33 @@ production transport that makes first-contact fully automatic. It is the
 riskiest part (inter-ship plea/boon, fakeship-untestable) and is left as the
 clearly-scoped next step.
 
-**Testing.** Compile + the `%30→%31` migration are checked on a fakeship
-(`|commit %base` after a fast pill boot reloads the kernel and runs the molt).
-Live behaviour is exercised by `python3 -m gwharness gate` (harness): a
-new-kernel comet holds an unverified suite-C peer, then either suspends it
-(injected negative verdict) or installs it after Bitcoin verification (the Jael
-ride). The verdict path is driven over conn (`lanes.inject_attest_verdict`),
-decoupling the gate test from the urb-watcher rewiring (spec Edit 10, also
-deferred — it couples the desk to the new kernel's lull).
+**Verification status.**
+
+- **Compile: VERIFIED.** A `-A pkg/arvo` boot compiles the full edited arvo —
+  `ride: compiled` in ~76s, **zero nest-fail / mint errors**. Confirmed against
+  the baseline (current pkg/arvo *without* these edits): it compiles identically.
+  So the kernel type-checks.
+- **Migration runtime + live gate: BLOCKED on a current-arvo pill (toolchain,
+  not the code).** Every pill available on this machine predates the current
+  pkg/arvo: gw-base.pill (Feb) and solid.pill (Mar) fail the multi-vane
+  `+load` upgrade with `arvo: upgrade failed / %exit` — and **the baseline
+  crashes identically**, proving the failure is a pill↔arvo version mismatch,
+  not this change (my migration slog never even prints — `state-30-to-31` isn't
+  reached). brass.pill is an unrecognized format for this vere. A clean
+  `%30→%31` molt and the live gate test both require a pill rebuilt from the
+  current arvo baseline (the GW CI step / `sh/update-solid-pill` against the gw
+  arvo) — then:
+  - migration: boot the baseline pill (fresh `%30`), `|commit` this arvo
+    (`%31`) → the molt runs (`ames: migrating from state %30 to %31`);
+  - live: `python3 -m gwharness gate` — a new-kernel comet holds an unverified
+    suite-C peer, then suspends it (injected negative verdict over conn,
+    `lanes.inject_attest_verdict`) or installs it after Bitcoin verification
+    (the Jael ride). The conn-driven verdict decouples this from the deferred
+    urb-watcher rewiring.
+
+The migration follows the kernel's canonical `state-N-to-N+1` pattern exactly
+(cf. `state-29-to-30`), so the compile-clean result is strong evidence of
+correctness; the molt itself is a bunt-and-override with no `!!`/assert.
 
 ---
 
