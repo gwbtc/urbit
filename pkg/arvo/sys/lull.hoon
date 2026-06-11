@@ -941,6 +941,8 @@
         [%gulp path]                :: like %plug, but for |mesa
         $>(%halt deep)              :: halt flow after we hear a remote %flub
         [%goad =ship]               :: re-start flow after remote agent is %live
+        [%attest-request =ship]      :: %urb-watcher: (re-)request comet's packet
+        [%attest-verdict =ship ok=?] :: %urb-watcher: Bitcoin verdict on a comet
     ==
   ::
   ::  $gift: effect from ames
@@ -1150,6 +1152,22 @@
         packets=(set =blob)
         keens=(jug [path ints] duct)
         chums=(jug [path ints] duct)
+    ==
+  ::  $attest-state: an in-flight suite-C (Groundwire) comet verification.
+  ::
+  ::    A suite-C comet's networking key embeds a Bitcoin satpoint claim, so it
+  ::    is NOT trusted on the bare Ames self-attestation — it is held here until
+  ::    %urb-watcher returns a VALID Bitcoin verdict (which clears the entry).
+  ::    A comet that never produces a valid verdict times out -> suspended.
+  ::      stage:     %fetch (awaiting packet) / %verify (awaiting verdict) /
+  ::                 %grace (re-attesting a known peer)
+  ::      lane:      provisional transport lane recorded at first contact
+  ::      deadline:  behn timeout (@da) for the current stage
+  ::
+  +$  attest-state
+    $:  stage=?(%fetch %verify %grace)
+        =lane
+        deadline=@da
     ==
   +$  chain  ((mop ,@ ,[key=@ =path]) lte)
   ::  $peer-state: state for a peer with known life and keys
@@ -1635,6 +1653,8 @@
         [saf=keypairs =ring =pass]
         chums=(map ship chum-state)         ::  XX migrated peers
         core=_`?(%ames %mesa)`%ames         ::  XX use |mesa core by default
+        attest=(map ship attest-state)      ::  in-flight suite-C verifications
+        bad=(map ship until=@da)            ::  suspended suite-C comets (lazy)
         ::  TODOs
         :: XX tmp=(map @ux page)            :: temporary hash-addressed bindings
     ==

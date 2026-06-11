@@ -1865,6 +1865,31 @@
     ::
     +|  %state-migrations
     ::
+    ::  +axle-30: the %30 axle, frozen for the %30->%31 attest-cycle migration.
+    ::  Structurally identical to the live axle (lull) MINUS the attest/bad
+    ::  fields; ship-state/chum-state are unchanged across this migration.
+    ::
+    +$  axle-30
+      $:  peers=(map ship ship-state)
+          =unix=duct  ::  [//ames/0v0 ~]
+          =life
+          =rift
+          =bug
+          snub=[form=?(%allow %deny) ships=(set ship)]
+          cong=[msg=_5 mem=_100.000]
+          $=  dead                            ::  dead-flow consolidation timers
+          $:  flow=[%flow (unit dead-timer)]  ::  ... for |ames
+              chum=[%chum (unit dead-timer)]  ::  ... for |mesa
+              cork=[%cork (unit dead-timer)]  ::  ... for %nacked corks
+              rots=[%rots (unit dead-timer)]  ::  ... for expiring direct routes
+          ==
+          ::
+          =server=chain                       ::  for serving %shut requests
+          [saf=keypairs =ring =pass]
+          chums=(map ship chum-state)         ::  XX migrated peers
+          core=_`?(%ames %mesa)`%ames         ::  XX use |mesa core by default
+      ==
+    ::
     +$  axle-28-29
       $:  peers=(map ship ship-state-28-29)
           =unix=duct  ::  [//ames/0v0 ~]
@@ -2527,7 +2552,8 @@
             [%27 axle-26-27]
             [%28 axle-28-29]
             [%29 axle-28-29]
-            [%30 axle]
+            [%30 axle-30]
+            [%31 axle]
         ==
     ::
     ::
@@ -2602,7 +2628,7 @@
       ~>  %slog.0^leaf/"ames: metamorphosis on %take"
       [:(weld molt-moves queu-moves take-moves) adult-gate]
     ::
-    ++  stay  [%30 larva/ames-state]
+    ++  stay  [%31 larva/ames-state]
     ++  scry  scry:adult-core
     ++  load
       |=  $=  old
@@ -2768,6 +2794,10 @@
                   state=axle-28-29
               ==
               $:  %30                            :: change key format
+                  ?(%adult %larva)               ::
+                  state=axle-30
+              ==
+              $:  %31                            :: suite-C attest cycle
                   ?(%adult %larva)               ::
                   state=axle
           ==  ==
@@ -3065,6 +3095,11 @@
         larval-gate
       ::
           [%30 *]
+        =.  cached-state  `[%30 state.old]
+        ~>  %slog.1^leaf/"ames: larva %30 reload"
+        larval-gate
+      ::
+          [%31 *]
         ?-  +<.old
           %larva  larval-gate
           %adult  (load:adult-core state.old)
@@ -3143,10 +3178,12 @@
       |^  ^+  [moz larval-core]
       ?~  cached-state  [~ larval-core]
       =*  old  u.cached-state
-      ?:  ?=(%30 -.old)
+      ?:  ?=(%31 -.old)
         ::  no state migrations left; update state, clear cache, and exit
         ::
         [(flop moz) larval-core(ames-state.adult-gate +.old, cached-state ~)]
+      ?:  ?=(%30 -.old)
+        $(cached-state `31+(state-30-to-31 +.old))
       ::
       ?:  ?=(%4 -.old)   $(cached-state `5+(state-4-to-5 +.old))
       ?:  ?=(%5 -.old)   $(cached-state `6+(state-5-to-6 +.old))
@@ -3841,6 +3878,31 @@
           %=  c
             +<  (azimuth-state-29-to-30 +<.c)
           ==
+        ==
+      ::  +state-30-to-31: add the suite-C attest cycle's `attest`/`bad` maps.
+      ::  Bunt a fresh %31 axle (attest/bad default to ~) and carry every %30
+      ::  field across by name — avoids fragile tuple-axis reconstruction.
+      ::
+      ++  state-30-to-31
+        |=  old=axle-30
+        ^-  axle
+        ~>  %slog.0^leaf/"ames: migrating from state %30 to %31"
+        =/  new=axle  *axle
+        %=  new
+          peers         peers.old
+          unix-duct     unix-duct.old
+          life          life.old
+          rift          rift.old
+          bug           bug.old
+          snub          snub.old
+          cong          cong.old
+          dead          dead.old
+          server-chain  server-chain.old
+          saf           saf.old
+          ring          ring.old
+          pass          pass.old
+          chums         chums.old
+          core          core.old
         ==
       --
     ::
@@ -4727,10 +4789,40 @@
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
           ?:  ?=([~ ~ [* * ^]] lyf)
             (emit [duct %pass /public-keys %j %public-keys sndr.shot ~ ~])
-          ::  upgrade comet to %known via on-publ-full
+          ::  CONFIDENTIAL COMETS suite gate.
+          ::
+          ::    The suite byte of a comet's networking key: 'a'->0 'b'->1
+          ::    'c'->2. A suite-C key embeds a Bitcoin satpoint claim, so the
+          ::    comet is NOT a non-Groundwire ship and must NOT be trusted on
+          ::    the bare Ames self-attestation alone — accepting it here would
+          ::    let it lie about its non-Groundwire-ness. We hold it pending a
+          ::    Bitcoin verdict from %urb-watcher; the comet is installed only
+          ::    when Jael delivers verified keys (the %public-keys ride, which
+          ::    also clears the attest entry) or %attest-verdict says ok. A
+          ::    comet that produces no valid verdict times out -> suspended.
+          ::    Suite-B/-A comets are ordinary non-Groundwire comets, accepted
+          ::    bare exactly as before.
+          ::
+          =/  crypto-suite=@ud  (sub (end 3 pass.open-packet) 'a')
+          ?:  =(crypto-suite 2)
+            ::  recently suspended (and not yet expired)? drop silently.
+            ::
+            ?:  ?&  (~(has by bad.ames-state) sndr.shot)
+                    (lth now (~(got by bad.ames-state) sndr.shot))
+                ==
+              event-core
+            =?  bad.ames-state  (~(has by bad.ames-state) sndr.shot)
+              (~(del by bad.ames-state) sndr.shot)
+            ::  record the pending verification + arm the %fetch deadline;
+            ::  do NOT install the peer yet.
+            ::
+            =.  attest.ames-state
+              (~(put by attest.ames-state) sndr.shot [%fetch lane (add now ~m15)])
+            ~>  %slog.0^leaf/"ames: holding suite-C comet {<sndr.shot>} pending Bitcoin verification"
+            (set-attest-timer sndr.shot (add now ~m15))
+          ::  suite-B/-A: ordinary comet -- upgrade to %known via on-publ-full
           ::
           =.  event-core
-            =/  crypto-suite=@ud  (sub (end 3 pass.open-packet) 'a')
             =/  keys
               (my [sndr-life.open-packet crypto-suite pass.open-packet]~)
             =/  =point
@@ -5222,6 +5314,28 @@
         ++  on-take-wake
           |=  [=wire error=(unit tang)]
           ^+  event-core
+          ::  a suite-C attest deadline fired: if the entry is still pending
+          ::  past its deadline, drive a negative verdict (tear down + suspend).
+          ::  Re-armed timers leave a stale earlier %wake, ignored by the
+          ::  now<deadline guard.
+          ::
+          ?:  ?=([%attest @ ~] wire)
+            ?^  error
+              %-  (slog 'ames: attest timer failed' u.error)
+              event-core
+            ?~  ship=`(unit @p)`(slaw %p i.t.wire)
+              %-  (slog leaf+"ames: bad attest timer wire: {<wire>}" ~)
+              event-core
+            ?~  e=(~(get by attest.ames-state) u.ship)
+              event-core
+            ?:  (lth now deadline.u.e)
+              event-core
+            =+  mesa-core=(mesa now eny rof)
+            =^  verdict-moves  ames-state
+              =<  sy-abet
+              (~(sy-attest-verdict sy:mesa-core duct) u.ship %.n)
+            (emil verdict-moves)
+          ::
           ?:  ?=([%alien @ ~] wire)
             ::  if we haven't received an attestation, ask again
             ::
@@ -5600,6 +5714,17 @@
             (send-blob for=| ship blob (~(get by peers.ames-state) ship))
           =/  =wire  /alien/(scot %p ship)
           (emit duct %pass wire %b %wait (add now ~s30))
+        ::  +set-attest-timer: arm a behn %wake for a suite-C attest deadline.
+        ::
+        ::    Fires on wire /attest/<ship>; handled in +on-take-wake, which
+        ::    drives a negative verdict if the entry is still pending. Re-armed
+        ::    on each stage transition; the wake's early-exit guard ignores any
+        ::    stale earlier timer.
+        ::
+        ++  set-attest-timer
+          |=  [=ship deadline=@da]
+          ^+  event-core
+          (emit ~[/ames] %pass /attest/(scot %p ship) %b %wait deadline)
         ::  +send-blob: fire packet at .ship and maybe sponsors
         ::
         ::    Send to .ship and sponsors until we find a direct lane,
@@ -8818,6 +8943,8 @@
                 %stun  sy-abet:(sy-stun:sy-core stun.task)
                 %dear  sy-abet:(sy-dear:sy-core +.task)
                 %tame  sy-abet:(sy-tame:sy-core ship.task)
+                %attest-verdict  sy-abet:(sy-attest-verdict:sy-core [ship ok]:task)
+                %attest-request  sy-abet:(sy-attest-request:sy-core ship.task)
                 %sift  sy-abet:(sy-sift:sy-core ships.task)
                 %spew  sy-abet:(sy-spew:sy-core veb.task)
                 %trim  sy-abet:sy-trim:sy-core
@@ -10928,6 +11055,9 @@
             =.  life.+.u.peer           life
             =.  pass.+.u.peer           pass
             =.  public-keys.+.u.peer    public-keys
+            ::  key rotation invalidates any pending suite-C attest entry
+            ::
+            =.  attest.ames-state  (~(del by attest.ames-state) ship)
             ::
             =?  chums.ames-state  ?=(%mesa -.peer)
               (~(put by chums.ames-state) ship u.peer)
@@ -10996,6 +11126,10 @@
                 ::
                 =^  new-state  sy-core
                   (insert-ship-state -.old-peer-state ship point)
+                ::  verified PKI from jael clears any pending suite-C attest
+                ::  entry (idempotent with sy-attest-verdict ok=%.y)
+                ::
+                =.  attest.ames-state  (~(del by attest.ames-state) ship)
                 ::
                 =?  sy-core  ?=([?(%ames %mesa) ~ %alien *] old-peer-state)
                   ?:  ?=(%ames -.old-peer-state)
@@ -11428,6 +11562,40 @@
             =.  route.+.u.peer  ~
             (~(put by peers.ames-state) ship u.peer)
           (sy-emit unix-duct %give %nail ship ~)
+        ::  +sy-attest-verdict: apply %urb-watcher's Bitcoin verdict on a comet.
+        ::
+        ::    Idempotent: a verdict for a ship with no in-flight entry no-ops
+        ::    (the jael %public-keys ride may already have cleared it). ok ->
+        ::    just clear the entry; the peer is/will be installed by jael.
+        ::    not-ok -> tear down any peer state and suspend for ~d1.
+        ::
+        ++  sy-attest-verdict
+          |=  [=ship ok=?]
+          ^+  sy-core
+          ?~  (~(get by attest.ames-state) ship)  sy-core
+          =.  attest.ames-state  (~(del by attest.ames-state) ship)
+          ?:  ok
+            ~>  %slog.0^leaf/"ames: comet {<ship>} attestation verified"
+            sy-core
+          =.  peers.ames-state  (~(del by peers.ames-state) ship)
+          =.  bad.ames-state    (~(put by bad.ames-state) ship (add now ~d1))
+          ~>  %slog.0^leaf/"ames: comet {<ship>} attestation failed; suspended"
+          (sy-emit unix-duct %give %nail ship ~)
+        ::  +sy-attest-request: re-verify a comet (re-attestation grace window).
+        ::
+        ::    Arms a %grace deadline so a known peer keeps working while it
+        ::    re-proves; a fresh packet arrives out-of-band (the eyre keyfile
+        ::    path) and clears this via sy-attest-verdict / the jael ride.
+        ::
+        ++  sy-attest-request
+          |=  =ship
+          ^+  sy-core
+          =/  =lane
+            ?~  e=(~(get by attest.ames-state) ship)  *lane
+            lane.u.e
+          =.  attest.ames-state
+            (~(put by attest.ames-state) ship [%grace lane (add now ~m30)])
+          (sy-emit ~[/ames] %pass /attest/(scot %p ship) %b %wait (add now ~m30))
         ::  +sy-sift: handle request to filter debug output by ship
         ::
         ++  sy-sift
@@ -13635,7 +13803,7 @@
   take:am-core
 ::  +stay: extract state before reload
 ::
-++  stay  [%30 adult/ames-state]
+++  stay  [%31 adult/ames-state]
 ::  +load: load in old state after reload
 ::
 ++  load

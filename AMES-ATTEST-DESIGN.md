@@ -1,8 +1,60 @@
 # Workstream A — Ames suite gate + Bitcoin attest cycle
 
-Branch: `gw/cc-attest` (off `gw/next/kelvin/408`). Status: **designed,
-arm-anchored; lull types drafted; kernel cycle is the next-session
-implementation.** This document pins every change to an exact arm so the diff
+Branch: `gw/cc-attest` (off `gw/next/kelvin/408`).
+
+## Implementation status (Stage 1 — landed)
+
+The security-critical core is **implemented** in `pkg/arvo/sys/{lull,vane/ames}.hoon`:
+
+- **`%30 → %31` state migration** — `attest=(map ship attest-state)` and
+  `bad=(map ship @da)` added to the axle (lull:1619); frozen `axle-30` +
+  `state-30-to-31` (bunt-and-override, not the `%=`-add the spec sketched —
+  that can't add faces) + molt/load/stay wiring.
+- **The suite gate** (`on-hear-open`) — reads the suite byte; a suite-C comet
+  that isn't already Jael-known is **never bare-accepted**. It is held in
+  `attest` with a `~m15` deadline (no peer install), and slogged
+  (`ames: holding suite-C comet <who> pending Bitcoin verification`). Suite-B/-A
+  comets are accepted bare, unchanged. Recently-suspended comets (`bad`, lazy
+  expiry) are dropped.
+- **Verdict handlers** (`sy-attest-verdict` / `sy-attest-request`) + the task
+  router + lull `$task` constructors. ok → clear the hold (the peer is/will be
+  installed by the Jael ride); not-ok → suspend for `~d1` + tear down + `%nail`.
+- **Idempotent clear on the Jael ride** (`on-publ-full` / `on-publ-rekey`) — the
+  primary SUCCESS path: `%urb-watcher` verifies the packet → feeds Jael → Jael
+  `%public-keys` installs the peer **and** clears the `attest` hold. This reuses
+  exactly the path C-M2 already proved works.
+- **Behn timeout** (`on-take-wake`, `[%attest @ ~]`) — a hold that outlives its
+  deadline drives a negative verdict (suspend); early-wake guard makes re-arms
+  safe.
+
+**Design choice: strict, not provisional.** The original sketch installed the
+suite-C peer provisionally (for `/atst` transport) then tore it down on failure.
+We instead **do not install at all** until verified — strictly matching "a
+suite-C comet must not be accepted on the bare self-attestation." The peer is
+installed only via the Jael ride after Bitcoin verification.
+
+**Stage 2 (deferred): the `/atst` auto-fetch transport** (spec Edits 5-7 —
+`request-atst` plea, `fo-sink-plea` responder, `on-take-boon` relay). In Stage 1
+the comet's off-chain packet reaches `%urb-watcher` via the existing eyre POST
+(how the harness and Causeway already deliver keyfiles); `/atst` is the
+production transport that makes first-contact fully automatic. It is the
+riskiest part (inter-ship plea/boon, fakeship-untestable) and is left as the
+clearly-scoped next step.
+
+**Testing.** Compile + the `%30→%31` migration are checked on a fakeship
+(`|commit %base` after a fast pill boot reloads the kernel and runs the molt).
+Live behaviour is exercised by `python3 -m gwharness gate` (harness): a
+new-kernel comet holds an unverified suite-C peer, then either suspends it
+(injected negative verdict) or installs it after Bitcoin verification (the Jael
+ride). The verdict path is driven over conn (`lanes.inject_attest_verdict`),
+decoupling the gate test from the urb-watcher rewiring (spec Edit 10, also
+deferred — it couples the desk to the new kernel's lull).
+
+---
+
+## Original design (full cycle, for reference)
+
+This document pins every change to an exact arm so the diff
 is reviewable and so the cycle can be implemented and compile-checked against a
 fakeship (`urbit -F zod -B bin/solid.pill -A pkg/arvo`, then `|commit %base`).
 
