@@ -3281,7 +3281,9 @@
         ::
             moz
           ^-  (list move)
-          =/  old-30  (state-29-to-30 +.old)
+          ::  old-30 is used as a CURRENT ames-state for the ev cork-peek below,
+          ::  so migrate all the way to the live axle (%31); chums are preserved.
+          =/  old-30  (state-30-to-31 (state-29-to-30 +.old))
           %-  ~(rep by chums.old-30)
           |=  [[=ship per-sat=chum-state] moz=_moz]
           ?.  ?=([%known *] per-sat)
@@ -3854,7 +3856,7 @@
       ::
       ++  state-29-to-30
         |=  old=axle-28-29
-        ^-  axle
+        ^-  axle-30
         ~>  %slog.0^leaf/"ames: migrating from state %29 to %30"
         %=    old
             priv
@@ -13736,6 +13738,7 @@
     ::
       $?  %vega  %init  %born  %snub  %spew  %stun  %gulp
           %sift  %plug  %dear  %init  %tame  %cong
+          %attest-verdict  %attest-request
       ==
     (call:me-core sample)
     ::  common tasks
