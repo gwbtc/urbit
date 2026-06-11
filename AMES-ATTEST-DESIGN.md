@@ -47,16 +47,21 @@ clearly-scoped next step.
   `ride: compiled` in ~76s, **zero nest-fail / mint errors**. Confirmed against
   the baseline (current pkg/arvo *without* these edits): it compiles identically.
   So the kernel type-checks.
-- **Migration runtime + live gate: BLOCKED on a current-arvo pill (toolchain,
-  not the code).** Every pill available on this machine predates the current
-  pkg/arvo: gw-base.pill (Feb) and solid.pill (Mar) fail the multi-vane
-  `+load` upgrade with `arvo: upgrade failed / %exit` — and **the baseline
-  crashes identically**, proving the failure is a pill↔arvo version mismatch,
-  not this change (my migration slog never even prints — `state-30-to-31` isn't
-  reached). brass.pill is an unrecognized format for this vere. A clean
-  `%30→%31` molt and the live gate test both require a pill rebuilt from the
-  current arvo baseline (the GW CI step / `sh/update-solid-pill` against the gw
-  arvo) — then:
+- **Migration runtime + live gate: BLOCKED on a kelvin mismatch (environment,
+  not the code).** ROOT CAUSE: the local `gw-base.pill` is **`%zuse 410`** (a
+  Feb build from a since-reverted 410 state — note the kelvin Revert/Reapply
+  churn in the urbit git log), while ALL current gw source — `gw/cc-attest`,
+  `gw/next/kelvin/408`, `gw/next/kelvin/408-merge` — is **`%zuse 408`**. So the
+  local pill matches no current source: a `-A` boot is a 410→408 *downgrade*
+  (crashes the multi-vane `+load`; the baseline crashes identically, exonerating
+  this change), and the brass-from-`%gw-base`-desk recipe fails with
+  `clay: wait-for-kelvin need=410 have=408` (can't build a 408 desk on the 410
+  kernel). No 408 pill exists locally, and the local vere (`bm/fake-comets`)
+  can't fresh-bootstrap one (no `-B` → it downloads the kelvin-incompatible
+  stock pill). The clean unblock is **a 408 `gw-base.pill` built from the
+  current arvo** (the GW CI `groundwire-build.yml`, which fresh-boots
+  `urbit -F zod -A pkg/arvo` on the `tinnus-test-hack` vere and fyrds
+  `(brass:pill sys dez ...)`). Then:
   - migration: boot the baseline pill (fresh `%30`), `|commit` this arvo
     (`%31`) → the molt runs (`ames: migrating from state %30 to %31`);
   - live: `python3 -m gwharness gate` — a new-kernel comet holds an unverified
