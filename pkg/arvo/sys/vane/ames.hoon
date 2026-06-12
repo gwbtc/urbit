@@ -4723,6 +4723,14 @@
           ::
           ?:  =(%keys content.shot)
             on-hear-keys
+          ::  CONFIDENTIAL COMETS /atst transport: a plaintext request for our
+          ::  full self-attestation packet, or a held comet's response to ours.
+          ::  Both are bare packets keyed by content / the pending %fetch state;
+          ::  no peer is installed (the comet stays untrusted until verified).
+          ?:  =(%atst-req content.shot)
+            on-hear-atst-req
+          ?:  ?=([~ %fetch *] (~(get by attest.ames-state) sndr.shot))
+            on-hear-atst-resp
           ?:  ?&  ?=(%pawn (clan:title sndr.shot))
                   !?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
               ==
@@ -4765,6 +4773,27 @@
           =/  =blob  (attestation-packet sndr.shot 1)
           %-  send-blob
           [for=| sndr.shot blob (~(get by peers.ames-state) sndr.shot)]
+        ::  +on-hear-atst-req: serve our full self-attestation packet (/atst)
+        ::
+        ::    A peer that holds us as an unverified suite-C comet asks for our
+        ::    full self-attestation. We scry our own registered handler agent
+        ::    (%urb-watcher) for our keyfile and reply, as plaintext, to the
+        ::    requester's lane. We do NOT install the requester as a peer.
+        ::
+        ++  on-hear-atst-req
+          ~/  %on-hear-atst-req
+          |=  [=lane =shot dud=(unit goof)]
+          ^+  event-core
+          =+  %^  ev-trace  msg.veb  sndr.shot
+              |.("requested self-attestation")
+          ?.  =(%pawn (clan:title our))
+            event-core
+          =/  kf=(unit *)  scry-handler-keyfile
+          ?~  kf
+            event-core
+          ?:  ?=(~ unix-duct)
+            event-core
+          (emit unix-duct %give %send lane (atst-resp-blob sndr.shot u.kf))
         ::  +on-hear-open: handle receipt of plaintext comet self-attestation
         ::
         ++  on-hear-open
@@ -4821,7 +4850,11 @@
             =.  attest.ames-state
               (~(put by attest.ames-state) sndr.shot [%fetch lane (add now ~m15)])
             ~>  %slog.0^leaf/"ames: holding suite-C comet {<sndr.shot>} pending Bitcoin verification"
-            (set-attest-timer sndr.shot (add now ~m15))
+            =.  event-core  (set-attest-timer sndr.shot (add now ~m15))
+            ::  fetch the comet's full self-attestation packet over Ames (the
+            ::  /atst transport), then hand it to the registered handler; the
+            ::  comet stays held until a Bitcoin verdict arrives.
+            (atst-fetch sndr.shot lane)
           ::  suite-B/-A: ordinary comet -- upgrade to %known via on-publ-full
           ::
           =.  event-core
@@ -4854,6 +4887,28 @@
             ==
           ::
           event-core
+        ::  +on-hear-atst-resp: receive a held comet's self-attestation (/atst)
+        ::
+        ::    The comet we are holding (stage %fetch) returned its full
+        ::    self-attestation packet. Advance to %verify, re-arm the deadline,
+        ::    and hand the opaque packet to the registered handler agent. A
+        ::    re-sent bare open-packet (no %atst-resp tag) is ignored.
+        ::
+        ++  on-hear-atst-resp
+          ~/  %on-hear-atst-resp
+          |=  [=lane =shot dud=(unit goof)]
+          ^+  event-core
+          =/  e  (~(get by attest.ames-state) sndr.shot)
+          ?.  ?=([~ %fetch *] e)  event-core
+          =/  gen  (cue content.shot)
+          ?.  ?=([%atst-resp *] gen)  event-core
+          =/  packet=*  +.gen
+          =+  %^  ev-trace  msg.veb  sndr.shot
+              |.("got self-attestation")
+          =.  attest.ames-state
+            (~(put by attest.ames-state) sndr.shot [%verify lane.u.e (add now ~m15)])
+          =.  event-core  (set-attest-timer sndr.shot (add now ~m15))
+          (atst-poke-handler sndr.shot packet)
         ::  +on-hear-shut: handle receipt of encrypted packet
         ::
         ++  on-hear-shut
@@ -5727,6 +5782,53 @@
           |=  [=ship deadline=@da]
           ^+  event-core
           (emit ~[/ames] %pass /attest/(scot %p ship) %b %wait deadline)
+        ::  +handler-agent: the registered Confidential-Comets handler agent.
+        ::
+        ::    For the launch Bitcoin protocol this is %urb-watcher (the spec's
+        ::    "registered handler agent"). A future multi-protocol scheme would
+        ::    replace this constant with a (map crypto-suite dap) lookup.
+        ::
+        ++  handler-agent  `term`%urb-watcher
+        ::  +atst-fetch: request a held comet's full self-attestation (/atst).
+        ::
+        ::    Fire a plaintext %atst-req at the lane the comet attested from.
+        ::    No peer/channel is installed: the comet stays an untrusted alien
+        ::    until %urb-watcher returns a Bitcoin verdict.
+        ::
+        ++  atst-fetch
+          |=  [=ship =lane]
+          ^+  event-core
+          =?  event-core  ?=(^ unix-duct)
+            (emit unix-duct %give %send lane (atst-req-blob ship))
+          event-core
+        ::  +atst-poke-handler: hand a fetched packet to the registered handler.
+        ::
+        ::    A vane->gall %deal poke of mark %noun; the packet rides as an
+        ::    opaque noun ([%attest-packet ship packet]) so ames needs no
+        ::    dependency on the groundwire self-attestation structure. The
+        ::    handler verifies it and reports an [%attest-verdict ship ok] task.
+        ::
+        ++  atst-poke-handler
+          |=  [=ship packet=*]
+          ^+  event-core
+          %-  emit
+          :*  ~[/atst/poke/(scot %p ship)]  %pass  /atst/poke/(scot %p ship)
+              %g  %deal  [our our /ames]  handler-agent
+              %poke  noun+!>([%attest-packet ship packet])
+          ==
+        ::  +scry-handler-keyfile: read our own self-attestation keyfile from
+        ::  the registered handler agent (a (unit self-attestation), opaque).
+        ::
+        ++  scry-handler-keyfile
+          ^-  (unit *)
+          =/  res  (rof [~ ~] /ames %gx `beam`[[our handler-agent %da now] /keyfile/noun])
+          ?~  res  ~
+          ?~  u.res  ~
+          ::  the keyfile is a (unit self-attestation): ~ (atom) = none,
+          ::  [~ packet] (cell) = serve the packet. Keep it opaque to ames.
+          =/  val=*  q.q.u.u.res
+          ?@  val  ~
+          `+.val
         ::  +send-blob: fire packet at .ship and maybe sponsors
         ::
         ::    Send to .ship and sponsors until we find a direct lane,
@@ -5830,6 +5932,33 @@
               ^=   sndr-life  life.ames-state
               ^=        rcvr  her
               ^=   rcvr-life  her-life
+          ==
+        ::  +atst-req-blob: a plaintext request for .her's full self-attestation.
+        ::
+        ::    A bare packet tagged %atst-req in content; the receiver serves its
+        ::    keyfile via +on-hear-atst-req. Not encrypted, not acked.
+        ::
+        ++  atst-req-blob
+          |=  her=ship
+          ^-  blob
+          %-  etch-shot
+          :*  [our her]  req=&  sam=&
+              (mod life.ames-state 16)  `@`1
+              origin=~  content=`@`%atst-req
+          ==
+        ::  +atst-resp-blob: our full self-attestation packet, for .her.
+        ::
+        ::    A bare packet whose content is (jam [%atst-resp packet]); the
+        ::    requester decodes it in +on-hear-atst-resp. Not encrypted/acked.
+        ::    The packet is opaque to ames (the handler's keyfile noun).
+        ::
+        ++  atst-resp-blob
+          |=  [her=ship packet=*]
+          ^-  blob
+          %-  etch-shot
+          :*  [our her]  req=|  sam=&
+              (mod life.ames-state 16)  `@`1
+              origin=~  content=(jam [%atst-resp packet])
           ==
         ::  +sendkeys-packet: generate a request for a self-attestation.
         ::

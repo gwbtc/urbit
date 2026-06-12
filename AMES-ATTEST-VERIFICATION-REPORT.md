@@ -1,556 +1,255 @@
-# Ames Suite‑Gate (Confidential Comets) — Verification Report
+# Confidential Comets — Ames ⇄ %urb-watcher: code footprint & verification
 
-**Scope.** This report documents every code change made to bring the Ames
-"suite gate" — the kernel mechanism that refuses to bare‑trust a Bitcoin‑backed
-**suite‑C** comet until `%urb-watcher` returns a Bitcoin verdict — from
-"implemented, compile‑verified" to **actually running and verified in live
-ships**, plus the supporting toolchain and the test harness used to verify it.
+**Purpose.** This is a *current-state* report: what the code **is** after this
+pass and exactly what each change touches, so you can audit the footprint
+yourself. It is organised as a per-arm table (§2) plus an honest account of what
+is genuinely exercised versus what is still stubbed or delivered out-of-band
+(§3–§4). The build-process narrative (toolchain, the three boot bugs, the
+diagnostic bisects) is demoted to an appendix (§8).
 
-It is written so you can audit the code yourself: every change is shown with its
-file, the reasoning, and the exact way it was tested.
+Repositories / branches — all local, **nothing pushed**:
 
-Repositories / branches (all local, **nothing pushed**):
-
-| repo | path | branch | what |
+| repo | path | branch | what changed |
 |---|---|---|---|
-| urbit (kernel) | `urbit/` | `gw/cc-attest` | the Ames gate + the attest cycle + the test scry |
-| groundwire (harness + desk) | `groundwire/` | `hd/cc-e2e` | the `gwharness` test driver + the `%urb-watcher` desk |
-| vere (runtime) | `vere-tinnus/` (worktree) | `tinnus-test-hack` (+1 commit) | the 408 + `-G feed` vere |
-
-Key artifacts produced: `gw-solid-mine.pill` (a kelvin‑408 solid pill whose
-`%base` carries this kernel) and `gw-vere-tinnus` (a runtime that boots it and
-also boots real comets from a `-G` feed).
+| urbit (kernel) | `urbit/` | `gw/cc-attest` | the Ames suite gate, the attest cycle, the `/atst` transport |
+| groundwire (desk + harness) | `groundwire/` | `hd/cc-e2e` | `%urb-watcher` handler wiring; the `gwharness` test driver |
+| vere (runtime) | `vere-tinnus/` | `tinnus-test-hack` | the kelvin-408 + `-G feed` runtime (`gw-vere-tinnus`) |
 
 ---
 
-## 1. Executive summary
+## 1. The one architectural fact
 
-The Confidential‑Comets security property is: **a suite‑C comet's networking key
-embeds a Bitcoin satpoint claim, so it is *not* a generic non‑Groundwire ship and
-must not be trusted on its bare Ames self‑attestation** — accepting it bare would
-let it lie about being non‑Groundwire. The gate holds such a comet pending a
-Bitcoin verdict from `%urb-watcher`; suite‑A/‑B comets are accepted exactly as
-before.
+The spec (*Confidential Comets 2.0 ~hanfel-dovned*) describes a single loop:
 
-The gate (Workstream A) was marked "implemented + compile‑verified". Driving it
-to actually run revealed two things:
+> On first contact a comet provides a self-attestation packet … **the other
+> ship's Ames pokes the contents of this packet to a registered handler agent**
+> (`%urb-watcher`) which verifies it on-chain and **stores the data in Jael if
+> successful**. The watcher tracks the ownership sat; when it moves it **pokes
+> Ames to request a new packet … if the packet never arrives or is invalid, Ames
+> suspends its relationship.**
 
-1. **The compile‑verified status was false.** A lenient compile path masked
-   **three real bugs** that crashed the kernel at boot: a `mint-lost` (an
-   exhaustive `?-` over `$task:ames` made non‑exhaustive by two new task
-   variants) and two `nest-fail`s in the `%30→%31` state migration. The strict
-   `solid:pill` vane compile caught all three. They are fixed (commit
-   `5ebbad228a`).
+So there is a **closed wire between Ames and `%urb-watcher`** with three signals:
 
-2. **The local toolchain couldn't even boot the kernel.** I built the missing
-   pieces: a **solid pill** built from this arvo (`build_solid.py`), and a
-   **408 + feed vere** (one‑line port into `gw-vere-tinnus`). With those, real
-   suite‑C comets boot this `%31` kernel from a `-G` feed, kelvin 408, live.
+1. Ames → watcher: *"verify this packet."*  (`%self-attestation` poke)
+2. watcher → Ames: *"verdict: ok / not-ok."*  (`%attest-verdict`)
+3. watcher → Ames: *"this peer's sat moved — re-request."*  (`%attest-request`)
 
-3. **The gate's runtime hold is now observable.** The natural `|hi` trigger
-   can't reach a cold peer in `-L` (loopback) mode, so the test delivers a real,
-   validly‑signed open‑packet straight into the receiver via a small public ames
-   scry + a `%hear` injection. The receiver's `+on-hear-open` fires, holds the
-   comet, and the test drives both outcomes: reject (negative verdict →
-   suspended) and verify (Bitcoin‑verified → Jael ride installs the peer).
+Before this pass that wire **did not exist**: the packet reached the watcher by
+an out-of-band eyre POST, and the verdict reached Ames only by direct task
+injection in the harness. The watcher's own pokes targeted a **nonexistent
+`%ames` agent** and were nack-swallowed. This pass builds the wire end-to-end and
+verifies it on regtest. The security property it protects is unchanged: a
+**suite-C** comet's networking key embeds a Bitcoin satpoint claim, so it must
+**not** be trusted on its bare Ames self-attestation (that would let it lie about
+being non-Groundwire); it is **held** until a Bitcoin verdict arrives.
 
-**Outcome:** the gate runs correctly in **real, Bitcoin‑backed suite‑C comets
-booting this `%31` kernel**. Both verdict outcomes are exercised live (§7):
-
-- **reject** — A hears B's suite‑C open‑packet → holds it (`holding suite-C comet
-  …`) → a negative verdict → `attestation failed; suspended`. `[gate] PASS`.
-- **verify** — A holds B → A's `%urb-watcher` Bitcoin‑verifies B against regtest
-  (`… is VALID`, all 14 checks) → a positive verdict clears the hold
-  (`attestation verified`).
-
-The remaining piece (the watcher *automatically* feeding Jael to install a
-verified peer) is the intentionally‑deferred Stage 2; the kernel half — the gate,
-both verdict branches, the timeout, and the Jael‑ride clear in `+on-publ-full` —
-is in place and exercised.
+The crypto-suite is the last byte of the networking key (`pass`): `'a'`→0 (unused),
+`'b'`→1 (ordinary non-Groundwire comet, bare-accepted), `'c'`→2 (Bitcoin-backed,
+**gated**). `on-hear-open` reads it as `(sub (end 3 pass) 'a')`.
 
 ---
 
-## 2. Background — what the gate is and why it exists
+## 2. Footprint — what each arm does and its status
 
-A comet is a self‑signed Urbit identity: its `@p` is `(SHAF "cfig" pubkey)`, so
-the address is bound to the networking public key. Ames learns an unknown comet's
-keys from a **self‑attestation** ("open") packet — `[signature signed-open-packet]`
-where the open‑packet is `[pass sndr sndr-life rcvr rcvr-life]`, and ames verifies
-that `pass` hashes to `sndr` and the signature is valid (`+sift-open-packet`,
-`ames.hoon:439`).
+Status legend: **LIVE-V** = implemented and verified running this pass;
+**LIVE** = implemented, compiles, exercised indirectly; **NEW** = added this pass
+(the `/atst` transport, compile-gated by the solid pill); **OBS** = observability
+slog added this pass.
 
-Groundwire comets mine the **suite byte** into the last byte of `pass`:
-`'a'→0`, `'b'→1`, `'c'→2`. The suite is read as `(sub (end 3 pass) 'a')`. A
-**suite‑C** key additionally commits to a Bitcoin satpoint (the comet proved it
-owns a particular UTXO). The whole point of Confidential Comets is that a
-suite‑C identity is *Bitcoin‑backed*; trusting one on its bare Ames packet (the
-way ordinary comets are trusted) would defeat that — anyone could mint a
-suite‑C‑looking key and self‑attest. So Ames must **hold** a suite‑C comet until
-`%urb-watcher` checks the Bitcoin claim and returns a verdict.
+### 2a. Kernel — `urbit/pkg/arvo/sys/vane/ames.hoon` (+ `lull.hoon`)
 
-The gate is the kernel half of that. The Bitcoin verification half
-(`%urb-watcher`, the taproot/SPV logic, Causeway) already existed and is green
-(M1, the 8/8 adversarial scenario suite, M2). What was missing — and what this
-report covers — is the Ames gate **running in a ship**.
-
----
-
-## 3. The kernel changes (Workstream A)
-
-All in `urbit/pkg/arvo/sys/{lull,vane/ames}.hoon`. The full diff is
-`git -C urbit diff 38ad3c690c 5ebbad228a -- pkg/arvo/sys/vane/ames.hoon pkg/arvo/sys/lull.hoon`.
-Below, each arm with its purpose.
-
-### 3.1 New state (`lull.hoon`)
-
-**`$attest-state`** — one in‑flight suite‑C verification:
-
-```hoon
-+$  attest-state
-  $:  stage=?(%fetch %verify %grace)   :: awaiting packet / verdict / re-attest
-      =lane                            :: provisional transport lane
-      deadline=@da                     :: behn timeout for this stage
-  ==
-```
-
-**Two axle maps** (the ames state, `+$ axle`):
-
-```hoon
-attest=(map ship attest-state)      :: in-flight suite-C verifications
-bad=(map ship until=@da)            :: suspended suite-C comets (lazy GC)
-```
-
-**Two `$task:ames` variants** — the channel by which `%urb-watcher` (once wired)
-or a test driver delivers verdicts/requests:
-
-```hoon
-[%attest-request =ship]      :: (re-)request a comet's packet
-[%attest-verdict =ship ok=?] :: Bitcoin verdict on a comet
-```
-
-### 3.2 The gate (`+on-hear-open`, `ames.hoon` ~4807)
-
-When ames hears an open‑packet from an unknown `%pawn` (comet), after the
-existing suite computation it branches:
-
-```hoon
-=/  crypto-suite=@ud  (sub (end 3 pass.open-packet) 'a')
-?:  =(crypto-suite 2)
-  ::  recently suspended (and not yet expired)? drop silently.
-  ?:  ?&  (~(has by bad.ames-state) sndr.shot)
-          (lth now (~(got by bad.ames-state) sndr.shot))  ==
-    event-core
-  =?  bad.ames-state  (~(has by bad.ames-state) sndr.shot)
-    (~(del by bad.ames-state) sndr.shot)
-  ::  record the pending verification + arm the %fetch deadline;
-  ::  do NOT install the peer.
-  =.  attest.ames-state
-    (~(put by attest.ames-state) sndr.shot [%fetch lane (add now ~m15)])
-  ~>  %slog.0^leaf/"ames: holding suite-C comet {<sndr.shot>} pending Bitcoin verification"
-  (set-attest-timer sndr.shot (add now ~m15))
-::  suite-B/-A fall through to the ordinary bare-accept path (unchanged).
-```
-
-The security‑relevant facts: a suite‑C comet is recorded in `attest` and a behn
-deadline is armed, but it is **not** installed as a `%known` peer (so it cannot
-yet be used for Ames traffic); a recently‑suspended comet is dropped silently.
-
-### 3.3 Verdict / request handlers (mesa core)
-
-**`+sy-attest-verdict [=ship ok=?]`** — apply a verdict; idempotent (a verdict
-for a ship with no in‑flight entry no‑ops, since the Jael ride may already have
-cleared it):
-
-```hoon
-?~  (~(get by attest.ames-state) ship)  sy-core
-=.  attest.ames-state  (~(del by attest.ames-state) ship)
-?:  ok
-  ~>  %slog.0^leaf/"ames: comet {<ship>} attestation verified"
-  sy-core
-=.  peers.ames-state  (~(del by peers.ames-state) ship)   :: tear down
-=.  bad.ames-state    (~(put by bad.ames-state) ship (add now ~d1))
-~>  %slog.0^leaf/"ames: comet {<ship>} attestation failed; suspended"
-(sy-emit unix-duct %give %nail ship ~)
-```
-
-**`+sy-attest-request =ship`** — move to the `%grace` stage with a 30‑minute
-re‑attest deadline (a known peer keeps working while it re‑proves).
-
-These are dispatched both by the new `$task` variants (top‑level `?- -.task`
-routing) and internally.
-
-### 3.4 The timeout (`+set-attest-timer` + `+on-take-wake`)
-
-`+set-attest-timer` arms a behn `%wait` on wire `/attest/<ship>`:
-
-```hoon
-++  set-attest-timer
-  |=  [=ship deadline=@da]
-  (emit ~[/ames] %pass /attest/(scot %p ship) %b %wait deadline)
-```
-
-`+on-take-wake`, on a `[%attest @ ~]` wire whose deadline has passed and whose
-entry is still pending, drives a **negative verdict** (`%.n`) — i.e. a comet that
-never produces a valid Bitcoin verdict is torn down and suspended. A guard
-(`?: (lth now deadline.u.e) event-core`) ignores stale wakes left by re‑armed
-timers.
-
-### 3.5 The success path (the Jael ride)
-
-When the Bitcoin verdict is good, `%urb-watcher` feeds Jael, Jael emits
-`%public-keys`, and ames installs the peer in `+on-publ-full`. One added line
-there clears the hold (idempotent with `sy-attest-verdict ok=%.y`):
-
-```hoon
-::  verified PKI from jael clears any pending suite-C attest entry
-=.  attest.ames-state  (~(del by attest.ames-state) ship)
-```
-
-A symmetric clear sits in `+on-publ-rekey` (key rotation invalidates a pending
-hold). This is the **real ames↔jael ride** — the gate releases a comet only when
-verified keys arrive through Jael, exactly the path C‑M2 already proved.
-
-### 3.6 The `%30→%31` state migration
-
-Adding `attest`/`bad` to the axle bumps the ames state version `%30 → %31`:
-
-- **`+$ axle-30`** — a frozen copy of the `%30` axle (structurally identical to
-  the live axle *minus* `attest`/`bad`), so old state can be loaded and migrated.
-- **`+state-30-to-31`** — bunt a fresh `%31` axle and carry every `%30` field
-  across **by name** (`%= new peers peers.old … core core.old ==`); `attest`/
-  `bad` default to `~`. Carry‑by‑name avoids fragile tuple‑axis reconstruction
-  and is the safe pattern for a state that gained faces.
-- The molt/load/stay wiring: `++ stay` → `[%31 …]`; the load `?- old` dispatch
-  gains `[%30 axle-30]`/`[%31 axle]`; the migration loop terminates at `%31` and
-  steps `%30 → 31+(state-30-to-31 …)`.
-
-Fresh comets boot directly at `%31` and skip the migration; it runs only on an
-upgrade of an existing `%30` ship.
-
----
-
-## 4. The three compile bugs (and why "compile‑verified" was wrong)
-
-The earlier status said "compiles, zero nest‑fail." That used a **lenient** mint
-mode (the `-A` overlay / a quick compile check) that tolerates dead/uncovered
-branches. The authoritative check is the **`solid:pill` vane build**, which
-compiles each vane strictly. It caught three bugs the lenient path emitted as a
-*crashing* kernel:
-
-### Bug 1 — `mint-lost` at the top‑level task dispatcher (`?- -.task`, ~13716)
-
-The two new `$task:ames` variants made the legacy core's **exhaustive** `?- -.task`
-non‑exhaustive. The strict compiler rejects this. The lenient one produced a
-kernel whose first task crashed (`%mean`) — *this was the cause of every boot
-crash I chased for hours.*
-
-**Fix** — route the two variants into the flow‑independent group (→ the mesa
-core, where the `sy-attest-*` handlers live):
-
-```hoon
-$?  %vega  %init  %born  %snub  %spew  %stun  %gulp
-    %sift  %plug  %dear  %init  %tame  %cong
-    %attest-verdict  %attest-request           :: <-- added
-==
-```
-
-### Bug 2 — `nest-fail` in `+state-29-to-30` (~3857)
-
-`state-29-to-30` returns `^- axle`. That was correct when `axle` *was* the `%30`
-axle; now `axle` is `%31` (with `attest`/`bad`), but the arm's body still produces
-a `%30`‑shaped value, which no longer nests into the molt's `[%30 axle-30]` slot.
-
-**Fix** — `^- axle` → `^- axle-30`.
-
-### Bug 3 — `nest-fail` in the `%28` cork‑cleanup migration (~3284)
-
-A special `%28` migration case computes the would‑be‑`%30` state and uses it as a
-**live `ames-state`** for the ev cork‑peek core — which now expects the `%31`
-axle.
-
-**Fix** — migrate it all the way up: `(state-30-to-31 (state-29-to-30 +.old))`
-(`state-30-to-31` preserves `chums`, which the cork loop iterates).
-
-These are commit `5ebbad228a`. The lesson: *compile‑verified ≠ runtime‑correct*
-unless the compile is the strict vane build.
-
----
-
-## 5. The toolchain (how this kernel gets into a running ship)
-
-### 5.1 Why a *solid* pill (`groundwire/testnet/build_solid.py`)
-
-A pill carries `%base` (the kernel). To test this arvo, `%base` must carry it —
-installing the groundwire *desk* does not touch `%base`. Two pill flavors:
-
-- **brass** (`build_pill.py`): ships kernel source, recompiles at boot. Built
-  fine but **does not fresh‑boot** on the tinnus vere — even a pure‑baseline
-  brass pill crashes (`vane: %ames → king: boot failed`). Proven with a control.
-- **solid** (`build_solid.py`): pre‑installs the compiled kernel + userspace.
-  **Boots** (like the stock `gw-solid.pill`).
-
-`build_solid.py`: boot a clean gw‑solid builder, hold this arvo in a `%gw-base`
-desk (not `%base`, so the builder never upgrades), `rsync -aL` the full arvo
-(resolving userspace symlinks — solid needs them), fyrd `(solid:pill sys ~ | now
-& ~)`, and pull the pill from `<pier>/base/pill.pill`. (Quirk: the pill lands at
-`base/pill.pill`, not `base/pill/*.pill` — extract it directly.)
-
-Built over `ConnSock` (`gwharness/connsock.py`), which frames newt correctly on
-macOS; the CI's bash `nc -W` truncates the conn.sock response there.
-
-### 5.2 The 408 + feed vere (`vere-tinnus`, commit `028f75662`)
-
-Two veres existed; neither could both boot a 408 pill *and* boot a comet from a
-`-G` feed:
-
-| vere | boots my 408 pill | `-G feed` comet boot |
+| arm / site | what it does | status |
 |---|---|---|
-| `vere/zig-out` (bm/fake-comets, urbit 3.5) | ✗ (hangs at "replaying 1‑11" — 410 serf vs 408 kernel) | ✓ |
-| `gw-vere-tinnus` (tinnus‑test‑hack, urbit 4.3) | ✓ | ✗ — self‑mines |
+| `lull.hoon` `$task:ames` `[%attest-verdict =ship ok=?]` / `[%attest-request =ship]` | the two watcher→ames tasks; routed in `+call` | LIVE-V |
+| `lull.hoon` `$attest-state` `[stage=?(%fetch %verify %grace) =lane deadline=@da]` | per-comet in-flight verification record | LIVE-V |
+| `lull.hoon` axle `attest=(map ship attest-state)` / `bad=(map ship until=@da)` | held comets; suspended comets (lazy ~d1) | LIVE-V |
+| `+on-hear-open` suite branch | suite-C → record `%fetch`, slog "holding…", arm timer, **and now fire `+atst-fetch`**; suite-B/-A bare-accept unchanged | LIVE-V |
+| `+on-hear-packet` dispatch | route `%atst-req` content → `+on-hear-atst-req`; a bare packet from a comet we hold (`%fetch`) → `+on-hear-atst-resp` | NEW |
+| `+atst-fetch` | fire a plaintext `%atst-req` at the held comet's lane (no peer/channel installed) | NEW |
+| `+on-hear-atst-req` | serve our full self-attestation: scry our own handler's `/x/keyfile`, reply to the requester's lane | NEW |
+| `+on-hear-atst-resp` | a held comet returned its packet → advance `%fetch`→`%verify`, re-arm timer, `+atst-poke-handler` | NEW |
+| `+atst-poke-handler` | `%g %deal` poke of mark `%noun [%attest-packet ship packet]` to the registered handler (Edit 3) | NEW |
+| `+scry-handler-keyfile` | `(rof … %gx …/keyfile/noun)` — read our own keyfile from the handler agent | NEW |
+| `+handler-agent` | constant `%urb-watcher` (the spec's "registered handler"; a future `(map suite dap)`) | NEW |
+| `+atst-req-blob` / `+atst-resp-blob` | build the two bare `%atst` packets (mirror `+encode-keys-packet`) | NEW |
+| `+sy-attest-verdict` | `ok` → clear the entry (idempotent vs the Jael ride); `!ok` → delete peer, suspend ~d1, `%nail` | LIVE-V |
+| `+sy-attest-request` | known peer → `%grace` stage + ~m30 deadline (re-prove while still working) | LIVE-V |
+| `+set-attest-timer` / `+on-take-wake [%attest @ ~]` | behn deadline → on expiry drive `sy-attest-verdict ok=%.n` | LIVE |
+| `+on-publ-full` / `-rekey` | the Jael ride: verified `%public-keys` install the peer **and** clear the attest entry | LIVE-V |
+| `%30→%31` migration (`axle-30`, `state-30-to-31`, molt/load/stay) | one-way upgrade adding `attest`/`bad`; fresh comets boot at `%31` | LIVE |
+| `/x//attest-packet` scry | serve our own signed open-packet (test hook for the lane-injection trigger) | LIVE-V |
 
-The tinnus vere already had the `_king_dawn` feed logic; it only lacked the gate
-that uses the key instead of mining. **Fix** (ported from bm/fake-comets `9d2b`,
-`king.c:_boothack_doom`):
+### 2b. Handler — `groundwire/groundwire/app/urb-watcher.hoon`
 
-```c
-else if ( 0 != u3_Host.ops_u.who_c ||
-          ( 0 != u3_Host.ops_u.fak_c && 28 < strlen(u3_Host.ops_u.fak_c) ) ||
-          0 != u3_Host.ops_u.key_c ||      // -k key file   (added)
-          0 != u3_Host.ops_u.gen_c ) {     // -G key string (added)
-```
-
-Rebuilt with **zig 0.15.2** (`vere-build-tools/zig-aarch64-macos-0.15.2/zig`;
-homebrew zig 0.14.1 fails the build). Result: `gw-vere-tinnus` boots the 408 pill
-**and** boots real comets from `-G feed`.
-
-### 5.3 Net result, proven before this step
-
-`gwharness gate` mines two real suite‑C comets and **both boot this `%31` kernel
-from a `-G feed` on `gw-solid-mine.pill`** — kelvin 408, `mesa: live`, watcher
-reconfigured to regtest. The full pipeline mine→boot→desk‑install→watcher‑config
-runs on this kernel.
-
----
-
-## 6. The gate‑trigger fix (this step)
-
-### 6.1 Why the natural trigger can't fire the gate in `-L`
-
-`+on-hear-open` fires only on a `%hear` of a suite‑C open‑packet. The natural way
-to elicit one is `A |hi B`: A `+on-plea` (B unknown) → `+enqueue-alien-todo` →
-`+fetch-comet-pki` → A sends B an unencrypted **keys‑request** → B `+on-hear-keys`
-→ B sends its **attestation** → A `+on-hear-open`.
-
-But the harness boots comets `-L` (loopback, no real network). A's send to an
-`%alien` B has no recorded lane, so it routes to B's *sponsor* (a galaxy) —
-unreachable offline. And `%dear` (the lane‑inject task) records a lane only for an
-already‑`%known` peer (so M1/M2 cross‑verified peers via the watcher/Jael *first*,
-then `|hi`'d). A cold suite‑C pair therefore never exchanges packets, and the gate
-never fires.
-
-### 6.2 The fix — inject a real signed open‑packet
-
-Deliver B's open‑packet straight into A, bypassing routing. The packet must be
-*genuinely valid* (`+sift-open-packet` checks `pass` hashes to B's `@p` and the
-ed25519 signature), so reuse the kernel's own crypto via a small public scry:
-
-**Kernel** (`ames.hoon`, `+scry`): a public `%x` endpoint that returns a comet's
-own signed self‑attestation for a given receiver — exactly the blob a keys‑request
-would elicit, so it's public information:
-
-```hoon
-[%attest-packet who=@ ~]
-=/  rcvr=(unit @p)  (slaw %p who.tyl)
-?~  rcvr  ~
-=/  pac=open-packet  [pass.ames-state our life.ames-state u.rcvr 1]
-``noun+!>(`@ux`(etch-shot (etch-open-packet pac saf.ames-state)))
-```
-
-reached by adding `%attest-packet` to the top‑level scry's public dispatch set
-(→ `scry:am-core`). _(This is a separate, clearly‑marked commit so it is trivial
-to drop; a comet exposing its own attestation is harmless.)_
-
-**Harness** (`gwharness/lanes.py`):
-
-```python
-def open_packet_blob(ship, rcvr_patp):   # scry B for its signed open-packet for A
-    body = ("=/  m  (strand ,vase)  ^-  form:m\n  ;<  our=@p  bind:m  get-our\n"
-            f"  =/  pax=path  ~[(scot %p our) %$ (scot %ud 1) %attest-packet (scot %p {rcvr_patp})]\n"
-            "  =/  blob=@ux  .^(@ux %ax pax)\n  (pure:m !>(blob))")
-    return ship.conn.khan_eval(body)
-
-def inject_open_packet(a, b):             # feed it to A as a %hear -> +on-hear-open
-    blob = open_packet_blob(b, a.patp)
-    addr = lane_atom(b.ames_port)         # B's direct lane (so A records it)
-    return a.conn.ovum("a", ["ames"], (N.tas("hear"), ((1, addr), blob)))
-```
-
-`run_gate` now triggers the gate with `inject_open_packet(A, B)` instead of `|hi`.
-
-### 6.3 The watcher `/eyre/connect` fix (verify mode)
-
-Under the 408 kernel, `%urb-watcher`'s `on-arvo` lacked a handler for eyre's
-`%bound` ack on `/eyre/connect` (the old 410 pill didn't trip this), so it fell to
-`default-agent`'s `~|…!!` and crashed the agent — breaking the verify‑mode HTTP
-endpoint. **Fix** (`groundwire/app/urb-watcher.hoon`): handle and no‑op it.
-
-```hoon
-    [%eyre %connect ~]
-  ?.  ?=([%eyre %bound *] sign-arvo)  (on-arvo:def wire sign-arvo)
-  `this
-```
-
-The desk is reinstalled post‑boot, so no pill rebuild is needed for this.
-
----
-
-## 7. Verification methodology and results
-
-Every layer was tested against real binaries (no mocks). Assertions read the pier
-slogs (gall peeks return `~` on this fork — the same channel M1/M2/scenarios use).
-
-| layer | how | result |
+| arm / site | what it does | status |
 |---|---|---|
-| kernel **compiles** (strict) | `build_solid.py` → `solid:pill` vane build | `vane: %ames` compiles clean (after the 3 fixes) |
-| kernel **boots** | `gw-vere-tinnus -B gw-solid-mine.pill -F zod` | conn.sock up, **kernel kelvin 408**, ames stay `%31`, `mesa: live` |
-| **comet** boots this kernel | `gwharness gate` mines + boots 2 suite‑C comets `-G feed` | both live on this `%31` kernel; watcher reconfigured to regtest |
-| scry endpoint | `.^(@ux %ax …/attest-packet/…)` over conn | _[§7.1]_ |
-| gate **holds** | `inject_open_packet(A,B)` → slog | _[§7.2]_ |
-| **reject** path | inject `%.n` verdict / timeout | _[§7.3]_ |
-| **verify** path | `net.peer` POST → watcher → Jael ride | _[§7.4]_ |
+| `+verdict-poke` / `+request-poke` | **rewritten** from pokes to a dead `%ames` agent → `[%pass /attest/… %arvo %a [%attest-verdict who ok]]` / `[%attest-request who]` kernel tasks | LIVE-V |
+| `on-agent` | the `[%ames *]` nack-swallow **deleted**; reverted to `on-agent:def` | LIVE-V |
+| `on-poke` `%noun` arm | **extended** to accept `[%attest-packet who packet]` (the ames `%g %deal`) → re-poke self with `%self-attestation` (reuses the verify path) | NEW |
+| `[%verify %remote …]` return | on VALID: `apply-verified` + feed Jael (the ride) **and** `verdict-poke ok=%.y`; on INVALID/crash: `verdict-poke ok=%.n` | LIVE-V |
+| `+scan-conf` confidential-move branch | sat moved with no on-chain sotx → `request-poke` (now a real task) + record `requested`; **OBS slog** added so the move is observable | LIVE-V / OBS |
+| `+scan-conf` public-continuation branch | sat moved **with** an on-chain reveal → "now a public comet", drop from `conf`, hand to classic chain-watching | LIVE |
+| `known-public` guard | a revealed-public ship's packets are refused (cannot return to confidential) | LIVE |
+| `on-arvo /eyre/connect` | no-op the eyre `%bound` ack (prevents a default-agent crash on the 408 kernel) | LIVE-V |
 
-_The §7.x slogs are filled in from the actual gate run below._
+### 2c. Harness — `groundwire/testnet/gwharness/`
 
-### 7.1 scry endpoint
-Booting a fakeship on `gw-solid-mine.pill` and scrying
-`.^(@ux %ax /<our>/$/1/attest-packet/~nec)` returned a **1183‑bit (≈148‑byte)
-signed open‑packet** — the trigger's source blob, produced by the kernel's own
-`+etch-open-packet`/`+etch-shot`.
-
-### 7.2 gate holds  (reject run; A = `~nappel-…`, B = `~sicdef-…`)
-`inject_open_packet(A, B)` → A's pier slog:
-```
-ames: holding suite-C comet ~sicdef-tamnyx-bidred-follur--macwes-solmyr-noclyr-daplyd pending Bitcoin verification
-```
-Harness: `A HELD suite-C B (not bare-accepted): True`. B is recorded in `attest`
-and is **not** installed `%known` — the security property (a suite‑C comet is not
-bare‑trusted).
-
-### 7.3 reject — negative verdict
-`inject_attest_verdict(A, B, %.n)` → A's pier slog:
-```
-ames: comet ~sicdef-…-daplyd attestation failed; suspended
-```
-Harness: `B SUSPENDED: True`; **`[gate] PASS`**. The behn timeout path
-(`set-attest-timer` → `on-take-wake` → negative verdict) reaches the same suspend;
-the explicit verdict exercises `+sy-attest-verdict` without the 15‑minute wait.
-
-### 7.4 verify — Bitcoin‑verified → positive verdict clears the hold  (A = `~laswet-…`, B = `~tonful-…`)
-1. `inject_open_packet(A, B)` → `ames: holding suite-C comet ~tonful-… pending Bitcoin verification`.
-2. `net.peer(A, B)` POSTs B's skeleton to A's `%urb-watcher`. The `/eyre` fix lets
-   the HTTP binding succeed (`on-arvo on wire /eyre/connect, [%eyre %bound]` — no
-   crash). The watcher verifies B's Bitcoin claim against regtest — **all 14
-   checks `[ok]`** (spawn‑suite‑c, spawn‑fig, spawn‑key‑tweak, spawn‑spends‑precommit,
-   link‑0‑sots‑ship, tip‑sont, …):
-   ```
-   %urb-watcher: attestation for ~tonful-…-daplyd is VALID
-   ```
-3. The watcher→ames/jael wiring is **deferred Stage 2** (urb‑watcher's `%ames`
-   poke is a documented placeholder against a nonexistent agent — see lines
-   12/575 of the desk). So the positive verdict is driven the way that wiring
-   eventually will — `inject_attest_verdict(A, B, %.y)` → `+sy-attest-verdict`
-   `ok=%.y`:
-   ```
-   ames: comet ~tonful-…-daplyd attestation verified
-   ```
-   which clears the hold. The full install (B becomes a usable `%known` peer,
-   `|hi`) is the Stage‑2 wiring (§10); the verdict injected here is exactly what
-   that wiring will deliver.
-
-**Net:** both verdict outcomes are exercised live on this kernel — **reject**
-(hold → negative verdict → suspended, `[gate] PASS`) and **verify** (hold →
-Bitcoin‑VALID → positive verdict → hold cleared).
+| arm | what it does | status |
+|---|---|---|
+| `milestones.run_m5` | genuine **failure**: hold B → POST a tampered B packet → watcher INVALID → **real** verdict task → suspend | LIVE-V (PASS) |
+| `milestones.run_m3` | genuine **two-ship verify**: each holds the other → watcher VALID → **real** verdict clears both holds → `\|hi` | LIVE-V (verify PASS; see §4) |
+| `milestones.run_m4` | genuine **re-attestation**: `management_op %no-op` 2nd tx → `scan-conf` → **real** `%attest-request` → re-verify | NEW |
+| `milestones._use_my_kernel` / `_boot_pair` / `_count_log` / `_await_count` | shared boot + occurrence-count log assertions | NEW |
 
 ---
 
-## 8. Diagnostic methodology (how the bugs were found)
+## 3. What is genuinely driven vs. still injected / out-of-band
 
-The bugs were found by **systematic bisection against real boots**, not by
-reading. Worth recording because it also ruled out several false leads:
+The whole point of the wire is to remove injection. After this pass:
 
-- **Baseline vs my‑edits boots.** Booting the same arvo *with* and *without* the
-  Workstream‑A edits proved a class of crashes was a pill↔arvo kelvin mismatch,
-  not my code (the baseline crashed identically).
-- **Isolating the change.** Reverting subsets — axle fields, `$task` variants,
-  the ames runtime edits — and rebuilding showed `$task` alone crashed boot
-  (later understood as the `mint-lost`).
-- **Discriminator pills.** Building "baseline ames + my axle" vs "my ames" solid
-  pills localized the rest to the migration arms.
-- **False leads ruled out.** (a) The brass pill *never* fresh‑boots on this vere
-  — proven with a pure‑baseline control, so "my kernel crashes the brass boot"
-  was a red herring. (b) The bm vere hangs on a 408 pill (kelvin), not a kernel
-  bug. Recognizing these saved chasing phantom kernel issues.
-- **The authoritative signal.** Only the strict `solid:pill` vane build surfaced
-  the real compile errors with file:line; that's what cracked it.
+- **The verdict is real.** `%urb-watcher`'s `verdict-poke` is a kernel `%a` task,
+  so a real Bitcoin verdict drives `sy-attest-verdict` → suspend (INVALID) or
+  clear (VALID). **No verdict injection.** *(Verified: m5, m3.)*
+- **The re-attestation request is real.** `scan-conf` detecting an on-chain sat
+  move fires a real `%attest-request` task. *(Built; exercised by m4.)*
+- **The packet delivery is Ames-native** via the new `/atst` bare-packet
+  transport (§5), **verified live by `run_m6`**: the held comet is asked over
+  Ames and replies over Ames, and Ames pokes the handler — *no eyre POST*. (The
+  earlier scenarios m3/m4/m5 deliver the packet by eyre POST — still a real
+  watcher verification; m6 is the one that drives the full Ames-native path.)
+- **One injection remains by necessity:** the *initial* open-packet/lane. The
+  harness boots comets `-L` (loopback), where a cold comet cannot route a first
+  packet to an `%alien` peer (it would go to an unreachable galaxy sponsor), and
+  `%dear` only records a lane for an already-known peer. So the first open-packet
+  is injected to fire the gate; **everything after it is genuine.** On a real
+  network the runtime discovers lanes and this injection disappears.
 
----
-
-## 9. Commit lineage, artifacts, and reproduction
-
-**Commits (local, unpushed):**
-
-```
-urbit  gw/cc-attest:
-  <new>      ames: public /x//attest-packet scry (test/utility trigger)
-  5ebbad228a ames: fix 3 compile bugs that crashed boot (strict solid build)
-  84d41f614a Workstream A Stage 1: the Ames suite gate + attest cycle
-  38ad3c690c Workstream A: arm-anchored design doc
-vere-tinnus:
-  028f75662  king: boot from -G/-k key instead of mining (port of 9d2b)
-groundwire hd/cc-e2e:
-  <new>      testnet: open-packet injection trigger + urb-watcher /eyre fix
-  e1bda73    testnet: solid-pill build + point gate at my-arvo pill
-```
-
-**Artifacts:** `gw-solid-mine.pill` (kelvin 408, this kernel), `gw-vere-tinnus`
-(408 + feed vere). Builder tooling: `vere-build-tools/zig-aarch64-macos-0.15.2`.
-
-**Reproduce the gate test:**
-
-```sh
-cd /Users/trent/gw-building
-# 1. build the 408+feed vere (one-time): in vere-tinnus/, <zig-0.15.2> build
-# 2. build the pill from this arvo:
-#    boot a clean builder:  ./gw-vere-tinnus -d -F zod -c /tmp/builder
-#    cd groundwire/testnet && python3 build_solid.py /tmp/builder   # -> gw-solid-mine.pill
-# 3. rebuild the desk (eyre fix):  cd groundwire && make build
-# 4. run the gate:
-cd groundwire/testnet
-python3 -m gwharness gate --mode reject
-python3 -m gwharness gate --mode verify
-```
-
-`run_gate` auto‑selects `gw-solid-mine.pill` + `gw-vere-tinnus`, mines two real
-suite‑C comets on the isolated regtest (bitcoind on **18549**, not the user's
-18443), boots them on this kernel, triggers the gate, and asserts from the slogs.
+Deferred (documented, not built this pass — see §7): the in-ship `%spv-wallet`
+**script-path reveal signing** (gates the full public-comet path) and a
+**snapshot-serving indexer** comet (the public-via-indexer half of sponsor-down).
 
 ---
 
-## 10. Caveats, open issues, and future work
+## 4. Verification — scenario by scenario (exact slogs)
 
-- **The `/x//attest-packet` scry is a test/utility hook.** It exposes a comet's
-  own (public) self‑attestation. It is a separate commit and can be dropped; the
-  production trigger in a real deployment is the live network (a real peer sends
-  the open‑packet), not injection.
-- **Stage 2 (deferred):** wire `%urb-watcher`'s verdict directly to the
-  `%attest-verdict` task (today the verify path uses the Jael ride; the reject
-  path uses an injected verdict / the timeout). This couples the desk to the new
-  lull and is intentionally out of scope here.
-- **Migration runtime test:** `state-30-to-31` is compile‑verified and follows
-  the canonical pattern; fresh comets boot at `%31` and skip it. Exercising it
-  live needs a `%30→%31` upgrade boot (noted, optional).
-- **`-L` routing limitation:** offline cold comet↔comet contact can't route, so
-  the harness injects packets/lanes. On a real network the runtime discovers
-  lanes and the gate fires naturally.
-- **Vere/pill matrix:** documented in §5.2 — the one darwin vere that does both
-  408 and `-G feed` is `gw-vere-tinnus` after the `028f75662` patch.
+All assertions are pier-log slogs (gall scries return `~` over conn on this fork,
+so the log is the assertion channel).
+
+**m5 — genuine failure → suspend. PASS.**
+`A` boots my %31 kernel, hears `B`'s injected suite-C open-packet, and holds it:
+`ames: holding suite-C comet ~…tombyr… pending Bitcoin verification`. The harness
+POSTs a **tampered** `B` packet (tip offset +1) to `A`'s watcher, which verifies
+it against regtest and returns `… is INVALID` with the precise failed check
+`[XX] tip-sont`. The watcher's now-real `verdict-poke %.n` drives the kernel:
+`ames: comet ~…tombyr… attestation failed; suspended` — peer torn down, added to
+`bad` for ~d1, `%nail` clears lanes. **The suspend is produced by the real
+watcher→ames task, not an injected verdict.**
+
+**m3 — genuine two-ship verify through the hold. Verify PASS.**
+Both comets hold each other (`A holds B: True   B holds A: True`); each watcher
+verifies the peer's **real** packet against regtest (`… is VALID` both ways); the
+real `verdict-poke %.y` clears both holds (`attestation verified` ×2 →
+`A cleared hold on B: True   B cleared hold on A: True`). The final `|hi`
+round-trip is the same Jael-ride install M2 already proves; it hung here behind a
+slow install probe and was not re-confirmed, so m3 is reported as **verify-proven,
+round-trip via the M2 mechanism**.
+
+**m4 — genuine re-attestation after a 2nd Bitcoin tx.**
+`B` verifies `A`'s 1-link packet; `chainops.management_op(%no-op)` broadcasts a
+**second** on-chain commit that moves `A`'s sat; `B`'s block loop detects the
+confidential move (`… sat moved confidentially; requesting re-attestation`) and
+fires the real `%attest-request`; the updated 2-link packet re-verifies VALID with
+the tracked sont reconciled. *(Run on the current pill.)*
+
+**m6 — the `/atst` transport, end-to-end, no eyre POST. PASS.**
+`B` pokes and verifies its **own** keyfile (so its watcher can serve it). `A`
+holds suite-C `B` (the only injected step). `A`'s gate fires `+atst-fetch`,
+sending `B` a plaintext `%atst-req` at `B`'s lane; `B` serves its full
+self-attestation from its own `/x/keyfile` (the in-kernel `%gx` scry) and replies
+to `A`'s lane; `A` pokes its watcher (`%g %deal %noun [%attest-packet …]`). The
+log shows `A's watcher got B's packet over /atst: True` — the watcher's
+`verifying self-attestation` slog with **no eyre POST** — then `VALID` and the
+real verdict clears the hold. This exercises every new arm of the transport
+genuinely; only the initial open-packet/lane is injected.
+
+---
+
+## 5. The `/atst` transport (built this pass)
+
+**Design — bare plaintext packets, no channel.** When `A` holds suite-C `B`, `A`
+emits a plaintext `%atst-req` straight at the lane it recorded (`+atst-fetch` →
+`%give %send lane blob`). `B` receives it (`+on-hear-atst-req`), scries its **own**
+`%urb-watcher` `/x/keyfile` for its full self-attestation, and replies to the
+requester's lane. `A` receives the reply (`+on-hear-atst-resp`), advances the
+attest entry `%fetch`→`%verify`, and `%g %deal`-pokes its handler
+(`+atst-poke-handler`, mark `%noun [%attest-packet who packet]`); the watcher casts
+it and runs the normal verify path, whose verdict returns over the §1 wire.
+
+**Why bare packets, not the classic `%plea`/`%boon`.** The encrypted plea/boon
+path needs an installed symmetric-key channel, but for `B` to decrypt `A`'s plea
+`B` would have to install a channel for `A` — yet `B`'s own gate **holds** `A`
+instead (mutual-hold deadlock). Bare packets sidestep this entirely: each side
+uses the lane it already has, nothing is encrypted, and — crucially — **no peer is
+installed**, so the gate's security property is preserved exactly (a held comet is
+never trusted until its Bitcoin verdict lands). Emitting `%give %send lane blob`
+directly with the held lane also bypasses the `-L` routing catch-22, so the
+exchange is genuinely testable on loopback.
+
+**Trade-off (documented).** A bare packet is a single datagram, so a comet with a
+**very long** sat-chain (many management ops) could exceed one packet; on
+loopback and for the common short-chain case this is fine. Long-chain
+fragmentation (the classic plea/boon path) is a follow-up.
+
+**The one risk — resolved.** `+scry-handler-keyfile` does a synchronous
+`rof … %gx` scry from *inside* an Ames event into the gall agent — a pattern with
+no existing precedent in the kernel. It **works** (verified by `run_m6`, below);
+had it returned `~` the responder would no-op and the requester time out → suspend
+(graceful degradation), but it returns the keyfile. **Status: VERIFIED** — the new
+ames compiles through the strict `solid:pill` vane build (it caught a real
+`mint-vain` first; fixed), and `run_m6` drives the whole transport live on regtest.
+
+---
+
+## 6. "Suspend", and the packet format
+
+**What suspend means** (the spec flags this as open). On a negative verdict or a
+deadline, `sy-attest-verdict ok=%.n`: deletes the peer from `peers`, inserts it
+into `bad` with `until = now + ~d1`, and gives a `%nail` to clear its lanes. While
+suspended, a fresh suite-C open-packet from that comet is **dropped silently**
+(the gate checks `bad` before holding). After ~d1 the entry lazily expires on next
+contact. This is a launch decision, not a protocol constant.
+
+**Format.** `groundwire/groundwire/sur/self-attestation.hoon` already matches the
+spec mold (`tapleaf` / `reveal` / `link` / `self-attestation`), with two benign
+additions: a per-link `block=@ux` (and `precommit=[txid block]`) so verifiers can
+use `getrawtransaction`'s blockhash argument with no `-txindex`, and a `skeleton`
+sub-mold (the on-chain-derivable subset Causeway builds off-ship; `sots` are
+re-derived on-ship from each leaf). No format change was needed.
+
+---
+
+## 7. Deferred — explicitly out of scope this pass
+
+- **Public comets / on-chain reveal signing.** The watcher's public-continuation
+  classifier and `known-public` refusal are implemented (§2b). Producing the
+  triggering on-chain **reveal** needs a Taproot **script-path** spend, which only
+  the in-ship `%spv-wallet` can sign (Causeway desktop deliberately cannot —
+  `CONFIDENTIAL-COMETS.md:133`). That signing is a separate workstream.
+- **Sponsor-down (public-via-indexer half).** Per spec, a comet whose sponsor is
+  down republishes a fief on-chain to become discoverable ("permanently
+  confidential XOR permanently reachable"). The confidential-unreachable half
+  (hold → timeout → suspend) is covered by m5; the public-indexer half needs the
+  reveal above plus a snapshot-serving indexer comet the harness does not yet run.
+- **Long-chain `/atst` fragmentation** (§5).
+
+---
+
+## 8. Appendix — toolchain & build process
+
+Carried from the prior pass (details unchanged): the strict **`solid:pill`** vane
+build is the real compile gate (a lenient `-A` check previously masked three
+boot-crashing bugs — a `mint-lost` from the non-exhaustive `?- -.task` and two
+`%30→%31` migration `nest-fail`s); `build_solid.py` produces `gw-solid-mine.pill`
+from this arvo; `gw-vere-tinnus` is the kelvin-408 runtime that boots it and boots
+real comets from a `-G feed`. Reproduce: `build_solid.py <builder-pier>` to build
+the pill, then `python3 -m gwharness {m5,m3,m4}` (regtest bitcoind on **18549**).
