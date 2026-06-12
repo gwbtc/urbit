@@ -8521,6 +8521,19 @@
           ?+    tyl  ~
             ::  public namespaces
             ::
+            ::  +attest-packet: this comet's own signed self-attestation
+            ::  (open-packet) for receiver .who.  Public info -- identical to
+            ::  what a +sendkeys-packet request elicits -- exposed so a test
+            ::  harness can deliver a real, validly-signed open-packet to a
+            ::  peer's +on-hear-open (the suite-gate entry point) without the
+            ::  cold comet<->comet routing that -L disallows.
+            ::
+              [%attest-packet who=@ ~]
+            =/  rcvr=(unit @p)  (slaw %p who.tyl)
+            ?~  rcvr  ~
+            =/  pac=open-packet  [pass.ames-state our life.ames-state u.rcvr 1]
+            ``noun+!>(`@ux`(etch-shot (etch-open-packet pac saf.ames-state)))
+            ::
               [%fine %shut kef=@ enc=@ ~]
             =/  key-idx  (slav %ud kef.tyl)
             =/  key  (got:on:chain server-chain.ames-state (slav %ud kef.tyl))
@@ -13828,9 +13841,9 @@
           =(%x car)
       ==
     =/  tyl=(pole knot)  s.bem
-    ?:  ?=(?(%mess %publ %shut %veri %pawn %fine %chum %muth) -.tyl)
+    ?:  ?=(?(%mess %publ %shut %veri %pawn %fine %chum %muth %attest-packet) -.tyl)
       ?-    -.tyl
-          %fine                                    (scry:am-core sample)
+          ?(%fine %attest-packet)                  (scry:am-core sample)
           ?(%mess %publ %shut %veri %pawn %muth)   (scry:me-core sample)
       ::
           %chum
