@@ -154,12 +154,13 @@ round-trip is the same Jael-ride install M2 already proves; it hung here behind 
 slow install probe and was not re-confirmed, so m3 is reported as **verify-proven,
 round-trip via the M2 mechanism**.
 
-**m4 — genuine re-attestation after a 2nd Bitcoin tx.**
+**m4 — genuine re-attestation after a 2nd Bitcoin tx. PASS.**
 `B` verifies `A`'s 1-link packet; `chainops.management_op(%no-op)` broadcasts a
 **second** on-chain commit that moves `A`'s sat; `B`'s block loop detects the
 confidential move (`… sat moved confidentially; requesting re-attestation`) and
-fires the real `%attest-request`; the updated 2-link packet re-verifies VALID with
-the tracked sont reconciled. *(Run on the current pill.)*
+**fires the real `%attest-request`** task; the updated 2-link packet re-verifies
+VALID with the tracked sont reconciled as an interior link (`[ok] tracked-tip` —
+proving genuine re-verification, not a fresh verify).
 
 **m6 — the `/atst` transport, end-to-end, no eyre POST. PASS.**
 `B` pokes and verifies its **own** keyfile (so its watcher can serve it). `A`
