@@ -150,9 +150,9 @@ jobs:
           cp -rL gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
-      - name: Build groundwire and spv-wallet desks
+      - name: Build groundwire desk
         run: |
-          cd gwbtc-groundwire && make groundwire spv && cd ..
+          cd gwbtc-groundwire && cd ..
 
       - name: Populate %groundwire desk
         run: |
@@ -162,15 +162,6 @@ jobs:
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
-
-      - name: Populate %spv-wallet desk
-        run: |
-          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
-          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh spv-wallet ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
-          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
         run: |
@@ -202,7 +193,6 @@ jobs:
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
-                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
