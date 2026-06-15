@@ -152,7 +152,7 @@ jobs:
 
       - name: Build groundwire desk
         run: |
-          cd gwbtc-groundwire && cd ..
+          cd gwbtc-groundwire && make groundwire && cd ..
 
       - name: Populate %groundwire desk
         run: |
