@@ -159,8 +159,7 @@ jobs:
           ./automation/desk-create.sh groundwire "$CONN_SOCK"
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
+          cp -rL gwbtc-groundwire/dist-groundwire/* ./zod/groundwire/
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       - name: Populate %mcp desk
