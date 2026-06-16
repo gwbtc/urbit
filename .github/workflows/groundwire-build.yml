@@ -197,8 +197,10 @@ jobs:
           "${ROOT}/automation/desk-create.sh" vitriol "$CONN_SOCK"
           "${ROOT}/automation/desk-mount.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
           "${ROOT}/automation/desk-populate.sh" vitriol "${ROOT}/zod"
-          zig build -Ddesk=./zod/vitriol/
-          ./automation/desk-commit.sh vitriol ./zod "$CONN_SOCK"
+          pushd "${ROOT}/gwbtc-vitriol"
+          zig build -Ddesk="${ROOT}/zod/vitriol/"
+          popd
+          "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
