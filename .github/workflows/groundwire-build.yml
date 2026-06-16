@@ -184,13 +184,21 @@ jobs:
           popd
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
+      - name: Install Zig 0.15.2
+        run: |
+          curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
+          tar xf "${{ matrix.zig_archive }}"
+          ZIG_DIR="${{ matrix.zig_archive }}"
+          ZIG_DIR="${ZIG_DIR%.tar.xz}"
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+
       - name: Populate %vitriol desk
         run: |
           ROOT="${GITHUB_WORKSPACE:-$PWD}"
           "${ROOT}/automation/desk-create.sh" vitriol "$CONN_SOCK"
           "${ROOT}/automation/desk-mount.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
           "${ROOT}/automation/desk-populate.sh" vitriol "${ROOT}/zod"
-          cp -rL gwbtc-vitriol/desk/* ./zod/vitriol/
+          zig build -Ddesk=./zod/vitriol/
           ./automation/desk-commit.sh vitriol ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
