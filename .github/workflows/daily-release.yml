@@ -13,6 +13,7 @@ env:
   COMET_MINER_BRANCH: tinnus-feed
   URBIT_MCP_BRANCH: main
   URSOCKETS_BRANCH: master
+  VITRIOL_BRANCH: master
   # landscape branch mp/next/kelvin/408
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DESK_DISTER: ${{ vars.DESK_DISTER }}
@@ -80,6 +81,14 @@ jobs:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
           path: gwbtc-urbit-mcp
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout Vitriol
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/vitriol
+          ref: ${{ env.VITRIOL_BRANCH }}
+          path: gwbtc-vitriol
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout gwbtc/ursockets (nostrill desk)
@@ -186,6 +195,26 @@ jobs:
           echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
+      - name: Install Zig 0.15.2
+        run: |
+          curl -LO "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
+          tar xf zig-x86_64-linux-0.15.2.tar.xz
+          ZIG_DIR=zig-x86_64-linux-0.15.2
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+
+      - name: Populate %vitriol desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" vitriol "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" vitriol "${ROOT}/zod"
+          pushd "${ROOT}/gwbtc-vitriol"
+          zig build -Ddesk="${ROOT}/zod/vitriol/"
+          popd
+          touch "${ROOT}/zod/vitriol/desk.ship"
+          echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
+          "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
+
       - name: Populate %nostrill desk
         run: |
           ./automation/desk-create.sh nostrill "$CONN_SOCK"
@@ -232,6 +261,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
+                    [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                     ::  [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                 ==
@@ -631,6 +661,7 @@ jobs:
           - \`groundwire\`
           - \`spv-wallet\`
           - \`mcp\`
+          - \`vitriol\`
           - \`nostrill\`
 
           Each tarball contains:
