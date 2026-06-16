@@ -10,11 +10,13 @@ on:
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
-  GROUNDWIRE_BRANCH: main
-  URCRYPT_BRANCH: gw/cmp-pub
   VERE_BRANCH: gw/next/kelvin/408
+  URCRYPT_BRANCH: gw/cmp-pub
   COMET_MINER_BRANCH: tinnus-feed
+  # desks
+  GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
+  VITRIOL_BRANCH: master
 
 jobs:
   # =============================================================
@@ -101,6 +103,14 @@ jobs:
           path: gwbtc-urbit-mcp
           token: ${{ secrets.GH_PAT || github.token }}
 
+      - name: Checkout Vitriol
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/vitriol
+          ref: ${{ env.VITRIOL_BRANCH }}
+          path: gwbtc-vitriol
+          token: ${{ secrets.GH_PAT || github.token }}
+
       # -- Boot fake ~zod --
 
       - name: Download pill builder pill
@@ -174,6 +184,15 @@ jobs:
           popd
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
+      - name: Populate %vitriol desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" vitriol "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" vitriol "${ROOT}/zod"
+          cp -rL gwbtc-vitriol/desk/* ./zod/vitriol/
+          ./automation/desk-commit.sh vitriol ./zod "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -193,6 +212,7 @@ jobs:
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
+                    [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
