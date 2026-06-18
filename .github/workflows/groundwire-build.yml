@@ -330,7 +330,7 @@ jobs:
           cd gwbtc-vere
           for attempt in 1 2 3; do
             echo "Build attempt $attempt/3..."
-            if zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }}; then
+            if zig build -Doptimize=ReleaseFast -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }}; then
               break
             elif [ $attempt -eq 3 ]; then
               # Last resort: try vendoring zlib if GitHub is rate-limiting
@@ -348,7 +348,7 @@ jobs:
                      r'\1\n            .path = \"./ext/zlib-src\",', c)
           with open('build.zig.zon','w') as f: f.write(c)
           "
-                zig build -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }} || exit 1
+                zig build -Doptimize=ReleaseFast -Dunsafe-dawn=true -Dtarget=${{ matrix.zig_target }} || exit 1
               else
                 exit 1
               fi
