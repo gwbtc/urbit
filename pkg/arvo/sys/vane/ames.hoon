@@ -11252,10 +11252,11 @@
             %-  %+  %*(ev-tace ev her ship)  sun.veb.bug.ames-state
                 |.("hear new sponsor={<sponsor>}")
             ::
-            =?  sy-core  =(our ship)
+            =/  our-saxo=(list @p)  sy-get-sponsors
+            =?  sy-core  ?=(^ (find ~[ship] our-saxo))
               ?~  unix-duct
                 sy-core
-              (sy-emit unix-duct %give %saxo sy-get-sponsors)
+              (sy-emit unix-duct %give %saxo our-saxo)
             ?~  sponsor
               %-  (slog leaf+"ames: {(scow %p ship)} lost sponsor, ignoring" ~)
               sy-core
