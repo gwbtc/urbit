@@ -12375,8 +12375,6 @@
           ?.  ?=(%pawn (clan:title her.name))
             al-core
           ::
-          ?>  ?=([%publ lyf=%'1' res=*] pat.name)
-          ::
           =+  path=(validate-path +>.pat.name)
           ?>  ?=(poof-pith path)
           %-  %^  al-tace  rcv.veb.bug.ames-state  her.name
@@ -12394,15 +12392,37 @@
           ?>  ?=(^ gage)
           ?>  ?=(%open-packet p.gage)
           =+  ;;(=open-packet q.gage)
-          =/  =public-keys  ded:ex:(com:nu:cric:crypto pass.open-packet)
+          =/  cic  (com:nu:cric:crypto pass.open-packet)
+          =/  =public-keys  ded:ex:cic
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
-          ::  XX: check hasn't breached, only subscribe then
-          =/  lyf
-            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
-          ?:  ?=([~ ~ [* * ^]] lyf)
-            (al-emit [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~])
+          :: scry jael for this point
+          =/  pyn=(unit point:jael)
+            =;  pyn
+              ?.  ?=([~ ~ [* * ^]] pyn)  ~
+              u.u.q.q.pyn
+            (rof [~ ~] /ames %j `beam`[[our %pynt %da now] /(scot %p her.name)])
+          ?:  ?&  ?=(%c <+<.cic)
+                  !=(0x0 dat.tw.pub:+<:cic)
+                  ?|  ?=(~ pyn)
+                      (lth life.u.pyn sndr-life.open-packet)
+                  ==
+              ==
+              :: this is claiming to be a groundwire comet, either one we know attesting a new life, or an alien
+              :: we send a writ to jael with this proof
+              :: XX dat.tw.pub is wrong, fix later
+              (al-emit [[//writ]~ %pass /writ %j %writ dat.tw.pub her.name pass.open-packet])          
+              :: jael nack on unknown domain, or pokes registered handler
+              :: handler answers the writ, jael adds to its state if valid
+              :: sender retries, we repeat
+          ?^  pyn
+            :: jael has verified this comet, or we encountered it previously and it's resending an attestation packet for some reason
+            :: XX maybe this where we handle groundwire breaches
+            (al-emit [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~])          
+          :: this is vanilla comet we're encountering for the first time
+          :: check hasn't breached, only subscribe then
+          ?>  ?=([%publ lyf=%'1' res=*] pat.name)
           =.  al-core
             (al-register-comet her.name com-life.path open-packet)
           =.  ames-state

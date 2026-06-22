@@ -673,6 +673,12 @@
         ?>  ?=([@ *] tea)
         =*  app  i.tea
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
+        =/  cac  (com:nu:cric:crypto pass.sot)
+        =/  dom  -.dat.tw.pub:+<:cac :: XX this is wrong, decide later
+        ?~  dap=(~(get by dos) dom)
+          +>.$
+        ?.  ?=(dap app)
+          +>.$
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
       ==
