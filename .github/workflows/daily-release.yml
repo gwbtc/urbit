@@ -469,9 +469,13 @@ jobs:
           if ! grep -q '#include <inttypes.h>' pkg/vere/comet_miner.c; then
             sed -i.bak '1s/^/#include <inttypes.h>\n/' pkg/vere/comet_miner.c
           fi
+          MACOS_SDK=""
+          if [[ "$OSTYPE" == darwin* ]]; then
+            MACOS_SDK="-Dmacos_sdk_path=$(xcrun --show-sdk-path)"
+          fi
           for attempt in 1 2 3; do
             echo "Build attempt $attempt/3..."
-            zig build -Dtarget=${{ matrix.zig_target }} -Doptimize=ReleaseFast -Dprogram=comet_miner && break
+            zig build -Dtarget=${{ matrix.zig_target }} -Doptimize=ReleaseFast -Dprogram=comet_miner $MACOS_SDK && break
             [ $attempt -eq 3 ] && exit 1
             sleep 15
           done
