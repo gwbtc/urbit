@@ -163,20 +163,16 @@
   |=  comet=ship
   =/  m  (strand ,~)
   ^-  form:m
-  ::  hardcoded for:
-  ::    ~londeg-tirlys-somlyd-poltus--pintyn-tarbyl-bicnux-marbud
-  ::
   =/  =feed:jael
     :*  [%2 ~]
         who=comet
         ryf=0
         :_  ~
         :-  lyf=1
-        key=0wfm.lBEWM.08gfy.AxYjy.8-tBQ.uq-aa.LZt9c.CVQqd.XBJIs.
-            CoG90.BNNGV.1ZmVi.ZbAhY.LuhwC.idNnU.lCVkt.Z4qug.7iY92
+        key=sec:ex:(get-keys:aqua-azimuth comet 1)
     ==
   ::
-  ?>  ?=(^ (veri:dawn:vere comet feed *point:azimuth-types ~))
+  ?>  ?=(^ (veri:dawn:vere comet feed *point:jael ~ &))
   ~&  >  "mining comet under {<(^sein:title comet)>}"
   ;<  ~  bind:m  (send-events (init:util comet fake=%.n `feed core))
   (check-ship-booted comet)
