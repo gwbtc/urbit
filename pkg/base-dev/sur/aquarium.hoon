@@ -75,6 +75,7 @@
       [%push p=(list lane:pact:ames) q=@]
       [%saxo sponsors=(list ship)]
       [%nail =ship lanes=(list lane:ames)]
+      [%avow p=(avow:khan page)]
       [%doze p=(unit @da)]
       [%thus p=@ud q=(unit hiss:eyre)]
       [%ergo p=@tas q=mode:clay]

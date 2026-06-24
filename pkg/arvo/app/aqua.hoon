@@ -632,6 +632,7 @@
             [/e/http-server/0v1n.2m9vh %live 8.080 `8.445]
             [/a/newt/0v1n.2m9vh %born ~]
             [/d/term/1 %hail ~]
+            [/k/khan/0v1n.2m9vh/1 %born ~]
             :: [/d/term/1 %verb ~]  :: XX uncomment for verbose mode
           ::
             ?:  fake.ae  ~
