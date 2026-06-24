@@ -52,13 +52,6 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
-      - name: Install peru
-        run: |
-          sudo apt-get install -y pipx
-          pipx ensurepath
-          pipx install peru
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
@@ -181,6 +174,13 @@ jobs:
           echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
+      - name: Install Zig 0.15.2
+        run: |
+          curl -LO "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
+          tar xf zig-x86_64-linux-0.15.2.tar.xz
+          ZIG_DIR=zig-x86_64-linux-0.15.2
+          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+
       - name: Populate %mcp desk
         run: |
           ROOT="${GITHUB_WORKSPACE:-$PWD}"
@@ -188,19 +188,11 @@ jobs:
           "${ROOT}/automation/desk-mount.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
           "${ROOT}/automation/desk-populate.sh" mcp "${ROOT}/zod"
           pushd "${ROOT}/gwbtc-urbit-mcp"
-          chmod +x build.sh
-          bash build.sh -p "${ROOT}/zod/mcp"
+          zig build -Ddesk="${ROOT}/zod/mcp/"
           popd
           touch "${ROOT}/zod/mcp/desk.ship"
           echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
-
-      - name: Install Zig 0.15.2
-        run: |
-          curl -LO "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
-          tar xf zig-x86_64-linux-0.15.2.tar.xz
-          ZIG_DIR=zig-x86_64-linux-0.15.2
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
 
       - name: Populate %vitriol desk
         run: |
