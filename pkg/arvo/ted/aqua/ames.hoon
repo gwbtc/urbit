@@ -290,13 +290,11 @@
       ::  use default sponsorship chain for azimuth ship
       ::
       ?.  (is-c-comet this-hop)
-        ~&  >>>  [%not-c-comet this-hop=this-hop target=target]
         (rear (^saxo:title target))
       ::  use emitted saxos for Suite C comets
       ::
       =/  saxos=(list @p)  (~(gut by sax) target *(list @p))
       ?~  saxos
-          ~&  >>>  [%empty-saxos this-hop=this-hop target=target]
          (rear (^saxo:title target))
       (rear saxos)
     ::  make sure we're their sponsor and can therefore forward
