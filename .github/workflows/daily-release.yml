@@ -25,7 +25,7 @@ jobs:
   build-pill:
     name: Build pill
     needs: build-vere
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       CONN_SOCK: ./zod/.urb/conn.sock
     steps:
@@ -326,7 +326,7 @@ jobs:
       matrix:
         include:
           - target: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             zig_archive: zig-x86_64-linux-0.15.2.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
@@ -334,7 +334,7 @@ jobs:
             zig_archive: zig-aarch64-linux-0.15.2.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
-            runner: macos-latest
+            runner: macos-14
             zig_archive: zig-aarch64-macos-0.15.2.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
@@ -428,7 +428,7 @@ jobs:
             zig_archive: zig-aarch64-linux-0.14.1.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
-            runner: macos-latest
+            runner: macos-14
             zig_archive: zig-aarch64-macos-0.14.1.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
@@ -541,7 +541,7 @@ jobs:
   validate-and-release:
     name: Validate and release
     needs: [build-pill, build-vere, build-extras]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
