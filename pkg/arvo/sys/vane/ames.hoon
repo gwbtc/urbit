@@ -4951,9 +4951,17 @@
               |.("requested attestation")
           ?.  =(%pawn (clan:title our))
             event-core
+          =/  via=@p
+            ?.  =(%pawn (clan:title sndr.shot))
+              sndr.shot
+            =/  lyf
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
+            ?:  ?=([~ ~ [* * ^]] lyf)
+              sndr.shot
+            (^sein:title sndr.shot)
           =/  =blob  (attestation-packet sndr.shot 1)
-          %-  send-blob
-          [for=| sndr.shot blob (~(get by peers.ames-state) sndr.shot)]
+          %-  send-blob-via
+          [for=| via sndr.shot blob (~(get by peers.ames-state) via)]
         ::  +on-hear-open: handle receipt of plaintext comet self-attestation
         ::
         ++  on-hear-open
