@@ -853,7 +853,7 @@
       (public-keys:feel orig %diff ship.i.udiffs u.a-diff)
     $(udiffs t.udiffs)
   ::
-  ++  subscribers-on-ship
+  ++  subscribers-ship
     |=  =ship
     ^-  (set duct)
     ::  union of general and ship-specific subs
@@ -935,6 +935,65 @@
       =.  ..feed  (public-keys-give (sy hen ~) public-keys-result)
       ..feed
     ::
+    ::
+    ::  Handle subscription to writs
+    ::
+    ++  writs
+      |=  who=ship
+      :: ?:  fak.own.pki
+      ::   (public-keys:fake whos)
+      ::
+      :: =.  ..feed
+      ::   =/  moons=(jug ship ship)
+      ::     %-  ~(gas ju *(jug spon=ship who=ship))
+      ::     %+  murn  ~(tap in whos)
+      ::     |=  who=ship
+      ::     ^-  (unit [spon=ship child=ship])
+      ::     ?.  =(%earl (clan:title who))
+      ::       ~
+      ::     ?:  (~(has by ship-sources) who)
+      ::       ~
+      ::     `[(^sein:title who) who]
+      ::   =/  moonl=(list [spon=ship ships=(set ship)])
+      ::     ~(tap by moons)
+      ::   |-  ^+  ..feed
+      ::   ?~  moonl
+      ::     ..feed
+      ::   ?:  =(our spon.i.moonl)
+      ::     $(moonl t.moonl)
+      ::   =.  ..feed  (sources:feel ships.i.moonl [%& spon.i.moonl])
+      ::   $(moonl t.moonl)
+      ::  Add to subscriber list
+      ::
+      =.  ney.zim
+        |-  ^-  (jug ship duct)
+        ?~  whol
+          ney.zim
+        (~(put ju $(whol t.whol)) i.whol hen)
+      =.  yen.zim
+        %-  ~(gas ju yen.zim)
+        %+  turn  ~(tap in whos)
+        |=  who=ship
+        [hen who]
+      =?  nel.zim  ?=(~ whos)
+        (~(put in nel.zim) hen)
+      ::  Give initial result
+      ::
+      =/  =public-keys-result
+        :-  %full
+        ?:  =(~ whos)
+          pos.zim
+        %-  my  ^-  (list (pair ship point))
+        %+  murn
+          ~(tap in whos)
+        |=  who=ship
+        ^-  (unit (pair ship point))
+        =/  pub  (~(get by pos.zim) who)
+        ?~  pub  ~
+        ?:  =(0 life.u.pub)  ~
+        `[who u.pub]
+      =.  ..feed  (public-keys-give (sy hen ~) public-keys-result)
+      ..feed
     ::  Handle subscription to fiefs
     ::
     ++  fiefs
@@ -1001,6 +1060,26 @@
         =.  moz  [[hen %give %public-keys %full (my points)] moz]
         ..feel
       --
+      ::
+      :: ++  writs
+      ::   |=  whos=(set ship)
+      ::   =/  whol=(list ship)  ~(tap in whos)
+      ::   =/  passes
+      ::     |-  ^-  (list [who=ship =pass])
+      ::     ?~  whol
+      ::       ~
+      ::     ?.  =(%pawn (clan:title i.whol))  $(whol t.whol)
+      ::     =/  cic  (pit:nu:cric:crypto 512 i.whol %b ~)
+      ::     :-  [i.whol pub:ex:cic]
+      ::     $(whol t.whol)
+      ::   =/  points=(list (pair ship point))
+      ::     %+  turn  passes
+      ::     |=  [who=ship =pass]
+      ::     ^-  [who=ship =point]
+      ::     [who [rift=0 life=1 (my [1 1 pass] ~) `(^sein:title who) ~]]
+      ::   =.  moz  [[hen %give %public-keys %full (my points)] moz]
+      ::   ..feel
+      :: --
     --
   ::
   ++  feel

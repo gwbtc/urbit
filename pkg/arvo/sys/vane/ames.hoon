@@ -11463,8 +11463,8 @@
               |=  [[=path req=request-state] core=_ev-core]
               :: XX: zif: would send too many times
               =?  core  ?&  ?=(%pawn (clan:title our))
-                               ?=([%chum *] path)
-                               ?=(%unborn -.qos.per.core)
+                            ?=([%chum *] path)
+                            ?=(%unborn -.qos.per.core)
                            ==
                   =^  moves-al  ames-state.core
                     al-abet:(al-poke-proof:al-core:core ship per.core)
@@ -13408,7 +13408,7 @@
         =.  peers.ames-state  (~(put by peers.ames-state) sndr.shot alien/alien)
         =.  chums.ames-state  (~(del by chums.ames-state) sndr.shot)
         ::  XX no need to call the ames-core again; +enqueue-alien-todo will say
-        ::  that the publick-keys gift is still pending
+        ::  that the public-keys gift is still pending
         ::
         ::  enqueue %ahoy $plea; poke /app/hood
         ::
