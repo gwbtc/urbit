@@ -4303,12 +4303,28 @@
     ==
   ::
   +$  fiefs-result  (map ship (unit fief))
+  ::  $writ-result: outcome of one %writ attestation, given to %sybl
+  ::  subscribers.  %full carries the verified $point now stored in jael;
+  ::  %fail means the domain agent rejected the attestation; %lost means
+  ::  no agent is registered for the domain.
+  ::
+  +$  writ-result                                     ::  attestation outcome
+    $%  [%full dom=@tas =ship =point]                 ::  verified; point held
+        [%fail dom=@tas =ship]                        ::  failed validation
+        [%lost dom=@tas =ship]                        ::  unknown pki domain
+    ==
+  ::  $writ-response: %fact payload a registered pki-domain agent gives
+  ::  jael on its watch path to answer a %jael-writ poke.  on success,
+  ::  res carries the on-chain-verified $point for .ship.
+  ::
+  +$  writ-response  [dom=@tas =ship res=(unit point)]
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
         [%public-keys =public-keys-result]            ::  PKI changes
+        [%writ =writ-result]                          ::  attestation outcome
         [%fief =fiefs-result]                         ::  route changes
         [%turf turf=(list turf)]                      ::  domains
     ==                                                ::
@@ -4332,8 +4348,13 @@
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
         [%public-keys ships=(set ship)]               ::  sub to publics
-        [%writ dom=@tas =ship =pass]                  ::  send pki attestation for validation eg. [$comet %bitcoin (jam txid-etc)]
-        [%anex dom=@tas dap=term pax=path]            ::  register new pki domain eg. [%bitcoin %urb-watcher]
+        [%writ dom=@tas =ship =pass]                  ::  verify pki attestation; dom is committed in the pass tweak
+        [%anex dom=@tas dap=term pax=path]            ::  register new pki domain, eg. [%bitcoin %urb-watcher /jael]
+        [%sybl ~]                                     ::  sub to writ results
+        [%gost dom=@tas]                              ::  suspend pki domain (snub its peers)
+        [%ghul dom=@tas]                              ::  revive pki domain (unsnub)
+        [%bane dom=@tas]                              ::  destroy pki domain
+        [%hand dom=@tas dap=term pax=path]            ::  update domain agent
         [%fief ships=(set ship)]                      ::  sub to routes
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key

@@ -36,10 +36,32 @@
 =>  |%
 +$  state-4
   $:  %4
-      dos=(map @tas [term path])           
+      dos=(map @tas dom-state)                          ::  pki domain registry
       pki=state-pki-4                                   ::
       etn=state-eth-node                                ::  eth connection state
       tim=[%plea (unit resend-timer)]                   ::  nacked plea timer
+  ==                                                    ::
+::  $dom-state: one registered pki domain (%anex).
+::
+::    dap/pax: the local gall agent that verifies %writ attestations
+::    for this domain, and the path jael watches for its responses
+::    and chain updates.  hep: every foreign ship whose point was
+::    accepted through this domain, so %gost/%bane can %snub/%ruin
+::    them as a group.
+::
+::    XX  agent liveness is bracketed for now: a %gost-suspended
+::        domain should also stop being watched and refuse %writs,
+::        and %bane should stop the agent itself.  whether jael
+::        drives the agent's state (task -> effect on agent) or
+::        reacts to it (via a gall agent-status subscription) is an
+::        open design question awaiting gall affordances; see
+::        doc/spec/confidential-comets.md.  when it lands, restore:
+::      liv=?                                           ::  %.n if suspended
+::
++$  dom-state                                           ::  pki domain
+  $:  dap=term                                          ::  verifier agent
+      pax=path                                          ::  watch path
+      hep=(set ship)                                    ::  ships verified here
   ==                                                    ::
 +$  state-pki-4                                         ::  urbit metadata
   $:  $=  own                                           ::  vault (vein)
@@ -57,6 +79,7 @@
             nef=(jug ship duct)                         ::  reverse trackers
             fel=(set duct)                              ::  trackers of all fiefs
             fes=(map ship fief)                         ::  routes
+            syl=(set duct)                              ::  trackers of writs
             yen=(jug duct ship)                         ::  trackers
             ney=(jug ship duct)                         ::  reverse trackers
             nel=(set duct)                              ::  trackers of all
@@ -125,7 +148,7 @@
 +$  note                                                ::  out request $->
   $~  [%a %plea *ship *plea:ames]                       ::
   $%  $:  %a                                            ::    to %ames
-          $>(%plea task:ames)                           ::  send request message
+          $>(?(%plea %snub) task:ames)                  ::  send request/blocklist
       ==                                                ::
       $:  %b                                            ::    to %behn
           $>(%wait task:behn)                           ::  set timer
@@ -244,6 +267,18 @@
     |=  [hen=duct app=term pok=*]
     %-  emit
     [hen %pass /[app]/poke %g %deal [our our /jael] app %poke %noun !>(pok)]
+  ::  +dom-for-app: which pki domain, if any, is .app registered for?
+  ::
+  ::    .app is @ta, not term, so wire elements can be passed directly
+  ::
+  ++  dom-for-app
+    |=  app=@ta
+    ^-  (unit @tas)
+    =/  doz  ~(tap by dos)
+    |-  ^-  (unit @tas)
+    ?~  doz  ~
+    ?:  =(dap.q.i.doz app)  `p.i.doz
+    $(doz t.doz)
   ::
   ++  sein                                              ::  sponsor
     |=  who=ship
@@ -284,15 +319,133 @@
     ::        srcs=(list [p=term q=*])
     ::    ==
     ::
+    ::  register a pki domain and its verifier agent
+    ::    [%anex dom=@tas dap=term pax=path]
+    ::
+    ::  we watch .pax on .dap for %writ-response facts (attestation
+    ::  verdicts) and %azimuth-udiffs facts (ongoing chain updates).
+    ::  XX punt on validation of dap: a bogus agent name will just
+    ::  produce a negative %watch-ack in +take.
+    ::
         %anex
-      ?>  !(~(has by dos) dom.tac)
-      (emit-peer(dos (~(put by dos) dom.tac [dap.tac pax.tac])) hen dom.tac pax.tac)
-      :: punt on validation of dap
-      ::
+      ?<  (~(has by dos) dom.tac)
+      =.  dos  (~(put by dos) dom.tac [dap.tac pax.tac hep=~])
+      %-  curd  =<  abet
+      (emit-peer:~(. su hen now pki etn) dap.tac pax.tac)
+    ::
+    ::  verify a pki attestation
+    ::    [%writ dom=@tas =ship =pass]
+    ::
+    ::  forwarded to the domain's registered agent, which verifies it
+    ::  on-chain and answers with a %writ-response fact (handled in
+    ::  +take).  if the domain is unknown, %sybl subscribers hear a
+    ::  %lost verdict immediately.
+    ::
         %writ
-      =/  agent=term  (~(get by dos) dom.tac)
-      (poke-watch hen agent [%jael-writ dom.tac ship.tac pass.tac])
+      ?~  reg=(~(get by dos) dom.tac)
+        %-  curd  =<  abet
+        %+  exec:~(. su hen now pki etn)
+          syl.zim.pki
+        [%give %writ %lost dom.tac ship.tac]
+      (poke-watch hen dap.u.reg [%jael-writ dom.tac ship.tac pass.tac])
+    ::
+    ::  subscribe to %writ verification results
+    ::    [%sybl ~]
+    ::
+    ::  ames subscribes once at boot; every %writ verdict (%full,
+    ::  %fail, or %lost) is given to all %sybl subscribers.
+    ::
+        %sybl
+      +>.$(syl.zim.pki (~(put in syl.zim.pki) hen))
+    ::
+    ::  suspend a pki domain
+    ::    [%gost dom=@tas]
+    ::
+    ::  ordinary troubleshooting path: block the domain's verified
+    ::  peers in ames.  the registration and its peer set are
+    ::  retained for %ghul to restore.
+    ::
+    ::  XX  agent liveness is bracketed (see $dom-state): when it
+    ::      lands, %gost should also mark the domain suspended and
+    ::      stop watching its agent:
+    ::    =.  dos  (~(put by dos) dom.tac u.reg(liv |))
+    ::    =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
+    ::
+        %gost
+      ?~  reg=(~(get by dos) dom.tac)
+        +>.$
+      %-  curd  =<  abet
+      =/  sus  ~(. su hen now pki etn)
+      ::  XX %snub sets the blocklist wholesale; this clobbers any
+      ::  manually-snubbed ships.  see the confidential-comets spec
+      ::  for the additive %snub variant this wants.
       ::
+      (emit:sus hen %pass /gost %a %snub %deny ~(tap in hep.u.reg))
+    ::
+    ::  recover a suspended pki domain
+    ::    [%ghul dom=@tas]
+    ::
+    ::  undo %gost: mass-unsnub the domain's peers.
+    ::
+    ::  XX  agent liveness is bracketed (see $dom-state): when it
+    ::      lands, %ghul should also mark the domain live and resume
+    ::      watching its agent:
+    ::    =.  dos  (~(put by dos) dom.tac u.reg(liv &))
+    ::    =.  sus  (emit-peer:sus dap.u.reg pax.u.reg)
+    ::
+        %ghul
+      ?~  reg=(~(get by dos) dom.tac)
+        +>.$
+      %-  curd  =<  abet
+      =/  sus  ~(. su hen now pki etn)
+      ::  XX wholesale %snub semantics again: clearing the blocklist
+      ::  unsnubs everyone, not just this domain's peers.
+      ::
+      (emit:sus hen %pass /ghul %a %snub %deny ~)
+    ::
+    ::  destroy a pki domain
+    ::    [%bane dom=@tas]
+    ::
+    ::  response to a DOS attack or compromised PKI: deregister the
+    ::  domain, drop and %ruin every peer verified through it, and
+    ::  block them in ames.
+    ::
+    ::  XX  agent liveness is bracketed (see $dom-state): when it
+    ::      lands, %bane should also stop watching (and stop/nuke)
+    ::      the compromised agent:
+    ::    =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
+    ::
+        %bane
+      ?~  reg=(~(get by dos) dom.tac)
+        +>.$
+      =.  dos  (~(del by dos) dom.tac)
+      ::  forget the compromised points so a fresh attestation is
+      ::  re-verified from scratch rather than trusted as known
+      ::
+      =.  pos.zim.pki
+        %-  ~(rep in hep.u.reg)
+        |=  [=ship pos=_pos.zim.pki]
+        (~(del by pos) ship)
+      =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
+      %-  curd  =<  abet
+      =/  sus  ~(. su hen now pki etn)
+      =.  sus  (emit:sus hen %pass /bane %a %snub %deny ~(tap in hep.u.reg))
+      %-  ~(rep in hep.u.reg)
+      |=  [=ship s=_sus]
+      (exec:s dus %give %public-keys %breach ship)
+    ::
+    ::  update a pki domain's registered agent or watch path
+    ::    [%hand dom=@tas dap=term pax=path]
+    ::
+        %hand
+      ?~  reg=(~(get by dos) dom.tac)
+        +>.$
+      =.  dos  (~(put by dos) dom.tac [dap.tac pax.tac hep.u.reg])
+      %-  curd  =<  abet
+      =/  sus  ~(. su hen now pki etn)
+      =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
+      (emit-peer:sus dap.tac pax.tac)
+    ::
         %dawn
       ::  single-homed
       ::
@@ -452,6 +605,8 @@
         (~(del in fel.zim.pki) hen)
       =?  tel.zim.pki  ?=(~ whos.tac)
         (~(del in tel.zim.pki) hen)
+      =?  syl.zim.pki  ?=(~ whos.tac)
+        (~(del in syl.zim.pki) hen)
       ?^  whos.tac
         +>.$
       %_  +>.$
@@ -655,6 +810,12 @@
         =*  app  i.tea
         ::NOTE  we expect azimuth-tracker to be kill
         ?:  =(%azimuth-tracker app)  +>.$
+        ::  a registered pki-domain agent restarted; resubscribe on
+        ::  the same wire
+        ::
+        ?:  ?=(^ (dom-for-app app))
+          %-  curd  =<  abet
+          (emit-peer:~(. su hen now pki etn) ;;(term app) t.tea)
         ~|([%jael-unexpected-quit tea hin] !!)
       ::
           %poke-ack
@@ -672,13 +833,41 @@
           %fact
         ?>  ?=([@ *] tea)
         =*  app  i.tea
+        ::  %writ-response: a pki-domain agent answering a %jael-writ
+        ::  poke.  only honored from the domain's registered agent.
+        ::  on success, store the verified point (notifying
+        ::  %public-keys subscribers) and remember the ship as one of
+        ::  the domain's peers; either way, report the verdict to
+        ::  %sybl subscribers.
+        ::
+        ?:  ?=(%writ-response p.cage.p.+>.hin)
+          =+  ;;(res=writ-response q.q.cage.p.+>.hin)
+          ?~  reg=(~(get by dos) dom.res)
+            +>.$
+          ?.  =(dap.u.reg app)
+            +>.$
+          ?~  res.res
+            %-  curd  =<  abet
+            %+  exec:~(. su hen now pki etn)
+              syl.zim.pki
+            [%give %writ %fail dom.res ship.res]
+          =.  dos
+            %+  ~(put by dos)  dom.res
+            u.reg(hep (~(put in hep.u.reg) ship.res))
+          %-  curd  =<  abet
+          =/  sus  ~(. su hen now pki etn)
+          =/  sus
+            %+  public-keys:feel:sus
+              [pos fes]:zim.pki
+            [%full (my [ship.res u.res.res] ~)]
+          %+  exec:sus
+            syl.zim.pki
+          [%give %writ %full dom.res ship.res u.res.res]
+        ::  anything else is chain updates (udiffs) from a pki source
+        ::  XX  when agent liveness lands (see $dom-state), drop
+        ::      udiffs from a %gost-suspended domain's agent here
+        ::
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
-        =/  cac  (com:nu:cric:crypto pass.sot)
-        =/  dom  -.dat.tw.pub:+<:cac :: XX this is wrong, decide later
-        ?~  dap=(~(get by dos) dom)
-          +>.$
-        ?.  ?=(dap app)
-          +>.$
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
       ==
@@ -744,6 +933,12 @@
         %watch
         path
     ==
+  ::  +leave-peer: stop watching a pki-domain agent (%hand)
+  ::
+  ++  leave-peer
+    |=  [app=term =path]
+    %-  emit
+    [hen %pass [app path] %g %deal [our our /jael] app %leave ~]
   ::
   ++  peer
     |=  [app=term whos=(set ship)]
@@ -935,65 +1130,6 @@
       =.  ..feed  (public-keys-give (sy hen ~) public-keys-result)
       ..feed
     ::
-    ::
-    ::  Handle subscription to writs
-    ::
-    ++  writs
-      |=  who=ship
-      :: ?:  fak.own.pki
-      ::   (public-keys:fake whos)
-      ::
-      :: =.  ..feed
-      ::   =/  moons=(jug ship ship)
-      ::     %-  ~(gas ju *(jug spon=ship who=ship))
-      ::     %+  murn  ~(tap in whos)
-      ::     |=  who=ship
-      ::     ^-  (unit [spon=ship child=ship])
-      ::     ?.  =(%earl (clan:title who))
-      ::       ~
-      ::     ?:  (~(has by ship-sources) who)
-      ::       ~
-      ::     `[(^sein:title who) who]
-      ::   =/  moonl=(list [spon=ship ships=(set ship)])
-      ::     ~(tap by moons)
-      ::   |-  ^+  ..feed
-      ::   ?~  moonl
-      ::     ..feed
-      ::   ?:  =(our spon.i.moonl)
-      ::     $(moonl t.moonl)
-      ::   =.  ..feed  (sources:feel ships.i.moonl [%& spon.i.moonl])
-      ::   $(moonl t.moonl)
-      ::  Add to subscriber list
-      ::
-      =.  ney.zim
-        |-  ^-  (jug ship duct)
-        ?~  whol
-          ney.zim
-        (~(put ju $(whol t.whol)) i.whol hen)
-      =.  yen.zim
-        %-  ~(gas ju yen.zim)
-        %+  turn  ~(tap in whos)
-        |=  who=ship
-        [hen who]
-      =?  nel.zim  ?=(~ whos)
-        (~(put in nel.zim) hen)
-      ::  Give initial result
-      ::
-      =/  =public-keys-result
-        :-  %full
-        ?:  =(~ whos)
-          pos.zim
-        %-  my  ^-  (list (pair ship point))
-        %+  murn
-          ~(tap in whos)
-        |=  who=ship
-        ^-  (unit (pair ship point))
-        =/  pub  (~(get by pos.zim) who)
-        ?~  pub  ~
-        ?:  =(0 life.u.pub)  ~
-        `[who u.pub]
-      =.  ..feed  (public-keys-give (sy hen ~) public-keys-result)
-      ..feed
     ::  Handle subscription to fiefs
     ::
     ++  fiefs
@@ -1060,26 +1196,6 @@
         =.  moz  [[hen %give %public-keys %full (my points)] moz]
         ..feel
       --
-      ::
-      :: ++  writs
-      ::   |=  whos=(set ship)
-      ::   =/  whol=(list ship)  ~(tap in whos)
-      ::   =/  passes
-      ::     |-  ^-  (list [who=ship =pass])
-      ::     ?~  whol
-      ::       ~
-      ::     ?.  =(%pawn (clan:title i.whol))  $(whol t.whol)
-      ::     =/  cic  (pit:nu:cric:crypto 512 i.whol %b ~)
-      ::     :-  [i.whol pub:ex:cic]
-      ::     $(whol t.whol)
-      ::   =/  points=(list (pair ship point))
-      ::     %+  turn  passes
-      ::     |=  [who=ship =pass]
-      ::     ^-  [who=ship =point]
-      ::     [who [rift=0 life=1 (my [1 1 pass] ~) `(^sein:title who) ~]]
-      ::   =.  moz  [[hen %give %public-keys %full (my points)] moz]
-      ::   ..feel
-      :: --
     --
   ::
   ++  feel
@@ -1119,7 +1235,7 @@
             ==
           =.  ..feel
             %+  public-keys-give
-              (subscribers-on-ship who.i.pointl)
+              (subscribers-ship who.i.pointl)
             [%breach who.i.pointl]
           =/  sor  (~(get by sources-reverse) %& who.i.pointl)
           ?~  sor
@@ -1131,7 +1247,7 @@
         ::
         =.  ..feel
           %+  public-keys-give
-            (subscribers-on-ship who.i.pointl)
+            (subscribers-ship who.i.pointl)
           [%full (my i.pointl ~)]
         ::  moon keys not pending; delete
         ::
@@ -1174,7 +1290,7 @@
           ==
         =.  ..feel
           %+  public-keys-give
-            (subscribers-on-ship who)
+            (subscribers-ship who)
           [%breach who]
         =/  sor  (~(get by sources-reverse) %& who)
         ?~  sor
@@ -1201,7 +1317,7 @@
       ::
       =.  pos.zim  (~(put by pos.zim) who point)
       %+  public-keys-give
-        (subscribers-on-ship who)
+        (subscribers-ship who)
       ?~  maybe-point
         [%full (my [who point]~)]
       [%diff who a-diff]
@@ -1369,17 +1485,22 @@
     ==
   =?  old  ?=(%3 -.old)
     ^-  state-4
-    %=    old
-        -  %4
-        zim.pki
-      :*  tel=~  fen=~  nef=~  fel=~  fes=~
-          %=    zim.pki.old
-              pos
-            %-  ~(run by pos.zim.pki.old)
-            |=  point-1
-            ^-  point
-            [rift life keys sponsor ~]
-      ==  ==
+    :*  %4
+        dos=~
+        ^=  pki
+        %=    pki.old
+            zim
+          :*  tel=~  fen=~  nef=~  fel=~  fes=~  syl=~
+              %=    zim.pki.old
+                  pos
+                %-  ~(run by pos.zim.pki.old)
+                |=  point-1
+                ^-  point
+                [rift life keys sponsor ~]
+        ==    ==
+        ==
+        etn.old
+        tim.old
     ==
   ?>  ?=(%4 -.old)
   ..^$(lex old)
