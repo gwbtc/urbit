@@ -48,7 +48,7 @@ comet ~zig                    verifier ship
    |                              |                          |                       (khan thread,
    |                              |                          |<--%writ-response fact--  bitcoin rpc)
    |                              |                          |  store point; %public-keys
-   |                              |<---%writ gift (/sybl)----|  give verdict to %sybl subs
+   |                              |<---%sybl gift (/sybl)----|  give verdict to %sybl subs
    |                              | +sy-sybl:
    |                              |   %full -> +sy-publ (promote alien, drain queues)
    |                              |   %fail -> snub + drop pending
@@ -86,7 +86,7 @@ applied on the vanilla branch.
 
 ### 2.2 Jael: PKI domains as first-class state
 
-New top-level state (`state-4`):
+New top-level state (`state-5`):
 
 ```hoon
 dos=(map @tas dom-state)
@@ -97,10 +97,19 @@ dos=(map @tas dom-state)
   ==
 ```
 
+> **Naming note**: the verdict *gift* is tagged `%sybl` (matching the
+> subscription task), not `%writ`. Clay already gives a `%writ` gift, and
+> userspace (e.g. dojo's `+on-arvo`) switches on the gift tag across all
+> of `sign-arvo` — a second `%writ` gift forks that match and breaks the
+> build. Discovered when `%base` failed to rebuild at bootstrap.
+
 plus `syl=(set duct)` in `zim` — the `%sybl` (writ-result) subscriber
-set. Both are initialized empty by the `%3`→`%4` migration (which the
-stashed scaffold had left non-typechecking; it is now an explicit
-construction).
+set. Because these change the shape of Jael's durable state, the state
+version is bumped to `%5` with a proper `%4`→`%5` migration
+initializing both empty. (The stashed scaffold had instead redefined
+`state-4` in place — fine for fresh boots, but a live ship's real `%4`
+state no longer matched the type and `+load` crashed on upgrade; this
+was caught by upgrading a running fakeship.)
 
 **Agent liveness is deliberately bracketed** (commented out at the
 `$dom-state` definition and the `%gost`/`%ghul`/`%bane` handlers): a
@@ -126,11 +135,11 @@ the domain's peers, and Jael's subscription to the agent stays up.
 New gift, to `%sybl` subscribers:
 
 ```hoon
-[%writ =writ-result]
+[%sybl =writ-result]
 +$  writ-result
   $%  [%full dom=@tas =ship =point]   ::  verified; point now in jael
       [%fail dom=@tas =ship]          ::  failed validation
-      [%lost dom=@tas =ship]          ::  unknown/suspended domain
+      [%lost dom=@tas =ship]          ::  unknown domain
   ==
 ```
 

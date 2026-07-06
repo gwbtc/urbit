@@ -135,7 +135,7 @@
       $%  [%ames $>(?(%tune %sage) gift)]
           [%behn $>(%wake gift:behn)]
           [%gall $>(?(%flub %unto %spur) gift:gall)]
-          [%jael $>(?(%private-keys %public-keys %turf %fief %writ) gift:jael)]
+          [%jael $>(?(%private-keys %public-keys %turf %fief %sybl) gift:jael)]
           $:  @tas
               $>(?(%noon %boon %done) gift)
       ==  ==
@@ -5019,15 +5019,15 @@
           ::  what does jael already know about this comet?
           ::  (mirrors +al-take-proof on the |mesa side)
           ::
-          =/  pyn=(unit point:jael)
-            =;  pyn
-              ?.  ?=([~ ~ [* * ^]] pyn)  ~
-              u.u.q.q.pyn
-            (rof [~ ~] /ames %j `beam`[[our %pynt %da now] /(scot %p sndr.shot)])
+          =/  lyf=(unit @ud)
+            =/  res
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
+            ?.  ?=([~ ~ *] res)  ~
+            ;;((unit @ud) q.q.u.u.res)
           =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
           ?:  ?&  ?=([%c *] cek)
-                  ?|  ?=(~ pyn)
-                      (lth life.u.pyn sndr-life.open-packet)
+                  ?|  ?=(~ lyf)
+                      (lth u.lyf sndr-life.open-packet)
                   ==
               ==
             ::  a confidential comet we don't know, or a new life: ask
@@ -5043,7 +5043,7 @@
                     %writ  dom  sndr.shot  pass.open-packet
                 ==
             ==
-          ?^  pyn
+          ?^  lyf
             ::  jael verified this comet, or we met it before and it's
             ::  resending its attestation for some reason
             ::
@@ -9294,7 +9294,7 @@
                   [%jael %public-keys *]
                 sy-abet:(~(sy-publ sy hen) wire +>.sign)
               ::
-                  [%jael %writ *]
+                  [%jael %sybl *]
                 sy-abet:(~(sy-sybl sy hen) writ-result.sign)
               ::
                   [%jael %turf *]
@@ -12596,7 +12596,7 @@
         ::      newer life: forward the attestation to jael as a
         ::      %writ.  jael pokes the domain's registered agent,
         ::      which verifies the sat's ownership chain on-chain; the
-        ::      verdict comes back as a %writ gift on the /sybl wire
+        ::      verdict comes back as a %sybl gift on the /sybl wire
         ::      (+sy-sybl) and, on success, the point itself on
         ::      /public-keys.  we subscribe to the latter before
         ::      sending the writ so the promotion is heard.
@@ -12644,15 +12644,15 @@
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
           ::  what does jael already know about this comet?
           ::
-          =/  pyn=(unit point:jael)
-            =;  pyn
-              ?.  ?=([~ ~ [* * ^]] pyn)  ~
-              u.u.q.q.pyn
-            (rof [~ ~] /ames %j `beam`[[our %pynt %da now] /(scot %p her.name)])
+          =/  lyf=(unit @ud)
+            =/  res
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
+            ?.  ?=([~ ~ *] res)  ~
+            ;;((unit @ud) q.q.u.u.res)
           =/  cek  +<.cic
           ?:  ?&  ?=([%c *] cek)
-                  ?|  ?=(~ pyn)
-                      (lth life.u.pyn sndr-life.open-packet)
+                  ?|  ?=(~ lyf)
+                      (lth u.lyf sndr-life.open-packet)
                   ==
               ==
             ::  a confidential comet we don't know, or a new life: ask
@@ -12664,7 +12664,7 @@
             :~  [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~]
                 [[//writ]~ %pass /writ %j %writ dom her.name pass.open-packet]
             ==
-          ?^  pyn
+          ?^  lyf
             ::  jael verified this comet, or we met it before and it's
             ::  resending its attestation for some reason
             ::  XX maybe this is where we handle groundwire breaches
@@ -14249,7 +14249,7 @@
           ?=([%jael %public-keys *] sign)
           ?=([%jael %turf *] sign)
           ?=([%jael %fief *] sign)
-          ?=([%jael %writ *] sign)
+          ?=([%jael %sybl *] sign)
       ==
     ::  $keys gifts are captured in |sy:mesa
     ::

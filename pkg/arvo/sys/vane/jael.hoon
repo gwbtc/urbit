@@ -34,10 +34,10 @@
 ::  manage subscriptions efficiently.
 ::
 =>  |%
-+$  state-4
-  $:  %4
++$  state-5
+  $:  %5
       dos=(map @tas dom-state)                          ::  pki domain registry
-      pki=state-pki-4                                   ::
+      pki=state-pki-5                                   ::
       etn=state-eth-node                                ::  eth connection state
       tim=[%plea (unit resend-timer)]                   ::  nacked plea timer
   ==                                                    ::
@@ -63,7 +63,7 @@
       pax=path                                          ::  watch path
       hep=(set ship)                                    ::  ships verified here
   ==                                                    ::
-+$  state-pki-4                                         ::  urbit metadata
++$  state-pki-5                                         ::  urbit metadata
   $:  $=  own                                           ::  vault (vein)
         $:  yen=(set duct)                              ::  trackers
             sig=(unit oath)                             ::  for a moon
@@ -248,7 +248,7 @@
           ==
           ::  all vane state
           ::
-          state-4
+          state-5
       ==
   ::  lex: all durable state
   ::  moz: pending actions
@@ -346,7 +346,7 @@
         %-  curd  =<  abet
         %+  exec:~(. su hen now pki etn)
           syl.zim.pki
-        [%give %writ %lost dom.tac ship.tac]
+        [%give %sybl %lost dom.tac ship.tac]
       (poke-watch hen dap.u.reg [%jael-writ dom.tac ship.tac pass.tac])
     ::
     ::  subscribe to %writ verification results
@@ -427,9 +427,10 @@
         |=  [=ship pos=_pos.zim.pki]
         (~(del by pos) ship)
       =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
-      %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
       =.  sus  (emit:sus hen %pass /bane %a %snub %deny ~(tap in hep.u.reg))
+      =;  core=_sus
+        (curd abet:core)
       %-  ~(rep in hep.u.reg)
       |=  [=ship s=_sus]
       (exec:s dus %give %public-keys %breach ship)
@@ -850,7 +851,7 @@
             %-  curd  =<  abet
             %+  exec:~(. su hen now pki etn)
               syl.zim.pki
-            [%give %writ %fail dom.res ship.res]
+            [%give %sybl %fail dom.res ship.res]
           =.  dos
             %+  ~(put by dos)  dom.res
             u.reg(hep (~(put in hep.u.reg) ship.res))
@@ -862,7 +863,7 @@
             [%full (my [ship.res u.res.res] ~)]
           %+  exec:sus
             syl.zim.pki
-          [%give %writ %full dom.res ship.res u.res.res]
+          [%give %sybl %full dom.res ship.res u.res.res]
         ::  anything else is chain updates (udiffs) from a pki source
         ::  XX  when agent liveness lands (see $dom-state), drop
         ::      udiffs from a %gost-suspended domain's agent here
@@ -875,7 +876,7 @@
   ::                                                    ::  ++curd:of
   ++  curd                                              ::  relative moves
     |=  $:  moz=(list move)
-            pki=state-pki-4
+            pki=state-pki-5
             etn=state-eth-node
         ==
     +>(pki pki, etn etn, moz (weld (flop moz) ^moz))
@@ -895,7 +896,7 @@
   =|  moz=(list move)
   =|  $:  hen=duct
           now=@da
-          state-pki-4
+          state-pki-5
           state-eth-node
       ==
   ::  moz: moves in reverse order
@@ -1388,7 +1389,7 @@
 ::
 ::  lex: all durable %jael state
 ::
-=|  lex=state-4
+=|  lex=state-5
 |=  $:  ::  now: current time
         ::  eny: unique entropy
         ::  rof: namespace resolver
@@ -1420,7 +1421,29 @@
 ++  load                                                ::  upgrade
   =>  |%
       ::
-      +$  any-state  $%(state-1 state-2 state-3 state-4)
+      +$  any-state  $%(state-1 state-2 state-3 state-4 state-5)
+      ::  $state-4: pre-groundwire; no pki-domain registry (dos)
+      ::  and no writ-result subscriber set (syl in zim)
+      ::
+      +$  state-4
+        $:  %4
+            pki=state-pki-4
+            etn=state-eth-node
+            tim=[%plea (unit resend-timer)]
+        ==
+      +$  state-pki-4
+        $:  $=  own
+              $:  yen=(set duct)  sig=(unit oath)  tuf=(list turf)  fak=_|
+                  lyf=life        step=@ud         jaw=(map life ring)
+              ==
+            $=  zim
+              $:  tel=(set duct)       fen=(jug duct ship)
+                  nef=(jug ship duct)  fel=(set duct)
+                  fes=(map ship fief)  yen=(jug duct ship)
+                  ney=(jug ship duct)  nel=(set duct)
+                  dns=dnses            pos=(map ship point)
+                  mon=(jug [=duct source=ship] moon=ship)
+        ==    ==
       +$  state-3
         $:  %3
             pki=state-pki-3
@@ -1486,11 +1509,10 @@
   =?  old  ?=(%3 -.old)
     ^-  state-4
     :*  %4
-        dos=~
         ^=  pki
         %=    pki.old
             zim
-          :*  tel=~  fen=~  nef=~  fel=~  fes=~  syl=~
+          :*  tel=~  fen=~  nef=~  fel=~  fes=~
               %=    zim.pki.old
                   pos
                 %-  ~(run by pos.zim.pki.old)
@@ -1502,7 +1524,30 @@
         etn.old
         tim.old
     ==
-  ?>  ?=(%4 -.old)
+  =?  old  ?=(%4 -.old)
+    ^-  state-5
+    :*  %5
+        dos=~
+        ^=  pki
+        %=    pki.old
+            zim
+          :*  tel.zim.pki.old
+              fen.zim.pki.old
+              nef.zim.pki.old
+              fel.zim.pki.old
+              fes.zim.pki.old
+              syl=~
+              yen.zim.pki.old
+              ney.zim.pki.old
+              nel.zim.pki.old
+              dns.zim.pki.old
+              pos.zim.pki.old
+              mon.zim.pki.old
+        ==  ==
+        etn.old
+        tim.old
+    ==
+  ?>  ?=(%5 -.old)
   ..^$(lex old)
 ::                                                      ::  ++scry
 ++  scry                                                ::  inspect

@@ -4304,7 +4304,7 @@
   ::
   +$  fiefs-result  (map ship (unit fief))
   ::  $writ-result: outcome of one %writ attestation, given to %sybl
-  ::  subscribers.  %full carries the verified $point now stored in jael;
+  ::  subscribers as a %sybl gift.  %full carries the verified $point now stored in jael;
   ::  %fail means the domain agent rejected the attestation; %lost means
   ::  no agent is registered for the domain.
   ::
@@ -4324,7 +4324,7 @@
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
         [%public-keys =public-keys-result]            ::  PKI changes
-        [%writ =writ-result]                          ::  attestation outcome
+        [%sybl =writ-result]                          ::  attestation outcome
         [%fief =fiefs-result]                         ::  route changes
         [%turf turf=(list turf)]                      ::  domains
     ==                                                ::
