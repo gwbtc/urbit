@@ -178,7 +178,8 @@ jobs:
           "${ROOT}/automation/desk-mount.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
           "${ROOT}/automation/desk-populate.sh" mcp "${ROOT}/zod"
           pushd "${ROOT}/gwbtc-urbit-mcp"
-          zig build -Ddesk="${ROOT}/zod/mcp/"
+          zig build
+          cp -rL zig-out/* "${ROOT}/zod/mcp/"
           popd
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
