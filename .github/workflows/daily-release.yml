@@ -174,12 +174,11 @@ jobs:
           echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
-      - name: Install Zig 0.15.2
-        run: |
-          curl -LO "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
-          tar xf zig-x86_64-linux-0.15.2.tar.xz
-          ZIG_DIR=zig-x86_64-linux-0.15.2
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+      - name: Set up Zig 0.15.2
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-key: pill-desks
 
       - name: Populate %mcp desk
         run: |
@@ -319,25 +318,20 @@ jobs:
         include:
           - target: linux-x86_64
             runner: ubuntu-22.04
-            zig_archive: zig-x86_64-linux-0.15.2.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
-            zig_archive: zig-aarch64-linux-0.15.2.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-14
-            zig_archive: zig-aarch64-macos-0.15.2.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig 0.15.2
-        run: |
-          curl -LO "https://ziglang.org/download/0.15.2/${{ matrix.zig_archive }}"
-          tar xf "${{ matrix.zig_archive }}"
-          ZIG_DIR="${{ matrix.zig_archive }}"
-          ZIG_DIR="${ZIG_DIR%.tar.xz}"
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+      - name: Set up Zig 0.15.2
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-key: vere-${{ matrix.zig_target }}
 
       - name: Checkout gwbtc/urcrypt
         uses: actions/checkout@v4
@@ -413,25 +407,20 @@ jobs:
         include:
           - target: linux-x86_64
             runner: ubuntu-22.04
-            zig_archive: zig-x86_64-linux-0.14.1.tar.xz
             zig_target: x86_64-linux-musl
           - target: linux-aarch64
             runner: ubuntu-24.04-arm
-            zig_archive: zig-aarch64-linux-0.14.1.tar.xz
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
             runner: macos-14
-            zig_archive: zig-aarch64-macos-0.14.1.tar.xz
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Zig 0.14.1
-        run: |
-          curl -LO "https://ziglang.org/download/0.14.1/${{ matrix.zig_archive }}"
-          tar xf "${{ matrix.zig_archive }}"
-          ZIG_DIR="${{ matrix.zig_archive }}"
-          ZIG_DIR="${ZIG_DIR%.tar.xz}"
-          echo "$(pwd)/$ZIG_DIR" >> $GITHUB_PATH
+      - name: Set up Zig 0.14.1
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+          cache-key: comet-miner-${{ matrix.zig_target }}
 
       - name: Checkout gwbtc/urcrypt
         uses: actions/checkout@v4
