@@ -43,24 +43,18 @@
   ==                                                    ::
 ::  $dom-state: one registered pki domain (%anex).
 ::
-::    dap/pax: the local gall agent that verifies %writ attestations
-::    for this domain, and the path jael watches for its responses
-::    and chain updates.  hep: every foreign ship whose point was
-::    accepted through this domain, so %gost/%bane can %snub/%ruin
-::    them as a group.
-::
-::    XX  agent liveness is bracketed for now: a %gost-suspended
-::        domain should also stop being watched and refuse %writs,
-::        and %bane should stop the agent itself.  whether jael
-::        drives the agent's state (task -> effect on agent) or
-::        reacts to it (via a gall agent-status subscription) is an
-::        open design question awaiting gall affordances; see
-::        doc/spec/confidential-comets.md.  when it lands, restore:
-::      liv=?                                           ::  %.n if suspended
+::    the domain name IS the verifier agent's name (1:1 by
+::    construction).  pax: the path jael watches on that agent for
+::    verdicts and chain updates.  liv: %.n while the agent is
+::    suspended; kept in sync causally from gall's %view liveness
+::    subscription (suspend acts as %gost, revival as %ghul), and
+::    settable directly via the %gost/%ghul tasks.  hep: every
+::    foreign ship whose point was accepted through this domain, so
+::    suspension/destruction can act on them as a group.
 ::
 +$  dom-state                                           ::  pki domain
-  $:  dap=term                                          ::  verifier agent
-      pax=path                                          ::  watch path
+  $:  pax=path                                          ::  watch path
+      liv=?                                             ::  %.n if suspended
       hep=(set ship)                                    ::  ships verified here
   ==                                                    ::
 +$  state-pki-5                                         ::  urbit metadata
@@ -157,7 +151,7 @@
           [%code-changed ~]                             ::  notify code changed
       ==                                                ::
       $:  %g                                            ::    to %gall
-          $>(%deal task:gall)                           ::  talk to app
+          $>(?(%deal %view) task:gall)                  ::  app talk/liveness
       ==                                                ::
       $:  %j                                            ::    to self
           $>(%listen task)                              ::  set ethereum source
@@ -177,7 +171,7 @@
           $>(%wake gift:behn)                           ::
       ==                                                ::
       $:  %gall                                         ::
-          $>(%unto gift:gall)                           ::
+          $>(?(%unto %view) gift:gall)                  ::
       ==                                                ::
   ==                                                    ::
 --  ::
@@ -274,11 +268,8 @@
   ++  dom-for-app
     |=  app=@ta
     ^-  (unit @tas)
-    =/  doz  ~(tap by dos)
-    |-  ^-  (unit @tas)
-    ?~  doz  ~
-    ?:  =(dap.q.i.doz app)  `p.i.doz
-    $(doz t.doz)
+    =/  dom  ;;(@tas app)
+    ?:((~(has by dos) dom) `dom ~)
   ::
   ++  sein                                              ::  sponsor
     |=  who=ship
@@ -319,35 +310,60 @@
     ::        srcs=(list [p=term q=*])
     ::    ==
     ::
-    ::  register a pki domain and its verifier agent
-    ::    [%anex dom=@tas dap=term pax=path]
+    ::  register a pki domain
+    ::    [%anex pax=path]
     ::
-    ::  we watch .pax on .dap for %writ-response facts (attestation
-    ::  verdicts) and %azimuth-udiffs facts (ongoing chain updates).
-    ::  XX punt on validation of dap: a bogus agent name will just
-    ::  produce a negative %watch-ack in +take.
+    ::  the sending agent's name is the domain (1:1 by construction;
+    ::  tasks from agents arrive on a [%gall %use dap ...] duct).  we
+    ::  watch .pax on that agent for %writ-response / %anew-response
+    ::  facts (attestation verdicts, fresh self-attestations) and
+    ::  %azimuth-udiffs facts (ongoing chain updates); and we watch
+    ::  the agent's liveness through gall %view, reacting to
+    ::  suspension as %gost, revival as %ghul, and deletion by
+    ::  breaching (but not snubbing) its peers and deregistering.
     ::
         %anex
-      ?<  (~(has by dos) dom.tac)
-      =.  dos  (~(put by dos) dom.tac [dap.tac pax.tac hep=~])
+      =/  dom
+        ?>  ?=([[%gall %use @ @ *] *] hen)
+        ;;(term i.t.t.i.hen)
+      ?<  (~(has by dos) dom)
+      =.  dos  (~(put by dos) dom [pax.tac liv=& hep=~])
       %-  curd  =<  abet
-      (emit-peer:~(. su hen now pki etn) dap.tac pax.tac)
+      =/  sus  ~(. su hen now pki etn)
+      =.  sus  (emit-peer:sus dom pax.tac)
+      (emit:sus hen %pass /vew/[dom] %g %view dom)
     ::
     ::  verify a pki attestation
     ::    [%writ dom=@tas =ship =pass]
     ::
     ::  forwarded to the domain's registered agent, which verifies it
     ::  on-chain and answers with a %writ-response fact (handled in
-    ::  +take).  if the domain is unknown, %sybl subscribers hear a
-    ::  %lost verdict immediately.
+    ::  +take).  if the domain is unknown or suspended, %sybl
+    ::  subscribers hear a %lost verdict immediately.
     ::
         %writ
-      ?~  reg=(~(get by dos) dom.tac)
+      =/  reg  (~(get by dos) dom.tac)
+      ?:  ?|(?=(~ reg) !liv.u.reg)
         %-  curd  =<  abet
         %+  exec:~(. su hen now pki etn)
           syl.zim.pki
         [%give %sybl %lost dom.tac ship.tac]
-      (poke-watch hen dap.u.reg [%jael-writ dom.tac ship.tac pass.tac])
+      (poke-watch hen dom.tac [%jael-writ dom.tac ship.tac pass.tac])
+    ::
+    ::  request a fresh self-attestation from the domain agent
+    ::    [%anew dom=@tas]
+    ::
+    ::  sent by ames on the /sybl wire when our own attestation needs
+    ::  a newer off-chain reveal log (our sat moved, or a peer
+    ::  rejected a stale packet).  the agent answers with an
+    ::  %anew-response fact; the fresh pass flows back to %sybl
+    ::  subscribers as a [%sybl %anew dom pass] gift.
+    ::
+        %anew
+      =/  reg  (~(get by dos) dom.tac)
+      ?:  ?|(?=(~ reg) !liv.u.reg)
+        +>.$
+      (poke-watch hen dom.tac [%jael-anew dom.tac])
     ::
     ::  subscribe to %writ verification results
     ::    [%sybl ~]
@@ -361,19 +377,19 @@
     ::  suspend a pki domain
     ::    [%gost dom=@tas]
     ::
-    ::  ordinary troubleshooting path: block the domain's verified
-    ::  peers in ames.  the registration and its peer set are
-    ::  retained for %ghul to restore.
-    ::
-    ::  XX  agent liveness is bracketed (see $dom-state): when it
-    ::      lands, %gost should also mark the domain suspended and
-    ::      stop watching its agent:
-    ::    =.  dos  (~(put by dos) dom.tac u.reg(liv |))
-    ::    =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
+    ::  ordinary troubleshooting path: mark the domain suspended
+    ::  (writs are refused with %lost, the agent's facts are
+    ::  ignored) and block its verified peers in ames.  the
+    ::  registration and peer set are retained for %ghul to restore.
+    ::  this same effect fires causally when gall reports the agent
+    ::  suspended (%view %idle in +take); no-op if already down.
     ::
         %gost
       ?~  reg=(~(get by dos) dom.tac)
         +>.$
+      ?.  liv.u.reg
+        +>.$
+      =.  dos  (~(put by dos) dom.tac u.reg(liv |))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
       ::  XX %snub sets the blocklist wholesale; this clobbers any
@@ -385,17 +401,16 @@
     ::  recover a suspended pki domain
     ::    [%ghul dom=@tas]
     ::
-    ::  undo %gost: mass-unsnub the domain's peers.
-    ::
-    ::  XX  agent liveness is bracketed (see $dom-state): when it
-    ::      lands, %ghul should also mark the domain live and resume
-    ::      watching its agent:
-    ::    =.  dos  (~(put by dos) dom.tac u.reg(liv &))
-    ::    =.  sus  (emit-peer:sus dap.u.reg pax.u.reg)
+    ::  undo %gost: mark the domain live again and mass-unsnub its
+    ::  peers.  fires causally when gall reports the agent back up
+    ::  (%view %live in +take); no-op if already live.
     ::
         %ghul
       ?~  reg=(~(get by dos) dom.tac)
         +>.$
+      ?:  liv.u.reg
+        +>.$
+      =.  dos  (~(put by dos) dom.tac u.reg(liv &))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
       ::  XX wholesale %snub semantics again: clearing the blocklist
@@ -408,12 +423,12 @@
     ::
     ::  response to a DOS attack or compromised PKI: deregister the
     ::  domain, drop and %ruin every peer verified through it, and
-    ::  block them in ames.
-    ::
-    ::  XX  agent liveness is bracketed (see $dom-state): when it
-    ::      lands, %bane should also stop watching (and stop/nuke)
-    ::      the compromised agent:
-    ::    =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
+    ::  block them in ames.  NB: jael never stops the agent itself
+    ::  (gall owns liveness); nuking the agent instead of sending
+    ::  %bane breaches without snubbing (see %view %nuke in +take).
+    ::  XX  the gall %view subscription has no unsubscribe yet, so
+    ::      it stays up after deregistration; %view gifts for
+    ::      unregistered domains are ignored.
     ::
         %bane
       ?~  reg=(~(get by dos) dom.tac)
@@ -434,18 +449,7 @@
       %-  ~(rep in hep.u.reg)
       |=  [=ship s=_sus]
       (exec:s dus %give %public-keys %breach ship)
-    ::
-    ::  update a pki domain's registered agent or watch path
-    ::    [%hand dom=@tas dap=term pax=path]
-    ::
-        %hand
-      ?~  reg=(~(get by dos) dom.tac)
-        +>.$
-      =.  dos  (~(put by dos) dom.tac [dap.tac pax.tac hep.u.reg])
-      %-  curd  =<  abet
-      =/  sus  ~(. su hen now pki etn)
-      =.  sus  (leave-peer:sus dap.u.reg pax.u.reg)
-      (emit-peer:sus dap.tac pax.tac)
+
     ::
         %dawn
       ::  single-homed
@@ -802,6 +806,53 @@
       %-  curd  =<  abet
       (sources:~(feel su hen now pki etn) ships source)
     ::
+        [%gall %view *]
+      ::  a registered pki-domain agent changed liveness.  suspension
+      ::  and revival act as %gost and %ghul on its peers.  deletion
+      ::  is NOT %bane: agents get nuked for ordinary bug-fixing
+      ::  reasons, so we breach the domain's peers (their points must
+      ::  re-verify from scratch when a new agent registers) but do
+      ::  not snub them; the registration is dropped and a
+      ::  re-installed agent starts fresh via %anex.
+      ::
+      ?>  ?=([%vew @ ~] tea)
+      =/  dom  ;;(term i.t.tea)
+      ?~  reg=(~(get by dos) dom)
+        +>.$
+      ?-    sate.hin
+          %idle
+        ?.  liv.u.reg
+          +>.$
+        =.  dos  (~(put by dos) dom u.reg(liv |))
+        %-  curd  =<  abet
+        %+  emit:~(. su hen now pki etn)
+          hen
+        [%pass /gost %a %snub %deny ~(tap in hep.u.reg)]
+      ::
+          %live
+        ?:  liv.u.reg
+          +>.$
+        =.  dos  (~(put by dos) dom u.reg(liv &))
+        %-  curd  =<  abet
+        %+  emit:~(. su hen now pki etn)
+          hen
+        [%pass /ghul %a %snub %deny ~]
+      ::
+          %nuke
+        =.  dos  (~(del by dos) dom)
+        =.  pos.zim.pki
+          %-  ~(rep in hep.u.reg)
+          |=  [=ship pos=_pos.zim.pki]
+          (~(del by pos) ship)
+        =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
+        =/  sus  ~(. su hen now pki etn)
+        =;  core=_sus
+          (curd abet:core)
+        %-  ~(rep in hep.u.reg)
+        |=  [=ship s=_sus]
+        (exec:s dus %give %public-keys %breach ship)
+      ==
+    ::
         [%gall %unto *]
       ?-    +>-.hin
           %raw-fact  !!
@@ -813,6 +864,10 @@
         ?:  =(%azimuth-tracker app)  +>.$
         ::  a registered pki-domain agent restarted; resubscribe on
         ::  the same wire
+        ::
+        ::  XX  ap-nuke's kicks land before the %view %nuke gift, so
+        ::      we may resubscribe to a just-nuked agent here; the
+        ::      resulting negative %watch-ack is logged and harmless
         ::
         ?:  ?=(^ (dom-for-app app))
           %-  curd  =<  abet
@@ -845,7 +900,7 @@
           =+  ;;(res=writ-response q.q.cage.p.+>.hin)
           ?~  reg=(~(get by dos) dom.res)
             +>.$
-          ?.  =(dap.u.reg app)
+          ?.  &(liv.u.reg =(dom.res app))
             +>.$
           ?~  res.res
             %-  curd  =<  abet
@@ -864,10 +919,27 @@
           %+  exec:sus
             syl.zim.pki
           [%give %sybl %full dom.res ship.res u.res.res]
-        ::  anything else is chain updates (udiffs) from a pki source
-        ::  XX  when agent liveness lands (see $dom-state), drop
-        ::      udiffs from a %gost-suspended domain's agent here
+        ::  %anew-response: the domain agent answering a %jael-anew
+        ::  poke with our own freshly re-encoded pass (new off-chain
+        ::  reveal log in its un-tweaked xtr data).  relay it to
+        ::  %sybl subscribers (ames) as a [%sybl %anew] gift.
         ::
+        ?:  ?=(%anew-response p.cage.p.+>.hin)
+          =+  ;;(res=anew-response q.q.cage.p.+>.hin)
+          ?~  reg=(~(get by dos) dom.res)
+            +>.$
+          ?.  &(liv.u.reg =(dom.res app))
+            +>.$
+          %-  curd  =<  abet
+          %+  exec:~(. su hen now pki etn)
+            syl.zim.pki
+          [%give %sybl %anew dom.res pass.res]
+        ::  anything else is chain updates (udiffs) from a pki
+        ::  source; drop them if the domain is suspended
+        ::
+        =/  dom  (dom-for-app app)
+        ?:  &(?=(^ dom) !liv:(~(got by dos) u.dom))
+          +>.$
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
@@ -934,13 +1006,6 @@
         %watch
         path
     ==
-  ::  +leave-peer: stop watching a pki-domain agent (%hand)
-  ::
-  ++  leave-peer
-    |=  [app=term =path]
-    %-  emit
-    [hen %pass [app path] %g %deal [our our /jael] app %leave ~]
-  ::
   ++  peer
     |=  [app=term whos=(set ship)]
     ?:  =(~ whos)

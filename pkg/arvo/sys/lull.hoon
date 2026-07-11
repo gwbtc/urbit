@@ -903,6 +903,7 @@
         [%prod ships=(list ship)]
         [%sift ships=(list ship)]
         [%snub form=?(%allow %deny) ships=(list ship)]
+        [%anew ~]                                 ::  refresh our attestation
         [%spew veb=(list verb)]
         [%cong msg=@ud mem=@ud]
         [%stir arg=@t]
@@ -3667,6 +3668,7 @@
         [%flub $@(~ [blocked=? dap=(unit term)])]       ::  refuse to take plea
         [%spur ~]                                       ::  ready to take plea
         [%unto p=unto]                                  ::
+        [%view sate=?(%live %idle %nuke)]           ::  agent liveness
     ==                                                  ::
   +$  task                                              ::  incoming request
     $~  [%vega ~]                                       ::
@@ -3687,6 +3689,7 @@
         $>(%plea vane-task)                             ::  network request
         [%spew veb=(list verb)]                         ::  set verbosity
         [%sift dudes=(list dude)]                       ::  per agent
+        [%view =dude]                                   ::  watch agent liveness
     ==                                                  ::
   +$  bitt  (map duct (pair ship path))                 ::  incoming subs
   +$  boat  (map [=wire =ship =term] [acked=? =path])   ::  outgoing subs
@@ -4312,12 +4315,18 @@
     $%  [%full dom=@tas =ship =point]                 ::  verified; point held
         [%fail dom=@tas =ship]                        ::  failed validation
         [%lost dom=@tas =ship]                        ::  unknown pki domain
+        [%anew dom=@tas =pass]                        ::  our fresh attestation
     ==
   ::  $writ-response: %fact payload a registered pki-domain agent gives
   ::  jael on its watch path to answer a %jael-writ poke.  on success,
   ::  res carries the on-chain-verified $point for .ship.
   ::
   +$  writ-response  [dom=@tas =ship res=(unit point)]
+  ::  $anew-response: %fact payload the domain agent gives jael to
+  ::  answer a %jael-anew poke: our own pass, re-encoded with the
+  ::  current off-chain reveal log in its (un-tweaked) xtr data.
+  ::
+  +$  anew-response  [dom=@tas =pass]
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
@@ -4349,12 +4358,12 @@
         [%private-keys ~]                             ::  sub to privates
         [%public-keys ships=(set ship)]               ::  sub to publics
         [%writ dom=@tas =ship =pass]                  ::  verify pki attestation; dom is committed in the pass tweak
-        [%anex dom=@tas dap=term pax=path]            ::  register new pki domain, eg. [%bitcoin %urb-watcher /jael]
+        [%anex pax=path]                              ::  register pki domain; the sending agent's name is the domain
+        [%anew dom=@tas]                              ::  request fresh self-attestation from the domain agent
         [%sybl ~]                                     ::  sub to writ results
         [%gost dom=@tas]                              ::  suspend pki domain (snub its peers)
         [%ghul dom=@tas]                              ::  revive pki domain (unsnub)
         [%bane dom=@tas]                              ::  destroy pki domain
-        [%hand dom=@tas dap=term pax=path]            ::  update domain agent
         [%fief ships=(set ship)]                      ::  sub to routes
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key

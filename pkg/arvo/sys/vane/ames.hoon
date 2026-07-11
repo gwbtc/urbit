@@ -169,6 +169,7 @@
                       %ruin
                       %writ
                       %sybl
+                      %anew
                   ==
               task:jael
           ==
@@ -9235,6 +9236,18 @@
                 %cong  sy-abet:sy-cong:sy-core
                 %prod  sy-abet:(sy-prod:sy-core ships.task)
                 %snub  sy-abet:(sy-snub:sy-core [form ships]:task)
+                ::  ask our pki-domain agent (via jael) to re-encode
+                ::  our pass with the current off-chain reveal log;
+                ::  the fresh pass returns on /sybl (+sy-sybl %anew).
+                ::  no-op for vanilla (suite-%b) ships.
+                ::  XX  should also fire automatically when a peer
+                ::      rejects our attestation as stale
+                ::
+                  %anew
+                =/  dom  (pass-pki-dom pass.ames-state)
+                ?~  dom
+                  `ames-state
+                sy-abet:(sy-emit:sy-core hen %pass /sybl %j %anew u.dom)
                 %stun  sy-abet:(sy-stun:sy-core stun.task)
                 %dear  sy-abet:(sy-dear:sy-core +.task)
                 %tame  sy-abet:(sy-tame:sy-core ship.task)
@@ -11176,6 +11189,23 @@
                     |.("writ for unknown pki domain {<dom.writ-result>}")
                 ==
             sy-core
+          ::
+          ::  our own freshly re-encoded pass, with an updated
+          ::  off-chain reveal log in its (un-tweaked) xtr data.
+          ::  the tweak proper is immutable, so our name must be
+          ::  unchanged; future self-attestations carry the new log.
+          ::  XX  not persisted in the boot keyfile; a fresh %anew
+          ::      round-trip after breach/boot re-derives it
+          ::
+              %anew
+            ?.  =(our fig:ex:(com:nu:cric:crypto pass.writ-result))
+              %.  sy-core
+              %-  trace
+              :*  %mesa  odd.veb.bug.ames-state  our
+                  ships.bug.ames-state
+                  |.("%anew pass does not hash to our name; dropped")
+              ==
+            sy-core(pass.ames-state pass.writ-result)
           ==
         ::
         ++  sy-publ
@@ -14188,7 +14218,7 @@
     ::  flow-independent tasks
     ::
       $?  %vega  %init  %born  %snub  %spew  %stun  %gulp
-          %sift  %plug  %dear  %init  %tame  %cong
+          %sift  %plug  %dear  %init  %tame  %cong  %anew
       ==
     (call:me-core sample)
     ::  common tasks

@@ -37,3 +37,23 @@ Next (kernel):
 Next (agent, hd/urb-handler):
 - %jael-writ poke handler + %writ-response fact in %urb-watcher, replacing
   the placeholder %attestation-verdict/%attestation-request pokes
+
+Phase 2 (cyc/cc-draft-2), after team review:
+- [x] causal liveness: gall %view subscription (task+gift, state %21); jael
+      subscribes on %anex and reacts (%idle -> gost, %live -> ghul,
+      %nuke -> breach hep WITHOUT snubbing + deregister; %bane task remains
+      the explicit snub-everything lever)
+- [x] 1:1 domain<->agent: %anex takes pax only, dom = sending agent's name
+      (from the gall duct); %hand eliminated
+- [x] pass anatomy split documented + enforced where kernel-visible:
+      dat.tw = mat(dom) + spawn satpoint (immutable, name-committing);
+      xtr.tw = off-chain reveal log (kernel-opaque, varies)
+- [x] %anew flow: ames task -> jael -> %jael-anew poke -> %anew-response
+      fact -> [%sybl %anew] gift -> pass.ames-state updated
+- [x] spec: urb-watcher %jael-writ pseudocode (verify from pass + chain
+      view alone); fragment sizing (variant A ~1 entry/KiB, variant B
+      ~5-7); multi-fragment DOS assessment (bounded LRU pool if needed)
+- open q:
+  - %view unsubscribe affordance (jael's sub outlives deregistration)
+  - auto-fire %anew when a peer rejects a stale attestation
+  - persist %anew-refreshed pass to the boot keyfile?

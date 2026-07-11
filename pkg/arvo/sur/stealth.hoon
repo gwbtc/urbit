@@ -3,30 +3,60 @@
 ::  NOTE: this file is a design sketch and is not currently built by
 ::  anything.  the authoritative $open-packet lives in sys/vane/ames.hoon
 ::  (unchanged from vanilla comets); the jael task/gift types
-::  ($writ-result, $writ-response) live in sys/lull.hoon.  see
-::  doc/spec/confidential-comets.md for the protocol.
+::  ($writ-result, $writ-response, $anew-response) live in sys/lull.hoon.
+::  see doc/spec/confidential-comets.md for the protocol.
 ::
-::  a confidential groundwire comet is exactly a comet whose $pass is
-::  suite %c.  its key-tweak data (dat.tw of the cric core) is:
+::  anatomy of a confidential comet's $pass (suite %c, encoded by
+::  +pub:ex:cric in zuse):
 ::
-::    (cat 0 (mat dom) <domain-specific attestation data>)
+::    dat.tw.pub -- the actual Schnorr tweak data.  hashed into the
+::      signing key, so the comet's name (the hash of the pass's
+::      tweaked key) commits to it; it can NEVER vary in the lifetime
+::      of the ID.  contains exactly:
 ::
-::  i.e. the +mat-encoded PKI domain tag at the head, extracted by the
-::  receiving ames with +rub (+pass-pki-dom in ames.hoon), followed by
-::  the domain payload.  since the comet's name is the hash of the
-::  pass, the name commits to the domain, preventing cross-chain
-::  double-boot; and $open-packet is untouched, so vanilla (suite-%b)
-::  comets are fully backward-compatible.
+::        (cat 0 (mat dom) <spawn satpoint>)
+::
+::      i.e. the +mat-encoded PKI domain tag (which is also the name
+::      of the verifier agent, 1:1) followed by the sat's spawn
+::      satpoint.  extracted with +rub by the receiving ames
+::      (+pass-pki-dom) and by jael; committing the domain here
+::      prevents cross-chain double-boot.
+::
+::    xtr.tw.pub -- the off-chain reveal of the on-chain event log: a
+::      list of merkle proofs into the block headers, one per
+::      ownership-sat transfer from the %spawn commit through the
+::      current (unspent) tip.  NOT hashed into the key (+nol/+com
+::      tweak over dat only), so it grows over the ID's lifetime
+::      without changing the name.  kernel-opaque: ames and jael pass
+::      the whole $pass through to the domain agent, which alone
+::      parses and verifies it (see $reveal-entry below).  refreshed
+::      via the %anew flow when the sat moves.
+::
+::  the self-attestation packet ($open-packet) adds only sndr/rcvr
+::  names and lives around the pass; those stay kernel-level for
+::  vanilla-comet and persistent-node interactions.
 ::
 |%
-::  $groundwire-pass: the %bitcoin domain's tweak payload (after the
-::  domain tag): the comet's ownership satpoint plus the off-chain
-::  reveal log that lets a verifier walk the sat's commit chain.
-::  parsed and verified by %urb-watcher, not by the kernel.
+::  $reveal-entry: one ownership-sat transfer in xtr.tw.pub.
 ::
-+$  groundwire-pass
-  $:  =satpoint
-      log=(list utxo-tweak)
-  ==
-+$  utxo-tweak  [outpoint script]
+::  two candidate shapes (see spec for size analysis):
+::
+::  self-contained (SPV against locally-held headers; ~1 entry per
+::  1KB fragment):
+::
+::    $:  txdata=octs                 ::  full serialized transaction
+::        reveal=octs                 ::  committed `urb` tapleaf script
+::        proof=(list @ux)            ::  tx merkle path to block root
+::        block=@ud                   ::  block height (header lookup)
+::    ==
+::
+::  fetch-based (agent fetches tx by txid from its own node/indexer;
+::  ~5-7 entries per fragment):
+::
+::    $:  =txid                       ::  transaction id
+::        block=@ud                   ::  block height
+::        reveal=octs                 ::  committed `urb` tapleaf script
+::    ==
+::
++$  txid  @ux
 --

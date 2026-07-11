@@ -1,6 +1,6 @@
 # Confidential Comets: Kernel Integration Spec & Proposal
 
-Status: **draft** (branch `cyc/cc-draft`)
+Status: **draft** (branches `cyc/cc-draft` + `cyc/cc-draft-2`)
 Companion to: *Confidential Comets* (~hanfel-dovned) and the
 `hd/urb-handler` prototype in `gwbtc/groundwire`
 (`sur/self-attestation.hoon`, `app/urb-watcher.hoon`).
@@ -28,8 +28,9 @@ those placeholders with real Ames/Jael plumbing.
 ## 2. Design overview
 
 The kernel treats on-chain verification as a **pluggable PKI domain**: a
-local gall agent, registered with Jael per domain tag (e.g. `%bitcoin` →
-`%urb-watcher`), owns all chain knowledge. The kernel only:
+local gall agent, registered with Jael per domain tag (1:1: e.g.
+`%groundwire` names both the domain and the agent), owns all chain
+knowledge. The kernel only:
 
 1. recognizes that an incoming comet attestation claims a domain,
 2. routes it to the domain's registered agent via Jael,
@@ -64,10 +65,20 @@ packet's `pass`:
 - **suite `%b`** — vanilla comet: plain self-signed key, life 1
   forever. Verified and registered entirely locally, exactly as before.
 - **suite `%c`** — exclusively a confidential groundwire comet (suite
-  `%c` was upstreamed for precisely this). The key's **tweak data**
-  (`dat.tw` of the cric core) carries, at its head, the `+mat`-encoded
-  PKI domain tag — extracted by the receiving Ames with `+rub`
-  (`+pass-pki-dom`) — followed by the domain-specific attestation data.
+  `%c` was upstreamed for precisely this). The pass carries two
+  distinct payloads (see `sur/stealth.hoon` for the full anatomy):
+  - `dat.tw.pub` — the **actual Schnorr tweak data**, hashed into the
+    signing key and therefore immutable for the ID's lifetime: exactly
+    the `+mat`-encoded PKI domain tag (extracted by the receiving Ames
+    with `+rub`, `+pass-pki-dom`) followed by the sat's **spawn
+    satpoint**.
+  - `xtr.tw.pub` — the **off-chain reveal of the on-chain event log**:
+    merkle proofs into the block headers for each ownership-sat
+    transfer, spawn → tip. *Not* tweaked into the key, so it grows
+    over time without changing the name. Kernel-opaque: it rides
+    inside the `$pass` straight through Ames and Jael to the domain
+    agent, which alone parses and verifies it. Refreshed via `%anew`
+    (§2.6).
 
 Committing the domain inside the tweak (rather than attesting it in a
 packet field) means the comet's *name* — the hash of the pass — commits
@@ -91,11 +102,19 @@ New top-level state (`state-5`):
 ```hoon
 dos=(map @tas dom-state)
 +$  dom-state
-  $:  dap=term          ::  verifier agent
-      pax=path          ::  watch path
+  $:  pax=path          ::  watch path on the domain agent
+      liv=?             ::  %.n while the agent is suspended
       hep=(set ship)    ::  ships verified through this domain
   ==
 ```
+
+**Domains and agents are 1:1 by construction**: the domain name *is*
+the verifier agent's name (e.g. `%groundwire` names both), and Jael
+derives it from the `[%gall %use dap ...]` duct the `%anex` task
+arrives on — an agent can only ever register itself. This eliminates
+the `%hand` re-pointing task and the whole class of dom/dap skew bugs;
+"changing the handler" is now: nuke or suspend the old agent (see
+liveness below), install the new one, let it `%anex`.
 
 > **Naming note**: the verdict *gift* is tagged `%sybl` (matching the
 > subscription task), not `%writ`. Clay already gives a `%writ` gift, and
@@ -111,26 +130,42 @@ initializing both empty. (The stashed scaffold had instead redefined
 state no longer matched the type and `+load` crashed on upgrade; this
 was caught by upgrading a running fakeship.)
 
-**Agent liveness is deliberately bracketed** (commented out at the
-`$dom-state` definition and the `%gost`/`%ghul`/`%bane` handlers): a
-suspended domain should also stop being watched and refuse `%writ`s
-(`liv=?` flag), and `%bane` should stop the agent itself. Whether Jael
-*drives* the agent's state (task → effect on agent) or *reacts* to it
-(subscribing to agent status through future Gall affordances) is an
-open design question — see §4. Until then, `%gost`/`%ghul` act only on
-the domain's peers, and Jael's subscription to the agent stays up.
+**Agent liveness flows causally from Gall to Jael.** Gall grows a
+`[%view =dude]` task: subscribe a duct to an agent's lifecycle, giving
+`[%view sate=?(%live %idle %nuke)]` — the current state immediately,
+then a gift on every transition (hooked in `+mo-receive-core`,
+`+mo-idle`, `+mo-nuke`; subscribers in a new `vew` jug, gall state
+`%20`→`%21`). Jael subscribes on `%anex` and reacts:
+
+- **`%idle`** (agent suspended) → `%gost` semantics: mark `liv=|`,
+  refuse `%writ`s with `%lost`, ignore the agent's facts, `%snub` the
+  domain's `hep` peers. Idempotent — the initial `%view` snapshot on a
+  live agent is a no-op.
+- **`%live`** (agent back) → `%ghul` semantics: `liv=&`, unsnub.
+- **`%nuke`** → **not** `%bane`. Agents get nuked for ordinary
+  bug-fixing reasons, and users can't be trusted to reserve nuking for
+  true emergencies — so deletion breaches the domain's peers (their
+  points are forgotten and must re-verify from scratch once a new
+  agent registers) and deregisters the domain, but does **not** snub
+  anyone. The full snub response remains available as the explicit
+  `%bane` task.
+
+Jael never drives the agent's state in the other direction —
+`%gost`/`%ghul` remain as manual levers over the same `liv`/peer
+effects, and `%bane` as the emergency lever, but none of them touch
+the agent itself; Gall owns liveness.
 
 ### 2.3 Task/gift API (lull)
 
 | Task | Meaning |
 |---|---|
-| `[%anex dom dap pax]` | register a PKI domain: `dap` verifies writs, jael watches `pax` for its responses and chain updates |
+| `[%anex pax]` | register a PKI domain: the *sending agent's name* is the domain (1:1); jael watches `pax` for its responses and chain updates, and watches the agent's liveness via gall `%view` |
 | `[%writ dom ship pass]` | verify an attestation: poke the domain agent with `[%jael-writ dom ship pass]`; unknown domain → immediate `%lost` verdict. `dom` is what Ames extracted from the pass tweak |
 | `[%sybl ~]` | subscribe to all writ verdicts (Ames does this once at boot, in `+sy-init`) |
-| `[%gost dom]` | suspend a domain: `%snub` its verified peers; registration and peer set retained. (Agent suspension bracketed, §2.2) |
-| `[%ghul dom]` | recover from `%gost`: mass-unsnub. (Agent resumption bracketed) |
-| `[%bane dom]` | destroy a domain (DOS attack / compromised PKI): deregister, delete its ships' points, `%breach`-broadcast (a la `%ruin`) and `%snub` them. (Agent stop/nuke bracketed) |
-| `[%hand dom dap pax]` | re-point a domain at a new agent or watch path |
+| `[%anew dom]` | request a fresh self-attestation (updated `xtr` reveal log) from the domain agent; the new pass returns to `%sybl` subscribers (§2.6) |
+| `[%gost dom]` | suspend a domain: `liv=|`, `%snub` its verified peers; registration and peer set retained. Also fired causally by gall `%view %idle` |
+| `[%ghul dom]` | recover from `%gost`: `liv=&`, mass-unsnub. Also fired causally by `%view %live` |
+| `[%bane dom]` | destroy a domain (DOS attack / compromised PKI): deregister, delete its ships' points, `%breach`-broadcast (a la `%ruin`) and `%snub` them. NB: nuking the agent instead breaches *without* snubbing (`%view %nuke`) |
 
 New gift, to `%sybl` subscribers:
 
@@ -212,6 +247,33 @@ The domain needs no separate plumbing: it is baked into the pass at
 keyfile-generation time, so whatever booted the comet already committed
 it.
 
+### 2.6 Refreshing our attestation: the `%anew` flow
+
+The immutable tweak (`dat`) never changes, but the reveal log (`xtr`)
+must grow whenever our ownership sat moves. The kernel entrypoint is
+the Ames task `[%anew ~]` (manual/dojo for now; XX auto-fire when a
+peer rejects a stale attestation):
+
+```
+ames %anew task
+  -> +pass-pki-dom on pass.ames-state (no-op for vanilla ships)
+  -> %pass /sybl %j [%anew dom]
+jael
+  -> registered + live?  %jael-anew poke to the domain agent
+agent (async: reads its own chain state)
+  -> %anew-response fact [dom=@tas =pass] on the %anex watch path
+jael
+  -> [%sybl %anew dom pass] gift to %sybl subscribers
+ames +sy-sybl %anew
+  -> assert (fig:ex pass) is still our name (tweak unchanged)
+  -> pass.ames-state := pass
+```
+
+Subsequent open-packets and `/pawn/proof` peeks carry the fresh log.
+XX: the updated pass is not persisted to the boot keyfile; after a
+breach-and-reboot the agent re-derives it and one `%anew` round-trip
+restores it.
+
 ## 3. End-to-end flows
 
 **First contact, confidential comet.** ~zig (confidential) pokes a plea
@@ -252,15 +314,13 @@ points, breaches (`%ruin`-style broadcast) and snubs its ships.
 
 ## 4. Open questions / deferred (proposal items)
 
-1. **Agent liveness / Gall affordances.** The `liv` flag and every
-   place Jael would act on (or react to) the domain agent's runtime
-   state — un-watching on `%gost`, re-watching on `%ghul`,
-   stopping/nuking on `%bane`, refusing writs and dropping udiffs from
-   a suspended domain — is bracketed in comments. The open design
-   question: should a `%gost` task *cause* the agent's suspension, or
-   should Jael *subscribe to agent status* (suspended → `%gost`
-   semantics, nuked → `%bane` semantics) once Gall grows an affordance
-   for that? To be covered in a discrete later step.
+1. **Agent liveness / Gall affordances — RESOLVED** (cyc/cc-draft-2):
+   causal flow from Gall to Jael via the `%view` subscription (§2.2).
+   Remaining loose ends: `%view` has no unsubscribe, so Jael's
+   subscription outlives a `%bane`/nuke deregistration (gifts for
+   unregistered domains are ignored); and `ap-nuke`'s kicks land
+   before the `%view %nuke` gift, so Jael may harmlessly resubscribe
+   to a just-nuked agent's watch path (negative `%watch-ack`, logged).
 2. **Additive `%snub` in the Ames task API.** `%gost`/`%ghul`/`%bane`
    currently emit the wholesale `%snub` task, which clobbers manual
    blocklists (`%ghul` clears the whole list). `+sy-sybl` already snubs
@@ -273,18 +333,15 @@ points, breaches (`%ruin`-style broadcast) and snubs its ships.
    payload, see `sur/stealth.hoon`) or — more likely — treats the pass
    as a locator and requests the full `$self-attestation` packet; and a
    `%writ-response` mark/fact in place of the placeholder
-   `%attestation-verdict` poke. The `%attestation-request` placeholder
-   (asking Ames to fetch a fresh packet when a watched sat moves) still
-   needs a kernel entry point — probably a Jael task that triggers
-   `+al-read-proof`.
-4. **How much attestation data rides in the pass?** The full
-   `$self-attestation` chain can be large (up to 1024 links in the
-   prototype), while the mesa proof path asserts a 1-fragment (≤1KiB)
-   packet. Either the pass tweak carries a compact form (domain tag +
-   satpoint + reveal log, as `$groundwire-pass` sketches) with the
-   agent fetching txs itself, or the attestation must be fetched as a
-   multi-fragment message rather than carried in the open-packet.
-   **This is the biggest unresolved sizing question.**
+   `%attestation-verdict` poke (pseudocode in §7). The
+   `%attestation-request` placeholder now has its kernel entry point:
+   the `%anew` flow (§2.6) — though auto-firing it when a watched sat
+   moves (rather than by manual task) is still TODO.
+4. **How much attestation data rides in the pass?** Quantified in §8:
+   a fully self-contained SPV log fits ~1 transfer per 1KiB fragment;
+   a fetch-based log fits ~5–7. Recommendation there: fetch-based
+   entries in a single fragment, with bounded multi-fragment reserved
+   for deep histories if self-contained proofs become a requirement.
 5. **Groundwire breaches.** Re-attestation at an equal/lower life, and
    the `[?????????]` in the design doc (what a watcher does when a
    tracked sat moves without a new packet), are stubbed at the "known"
@@ -337,3 +394,148 @@ Not yet compiled or booted (draft). To verify:
    the snub land (`/ax/snubbed` scry).
 4. `%gost`/`%ghul`/`%bane`/`%hand` exercised from dojo against the
    registered domain.
+
+## 7. Agent-side verification (pseudocode)
+
+What `%groundwire` (né `%urb-watcher`) does with a `%jael-writ` poke.
+The point: **the pass alone, plus the agent's own view of the chain,
+suffices** — no fetch of a wider `$self-attestation` structure is
+needed. The packet-level sndr/rcvr names and lives exist only for
+kernel-level handling; the agent reconstructs name and life from first
+principles and the kernel cross-checks.
+
+```
+++  handle-jael-writ
+  |=  [dom=@tas who=ship =pass]
+  ::  runs in a khan thread; %writ-response fact on completion
+  ::
+  ::  1. decode the pass (mirror of +com:nu:cric)
+  [ugn cry dat xtr]  (parse-cric-pass pass)      ::  'c' tag asserted
+  [dom' spawn-sont]  (rub-decode dat)
+  ?.  =(dom' dom)         (respond who ~)        ::  domain mismatch
+  ::  2. the name must be the hash of the tweaked key
+  ::     (jael/ames already checked this; re-derive, don't trust)
+  sgn  (scap ugn (shax (cat 3 ugn dat)))         ::  tweaked signing key
+  ?.  =(who (fig sgn))    (respond who ~)
+  ::  3. walk the reveal log: spawn -> tip
+  ::     each entry proves one key-path spend of the ownership sat
+  sont  spawn-sont
+  life  1
+  keys  (parse-spawn-keys reveal.entry-0)        ::  %spawn sotx: initial pass
+  |-  for entry in (parse-reveal-log xtr)
+    ::  a. locate the tx: self-contained (verify merkle proof against
+    ::     our header chain at block.entry) or fetch-based (fetch
+    ::     txid.entry from our node, confirm block height)
+    tx  (obtain-tx entry)
+    ?.  (spends tx sont)  (respond who ~)        ::  gap in the chain
+    ::  b. the spent output's key must commit to the revealed leaf:
+    ::     Q == P + H_TapTweak(x(P) || leaf-hash(reveal.entry)) * G
+    ::     and the tree must be provably sparse (root == leaf hash)
+    ?.  (leaf-commits (output-key tx sont) reveal.entry)
+      (respond who ~)
+    ::  c. interpret the revealed sotx
+    ?-  (parse-sotx reveal.entry)
+      %no-op  ::  plain custody transfer, key unchanged
+              sont := (advance-sont tx sont)
+      %keys   ::  key rotation: new messaging pass, life bump
+              keys := (put keys +(life) new-pass), life := +(life)
+              sont := (advance-sont tx sont)
+      %spawn  ?.  =(sont spawn-sont)  (respond who ~)   ::  only first
+              sont := (advance-sont tx sont)
+      *       (respond who ~)         ::  escapes etc: future work
+    ==
+  ::  4. the tip must be unspent *on our view of the chain*, and no
+  ::     later spend of the sat may exist (the log must be complete)
+  ?.  (utxo-live sont)    (respond who ~)
+  ::  5. the pass's messaging key must be the latest attested one
+  ?.  =(cry (latest keys))  (respond who ~)
+  ::  6. verdict: the verified point
+  (respond who `[rift=0 life=life keys=keys sponsor=`(sein who) fief=~])
+::
+++  respond
+  |=  [who=ship res=(unit point)]
+  (give-fact /jael %anew-response ... | %writ-response [dom who res])
+```
+
+`%jael-anew` is the dual: re-encode *our own* pass with
+`(cat 0 old-dat)` unchanged and `xtr` extended by the entries the
+watcher has indexed since the last encoding, then fact
+`[%anew-response dom pass]`.
+
+## 8. Attestation sizing and fragmentation
+
+How many reveal-log entries fit in one ~1KiB mesa fragment? Fixed
+overhead first: the `$open-packet` wrapper (sndr/rcvr/lives, jam
+structure) plus the pass's fixed fields (`'c'` tag, `ugn` 32B, `cry`
+32B, `dat` ≈ 45B for a mat-encoded domain tag + satpoint) and the
+64B signature come to **≈ 230B**, leaving **≈ 790B** of fragment for
+`xtr`.
+
+**Variant A — self-contained SPV entry**
+`[txdata envelope-datapush-reveal merkle-proof-hashes block-number]`:
+
+| field | size |
+|---|---|
+| txdata (1-in/1-out P2TR key-spend, full serialization) | ~161 B |
+| tapleaf reveal (leaf version + script with sotx datapush) | ~60–100 B |
+| merkle path, 32B × ⌈log₂(~2–4k txs/block)⌉ = 11–12 hashes | ~352–384 B |
+| block number | 4 B |
+| noun/jam overhead (~10%) | ~60 B |
+| **total** | **~640–710 B** |
+
+→ **1 entry per fragment** (the first fragment holds *none* after
+overhead; a spawn-only comet just fits). Every sat transfer costs
+roughly one additional fragment.
+
+**Variant B — fetch-based entry** `[txid block-number reveal]`
+(agent required to fetch the tx from a full node / indexer it
+trusts-but-verifies, not just from an up-to-date local light client):
+
+| field | size |
+|---|---|
+| txid | 32 B |
+| block number | 4 B |
+| tapleaf reveal | ~60–100 B |
+| jam overhead | ~10 B |
+| **total** | **~106–146 B** |
+
+→ **~5–7 entries in the single-fragment attestation** (≈790B / ~128B),
+~7–8 per additional KiB. A comet that has moved its sat five times
+still fits first-contact-in-one-fragment.
+
+**Recommendation**: variant B in the pass. Verification is already
+asynchronous (khan thread), so the extra fetches cost latency, not
+protocol complexity — and the entries stay small enough that the
+common case (0–5 transfers) never fragments. Variant A's
+self-contained proofs matter mainly for off-Urbit verifiers (EUDI
+thought experiment); those consumers can be served the fat form out of
+band rather than in the handshake.
+
+### Multi-fragment interactions with unverified peers
+
+Is relaxing the mesa 1-fragment assertion for first-contact
+attestations a DOS vector? **Yes, but a bounded and familiar one** —
+it is exactly IP-fragmentation-style reassembly-state exhaustion:
+
+- Fragments from an unverified peer are unattributable until the full
+  pass reassembles (the name commits only to `dat`, and the packet
+  signature can only be checked against the complete pass), so an
+  attacker can open arbitrarily many partial reassemblies from
+  invented names at ~zero cost. The name-check on `dat` in fragment 1
+  is *not* a gate: generating a fresh (ugn, dat) pair per packet is
+  free.
+- Mitigations are standard: a fixed-size LRU reassembly pool reserved
+  for unverified peers (e.g. 1024 slots × 8KiB cap ≈ 8MiB bounded
+  memory), per-source-lane rate limits, short TTL, and a hard cap on
+  attestation size (e.g. 8 fragments ≈ 50+ transfers under variant B).
+  Attackers can then evict each other — and honest *new* handshakes —
+  but cannot touch established peers or ship memory beyond the pool.
+- Net effect: griefing of first contacts under active attack, no
+  resource exhaustion. Acceptable, but **not free**: it adds a
+  reassembly pool and eviction policy to mesa's currently stateless
+  unverified-peer path.
+
+Given variant B makes the common case single-fragment, the pragmatic
+order is: ship variant B without touching mesa; add the bounded pool
+only when deep-history comets (or variant-A consumers) actually
+appear.
