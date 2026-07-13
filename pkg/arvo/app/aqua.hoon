@@ -630,6 +630,7 @@
             [/i/http-client/0v1n.2m9vh %born ~]
             [/e/http-server/0v1n.2m9vh %born ~]
             [/e/http-server/0v1n.2m9vh %live 8.080 `8.445]
+            [/a/newt/0v1n.2m9vh %load core.ae]
             [/a/newt/0v1n.2m9vh %born ~]
             [/d/term/1 %hail ~]
             [/k/khan/0v1n.2m9vh/1 %born ~]
@@ -890,7 +891,19 @@
   =/  suite=?(%b %c)
     suite:(~(gut by comets:aqua-azimuth) who [suite=%b seed=*@uw])
   =/  spon=(list [ship point:jael])
-    ?:  =(suite %c)  ~
+    ?:  &(=(%pawn (clan:title who)) =(suite %c))
+      ?^  feed
+        ?~  fud=(feed-to-point u.feed)
+          ~
+        [who u.fud]~
+      =/  pub=pass  pub:ex:(get-keys:aqua-azimuth who 1)
+      :~  :*  ship=who
+              rift=0
+              life=1
+              keys=(~(put by *(map life [@ud pass])) 1 [2 pub])
+              sponsor=`who
+              fief=~
+      ==  ==
     %-  flop
     |-  ^-  (list [ship point:jael])
     =/  =ship  (^sein:title who)
@@ -922,6 +935,53 @@
       *(list (pair @tas *))
   ==
 ::
+::  +feed-to-point: convert a $feed into a $point:jael
+::
+::    If feed has no rift, assumes zero. Assumes the
+::    highest life is the intended one. Sets sponsor to
+::    itself. Intended for c-suite comets.
+::
+++  feed-to-point
+  |=  =feed:jael
+  ^-  (unit point:jael)
+  ?~  fud=(lift-feed feed)
+    ~
+  =.  feed  u.fud
+  ?>  ?=([%2 ~] -.feed)
+  =/  [lyf=life keys=(map life [crypto-suite=@ud =pass])]
+    ?>  ?=(^ kyz.feed)
+    :-  lyf.i.kyz.feed
+    %-  ~(put by *(map life [@ud pass]))
+    =+  cic=(nol:nu:cric:crypto key.i.kyz.feed)
+    [lyf.i.kyz.feed num:ex:cic pub:ex:cic]
+  %-  some
+  :*  ryf.feed
+      lyf
+      keys
+      `who.feed
+      ~
+  ==
+::  +lift-feed: update $feed to [%2 ~]
+::    If feed has no rift, assumes zero. Assumes the
+::    highest life is the intended one.
+::
+++  lift-feed
+  |=  =feed:jael
+  ^-  (unit feed:jael)
+  =.  feed
+    ?@  -.feed
+      [[%2 ~] who 0 [lyf key]~]:feed
+    ?.  ?=([%1 ~] -.feed)
+      feed
+    [[%2 ~] who 0 kyz]:feed
+  ?>  ?=([%2 ~] -.feed)
+  =/  top=(unit [lyf=life key=ring])
+    =/  kyz
+      %+  sort  kyz.feed
+      |=([[a=@ *] [b=@ *]] (gth a b))
+    ?~(kyz ~ `i.kyz)
+  ?~  top  ~
+  `feed(kyz ~[u.top])
 ::  Should only do galaxies
 ::
 ++  get-czars

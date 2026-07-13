@@ -28,9 +28,8 @@
 ::
 ::  $nails: lanes from %nail effects
 ::
-+$  nails  (map nail-key nail-entry)
++$  nails  (jug nail-key lane:pact:ames)
 +$  nail-key    [at=ship target=ship]
-+$  nail-entry  [ames=(list lane:ames) mesa=(list lane:pact:ames)]
 ::  $knowns: whether shot receiver knows shot sender for event n
 ::
 +$  knowns  (map @ud ?)
@@ -80,7 +79,7 @@
     `state(nas (~(del by nas) [who target]))
   =.  nas
     %+  ~(put by nas)  [who target]
-    [lanes (turn lanes ames-to-mesa-lane)]
+    (~(gas in *(set lane:pact:ames)) (turn lanes ames-to-mesa-lane))
   `state
 ::
 ++  handle-fief
@@ -145,15 +144,18 @@
   =/  is-known=(unit ?)
     ?~  event-id  ~
     (~(get by kno) u.event-id)
+  ::~&  >>>  [%handle-send sndr=sndr rcvr=u.rcvr shot-sndr=sndr.shot shot-rcvr=rcvr.shot way=way lan=lan event-id=event-id is-known=is-known]
   ?:  &(=(u.rcvr rcvr.shot) ?=(~ is-known))
     (get-known our [sndr.shot rcvr.shot] sndr way %send lan pac)
   ::  avoid crashes from treating open packet as shut packet or vice versa
   ::
   ?:  (known-filter is-known u.rcvr [sndr rcvr content]:shot)
+    ::~&  >>  [%skip-event sndr=sndr rcvr=u.rcvr shot-sndr=sndr.shot shot-rcvr=rcvr.shot way=way lan=lan event-id=event-id is-known=is-known]
     ::~&  >  "skip packet"^event-id=event-id
     :_  state
     %+  emit-aqua-events  our
     (next-known-thread rcvr.shot)
+  ::~&  >  [%inject-event sndr=sndr rcvr=u.rcvr shot-sndr=sndr.shot shot-rcvr=rcvr.shot way=way lan=lan event-id=event-id is-known=is-known]
   ::~&  >>   "inject packet"^event-id=event-id
   :_  state
   %+  emit-aqua-events  our
@@ -214,7 +216,11 @@
       ::
       ?~  last-hop
         [aes state]
-      ::  otherwise, inject
+      ::  update route cache
+      ::
+      =/  return=lane:pact  (mesa-ship-to-lane u.last-hop)
+      =.  nas  (~(put ju nas) [this-hop u.last-hop] return)
+      ::  inject
       ::
       :_  state
       :_  aes
@@ -279,6 +285,9 @@
       ::  add to target's PIT
       ::
       =.  pit  (~(put ju pit) [this-hop key-name] return)
+      ::  update route cache
+      ::
+      =.  nas  (~(put ju nas) [this-hop last-hop] return)
       ::  inject event
       ::
       :_  state
@@ -304,7 +313,7 @@
     ::  get lanes for target from this hop's perspective
     ::
     =/  lanes=(list lane:pact)
-      mesa:(~(gut by nas) [this-hop target] *nail-entry)
+      ~(tap in (~(get ju nas) [this-hop target]))
     ::  add to this hop's PIT
     ::
     =/  return=lane:pact  (mesa-ship-to-lane last-hop)
@@ -327,11 +336,15 @@
     ::
     $(aes new-aes, lanes t.lanes)
   --
-::  +known-filter: test whether packet should be injected
+::  +known-filter: test whether packet should be skipped
 ::
 ++  known-filter
   |=  [is-known=(unit ?) rcvr=@p shot-sndr=@p shot-rcvr=@p content=@]
   ^-  ?
+  ::  always inject if it's a request for comet proof
+  ::
+  ?:  =(%keys content)
+    %.n
   ?&  ::=-  ~?  -  %is-pawn
       ::    -
       ?=(%pawn (clan:title shot-sndr))
