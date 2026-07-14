@@ -4951,9 +4951,17 @@
               |.("requested attestation")
           ?.  =(%pawn (clan:title our))
             event-core
+          =/  via=@p
+            ?.  =(%pawn (clan:title sndr.shot))
+              sndr.shot
+            =/  lyf
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
+            ?:  ?=([~ ~ [* * ^]] lyf)
+              sndr.shot
+            (^sein:title sndr.shot)
           =/  =blob  (attestation-packet sndr.shot 1)
-          %-  send-blob
-          [for=| sndr.shot blob (~(get by peers.ames-state) sndr.shot)]
+          %-  send-blob-via
+          [for=| via sndr.shot blob (~(get by peers.ames-state) via)]
         ::  +on-hear-open: handle receipt of plaintext comet self-attestation
         ::
         ++  on-hear-open
@@ -5849,10 +5857,22 @@
             (emit [duct %pass /public-keys %j %public-keys ship ~ ~])
           =.  event-core
             =/  =blob  (sendkeys-packet ship)
-            (send-blob for=| ship blob (~(get by peers.ames-state) ship))
+            =/  sponsor=@p  (^sein:title ship)
+            =/  sponsor-state=(unit ship-state)
+              (~(get by peers.ames-state) sponsor)
+            (send-blob-via for=| sponsor ship blob sponsor-state)
           =/  =wire  /alien/(scot %p ship)
           (emit duct %pass wire %b %wait (add now ~s30))
         ::  +send-blob: fire packet at .ship and maybe sponsors
+        ::
+        ::    Wrapper for +send-blob-via where .ship and .final-ship are
+        ::    the same.
+        ::
+        ++  send-blob
+          ~/  %send-blob
+          |=  [for=? =ship =blob ship-state=(unit ship-state)]
+          (send-blob-via for ship ship blob ship-state)
+        ::  +send-blob-via: fire packet at .final-ship via .ship and maybe sponsors
         ::
         ::    Send to .ship and sponsors until we find a direct lane,
         ::    skipping .our in the sponsorship chain.
@@ -5860,11 +5880,9 @@
         ::    If we have no PKI data for a recipient, enqueue the packet and
         ::    request the information from Jael if we haven't already.
         ::
-        ++  send-blob
-          ~/  %send-blob
-          |=  [for=? =ship =blob ship-state=(unit ship-state)]
-          ::
-          =/  final-ship  ship
+        ++  send-blob-via
+          ~/  %send-blob-via
+          |=  [for=? =ship final-ship=ship =blob ship-state=(unit ship-state)]
           %-  (ev-trace rot.veb final-ship |.("send-blob: to {<ship>}"))
           |-
           |^  ^+  event-core

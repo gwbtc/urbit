@@ -515,7 +515,7 @@
   |=  [=ship app=term =mark data=*]
   =/  m  (strand ,~)
   ^-  form:m
-  =/  command=tape  ":{(trip app)} &{(trip mark)} {<data>}"
+  =/  command=tape  ":{(trip app)} &{(trip mark)} {?@(data "`@`" ~)}{<data>}"
   (send-events (dojo:util ship command))
 ::
 ++  dojo-thread

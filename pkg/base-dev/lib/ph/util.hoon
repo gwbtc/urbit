@@ -18,9 +18,7 @@
 ++  init
   |=  [who=ship ake=? eed=(unit feed:jael) ore=?(%mesa %ames)]
   ^-  (list aqua-event)
-  :~  [%init-ship who ake eed]
-      [%event who [/a/aqua/load %load ore]]
-  ==
+  [%init-ship who ake eed ore]~
 ::
 ::  Send dojo command
 ::

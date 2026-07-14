@@ -1,0 +1,32 @@
+/+  gw-io=ph-gw-io
+|=  arg=vase
+=/  m  (strand:rand ,vase)
+=/  core=?(%ames %mesa)  (fall !<((unit ?(%ames %mesa)) arg) %ames)
+::
+=/  loud  %.y
+=/  tag  %gw-breach
+=/  io  ~(. gw-io loud tag)
+::
+=/  comet-1  ~fasteg-dinhet-malrum-ransub--hocduc-digtev-radsut-marbud
+=/  comet-2  ~molpyx-novtyc-wortyc-noswyd--taltyv-loplev-dabwen-mardev
+
+=/  oc=onchain:io
+  :~  [comet-1 1 0 ~ %if]
+      [comet-2 1 0 ~ %if]
+  ==
+::
+;<  ~              bind:m  start-simple:io
+::
+;<  ~              bind:m  (start-gw-comet:io comet-1 core oc)
+;<  ~              bind:m  (start-gw-comet:io comet-2 core oc)
+::
+;<  ~              bind:m  (send-hi:io comet-1 comet-2)
+;<  ~              bind:m  (send-hi:io comet-2 comet-1)
+::
+;<  oc=onchain:io  bind:m  (gw-breach:io comet-1 new-life=2 new-rift=1 core oc)
+::
+;<  ~              bind:m  (send-hi:io comet-2 comet-1)
+;<  ~              bind:m  (send-hi:io comet-1 comet-2)
+::
+;<  ~              bind:m  end:io
+(pure:m *vase)
