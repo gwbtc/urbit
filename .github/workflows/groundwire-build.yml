@@ -17,6 +17,7 @@ env:
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
+  NOSTRILL_BRANCH: bm/zig
 
 jobs:
   # =============================================================
@@ -102,6 +103,14 @@ jobs:
           repository: gwbtc/vitriol
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout Nostrill
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.NOSTRILL_BRANCH }}
+          path: gwbtc-ursockets
           token: ${{ secrets.GH_PAT || github.token }}
 
       # -- Boot fake ~zod --
@@ -194,6 +203,17 @@ jobs:
           popd
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
+      - name: Populate %nostrill desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" nostrill "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" nostrill "${ROOT}/zod"
+          pushd "${ROOT}/gwbtc-ursockets"
+          zig build -Ddesk="${ROOT}/zod/nostrill/"
+          popd
+          "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -214,6 +234,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
+                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
