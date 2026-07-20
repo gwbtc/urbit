@@ -3668,7 +3668,6 @@
         [%flub $@(~ [blocked=? dap=(unit term)])]       ::  refuse to take plea
         [%spur ~]                                       ::  ready to take plea
         [%unto p=unto]                                  ::
-        [%view sate=?(%live %idle %nuke)]           ::  agent liveness
     ==                                                  ::
   +$  task                                              ::  incoming request
     $~  [%vega ~]                                       ::
@@ -3689,7 +3688,6 @@
         $>(%plea vane-task)                             ::  network request
         [%spew veb=(list verb)]                         ::  set verbosity
         [%sift dudes=(list dude)]                       ::  per agent
-        [%view =dude]                                   ::  watch agent liveness
     ==                                                  ::
   +$  bitt  (map duct (pair ship path))                 ::  incoming subs
   +$  boat  (map [=wire =ship =term] [acked=? =path])   ::  outgoing subs

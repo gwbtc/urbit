@@ -7,7 +7,7 @@ Jael:
   - [x] %gost: suspend a domain's registered agent and %snub its peers - ordinary troubleshooting path
   - [x] %ghul: recover from %gost, mass-unsnub domain peers
   - [x] %bane: nuke registered agent, %ruin peers, and delete domain - response to DOS attack or compromised PKI
-  - [x] %hand: update registered agent or its watch path
+  - [x] %hand: update registered agent or its watch path (later removed: 1:1 domains, phase 2)
 - [x] agent response contract: %writ-response fact on the %anex watch path (spec §2.3)
 - open q:
   - subscribing to agent status in gall? - %gost on suspended, %bane on nuked?
@@ -39,10 +39,12 @@ Next (agent, hd/urb-handler):
   the placeholder %attestation-verdict/%attestation-request pokes
 
 Phase 2 (cyc/cc-draft-2), after team review:
-- [x] causal liveness: gall %view subscription (task+gift, state %21); jael
-      subscribes on %anex and reacts (%idle -> gost, %live -> ghul,
-      %nuke -> breach hep WITHOUT snubbing + deregister; %bane task remains
-      the explicit snub-everything lever)
+- [x] causal liveness via clay's existing %tire subscription (no new
+      gall affordance; the %view approach was built then rolled back):
+      jael resolves the agent's desk at %anex (%gd scry) and reacts to
+      zest changes (%dead/%held -> gost, %live -> ghul); deletion is
+      indistinguishable from suspension, so %bane remains the only
+      destructive path
 - [x] 1:1 domain<->agent: %anex takes pax only, dom = sending agent's name
       (from the gall duct); %hand eliminated
 - [x] pass anatomy split documented + enforced where kernel-visible:
@@ -51,9 +53,13 @@ Phase 2 (cyc/cc-draft-2), after team review:
 - [x] %anew flow: ames task -> jael -> %jael-anew poke -> %anew-response
       fact -> [%sybl %anew] gift -> pass.ames-state updated
 - [x] spec: urb-watcher %jael-writ pseudocode (verify from pass + chain
-      view alone); fragment sizing (variant A ~1 entry/KiB, variant B
-      ~5-7); multi-fragment DOS assessment (bounded LRU pool if needed)
+      view alone); fragment sizing; multi-fragment DOS assessment
+- [x] attestation format decided: variant B [txid blockheight reveal]
+      (accepting the bitcoind+txindex dependency; synchronous SPV
+      happy-path dropped), with STATE commitments kept (each leaf
+      re-attests full networking state; pure transfers commit nothing)
 - open q:
-  - %view unsubscribe affordance (jael's sub outlives deregistration)
+  - per-agent liveness affordance distinguishing nuke from suspend
+    (would enable automatic breach-without-snub on deletion)
   - auto-fire %anew when a peer rejects a stale attestation
   - persist %anew-refreshed pass to the boot keyfile?

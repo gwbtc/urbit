@@ -5050,9 +5050,12 @@
             ::
             (emit [duct %pass /public-keys %j %public-keys sndr.shot ~ ~])
           ::  a vanilla comet we're encountering for the first time:
-          ::  upgrade it to %known via on-publ-full
+          ::  upgrade it to %known
           ::
           ?>  =(1 sndr-life.open-packet)
+          =/  old-alien=alien-agenda
+            =-  ?>(?=(%alien -<) ->)
+            (~(got by peers.ames-state) sndr.shot)
           =.  event-core
             =/  crypto-suite=@ud  (sub (end 3 pass.open-packet) 'a')
             =/  keys
@@ -11132,7 +11135,8 @@
             ::  if there's been an error, reset the timer and skip %proding
             ::
             (sy-prod ~)
-          (sy-emit ~[/ames] %pass /mesa/retry %b %wait `@da`(add now ~m2))
+          %-  sy-emit
+          [~[/ames] %pass /mesa/retry %b %wait `@da`(add now retry-timer)]
         ::  +sy-sybl: hear a %writ attestation verdict from jael
         ::
         ::    the response to a %writ we sent from +al-take-proof (or

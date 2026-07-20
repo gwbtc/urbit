@@ -60,9 +60,9 @@
 ::  $move: Arvo-level move
 ::
 +$  move  [=duct move=(wind note-arvo gift-arvo)]
-::  $state-21: overall gall state, versioned
+::  $state-20: overall gall state, versioned
 ::
-+$  state-21  [%21 state]
++$  state-20  [%20 state]
 ::  $state: overall gall state
 ::
 ::    system-duct: TODO document
@@ -74,7 +74,6 @@
 ::    leaves: retry nacked %leaves timer, if set
 ::    flubs: list of flubed apps, per ship
 ::    halts: list of missing/suspended apps, per ship
-::    vew: agent-liveness subscribers, per agent (%view)
 ::
 +$  state
   $+  state
@@ -88,7 +87,6 @@
       flub-ducts=(map ship duct)
       flubs=(jug ship app=term)
       halts=(jug app=term [ship =duct])
-      vew=(jug dude duct)
   ==
 ::  $routes: new cuff; TODO: document
 ::
@@ -210,13 +208,12 @@
       flub-ducts=(map ship duct)
       flubs=(jug ship app=term)
       halts=(jug app=term [ship duct])
-      vew=(jug dude duct)
   ==
-+$  spore-21  [%21 spore]
++$  spore-20  [%20 spore]
 --
 ::  adult gall vane interface, for type compatibility with pupa
 ::
-=|  state=state-21
+=|  state=state-20
 |=  [now=@da eny=@uvJ rof=roof]
 =*  gall-payload  .
 ~%  %gall-top  ..part  ~
@@ -361,8 +358,7 @@
       =.  ap-core  (ap-reinstall:ap-core agent)
       =.  mo-core  ap-abet:ap-core
       =.  mo-core  (mo-give-halts dap)
-      =.  mo-core  (mo-clear-queue dap)
-      (mo-view-give dap %live)
+      (mo-clear-queue dap)
     ::
     =.  yokes.state
       %+  ~(put by yokes.state)  dap
@@ -398,7 +394,6 @@
     =.  mo-core  ap-abet:ap-core
     =.  mo-core  (mo-clear-queue dap)
     =.  mo-core  (mo-give-halts dap)
-    =.  mo-core  (mo-view-give dap %live)
     =/  =suss  [dap %boot now]
     (mo-pass (mo-talk %.y suss))
   ::  +mo-send-foreign-request: handle local request to .ship
@@ -911,32 +906,6 @@
     =?  new-blocked  !=(ship ship.attributing.routes.mov)
       (~(put to new-blocked) mov)
     $
-  ::  +mo-view: subscribe .hen to .dap's liveness transitions
-  ::
-  ::    gives the current state immediately, then a %view gift on
-  ::    every transition (%live on boot/revival, %idle on suspend,
-  ::    %nuke on deletion).  an agent that has never been installed
-  ::    reads as %nuke.  subscriptions persist across transitions;
-  ::    XX  no unsubscribe affordance yet.
-  ::
-  ++  mo-view
-    |=  dap=dude
-    ^+  mo-core
-    =.  vew.state  (~(put ju vew.state) dap hen)
-    =/  yoke  (~(get by yokes.state) dap)
-    =/  sate=?(%live %idle %nuke)
-      ?~  yoke  %nuke
-      ?:  ?=(%nuke -.u.yoke)  %nuke
-      ?:(?=(%& -.agent.u.yoke) %live %idle)
-    (mo-give %view sate)
-  ::  +mo-view-give: notify .dap's liveness subscribers
-  ::
-  ++  mo-view-give
-    |=  [dap=dude sate=?(%live %idle %nuke)]
-    ^+  mo-core
-    %-  ~(rep in (~(get ju vew.state) dap))
-    |=  [d=duct core=_mo-core]
-    (mo-emit:core d %give %view sate)
   ::  +mo-idle: put agent to sleep
   ::
   ++  mo-idle
@@ -946,8 +915,7 @@
     ?:  |(?=(~ yoke) ?=(%nuke -.u.yoke))
       ~>  %slog.0^leaf/"gall: ignoring %idle for {<dap>}, not running"
       mo-core
-    =.  mo-core  ap-abet:ap-idle:(ap-abed:ap dap [~ our prov])
-    (mo-view-give dap %idle)
+    ap-abet:ap-idle:(ap-abed:ap dap [~ our prov])
   ::  +mo-nuke: delete agent completely
   ::
   ++  mo-nuke
@@ -963,7 +931,6 @@
       mo-core
     ~>  %slog.0^leaf/"gall: nuking {<dap>}"
     =.  mo-core  ap-abet:ap-nuke:(ap-abed:ap dap [~ our prov])
-    =.  mo-core  (mo-view-give dap %nuke)
     =-  mo-core(yokes.state -)
     %+  ~(jab by yokes.state)  dap
     |=  =^yoke
@@ -2476,7 +2443,6 @@
       %sear  mo-abet:(mo-filter-queue:mo-core ship.task)
       %jolt  mo-abet:(mo-jolt:mo-core dude.task our desk.task)
       %idle  mo-abet:(mo-idle:mo-core prov dude.task)
-      %view  mo-abet:(mo-view:mo-core dude.task)
       %load  mo-abet:(mo-load:mo-core prov +.task)
       %nuke  mo-abet:(mo-nuke:mo-core prov dude.task)
       %doff  mo-abet:(mo-doff:mo-core prov +.task)
@@ -2506,13 +2472,11 @@
       =?  old  ?=(%17 -.old)  (spore-17-to-18 +.old)
       =?  old  ?=(%18 -.old)  (spore-18-to-19 +.old)
       =?  old  ?=(%19 -.old)  (spore-19-to-20 +.old)
-      =?  old  ?=(%20 -.old)  (spore-20-to-21 +.old)
-      ?>  ?=(%21 -.old)
+      ?>  ?=(%20 -.old)
       gall-payload(state old)
   ::
   +$  spore-any
-    $%  [%21 spore]
-        spore-20
+    $%  [%20 spore]
         [%7 spore-7]
         [%8 spore-8]
         [%9 spore-9]
@@ -2526,21 +2490,6 @@
         [%17 spore-17]
         [%18 spore-18]
         [%19 spore-19]
-    ==
-  ::  $spore-20: pre-%view; no agent-liveness subscribers (vew)
-  ::
-  +$  spore-20  [%20 spore-20-body]
-  +$  spore-20-body
-    $:  system-duct=duct
-        outstanding=(map [wire duct] (qeu remote-request))
-        contacts=(set ship)
-        eggs=(map term egg)
-        blocked=(map term (qeu blocked-move))
-        =bug
-        leaves=(unit [=duct =wire date=@da])
-        flub-ducts=(map ship duct)
-        flubs=(jug ship app=term)
-        halts=(jug app=term [ship duct])
     ==
   +$  spore-19  spore-18
   ::
@@ -2900,22 +2849,6 @@
   ::
   ::  +spore-19-to-20: type of type migration
   ::
-  ++  spore-20-to-21
-    |=  old=spore-20-body
-    ^-  spore-21
-    :*  %21
-        system-duct.old
-        outstanding.old
-        contacts.old
-        eggs.old
-        blocked.old
-        bug.old
-        leaves.old
-        flub-ducts.old
-        flubs.old
-        halts.old
-        vew=~
-    ==
   ++  spore-19-to-20
     |=  old=spore-19
     ^-  spore-20
@@ -3216,7 +3149,7 @@
 ::  +stay: save without cache; suspend non-%base agents
 ::
 ++  stay
-  ^-  spore-21
+  ^-  spore-20
   =;  eggs=(map term egg)  state(yokes eggs)
   %-  ~(run by yokes.state)
   |=  =yoke

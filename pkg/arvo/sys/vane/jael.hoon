@@ -45,15 +45,19 @@
 ::
 ::    the domain name IS the verifier agent's name (1:1 by
 ::    construction).  pax: the path jael watches on that agent for
-::    verdicts and chain updates.  liv: %.n while the agent is
-::    suspended; kept in sync causally from gall's %view liveness
-::    subscription (suspend acts as %gost, revival as %ghul), and
-::    settable directly via the %gost/%ghul tasks.  hep: every
-::    foreign ship whose point was accepted through this domain, so
-::    suspension/destruction can act on them as a group.
+::    verdicts and chain updates.  dek: the desk hosting the agent,
+::    resolved at %anex time; clay's %tire subscription reports app
+::    liveness per desk, and jael reacts causally -- a desk going
+::    %dead/%held acts as %gost on the domain, %live as %ghul.
+::    %tire does not distinguish deletion from suspension, so all
+::    destructive measures remain solely with the %bane task.  liv:
+::    %.n while suspended (also settable via %gost/%ghul directly).
+::    hep: every foreign ship whose point was accepted through this
+::    domain, so suspension/destruction can act on them as a group.
 ::
 +$  dom-state                                           ::  pki domain
   $:  pax=path                                          ::  watch path
+      dek=desk                                          ::  agent's desk
       liv=?                                             ::  %.n if suspended
       hep=(set ship)                                    ::  ships verified here
   ==                                                    ::
@@ -150,8 +154,11 @@
       $:  %e                                            ::    to %eyre
           [%code-changed ~]                             ::  notify code changed
       ==                                                ::
+      $:  %c                                            ::    to %clay
+          [%tire p=(unit ~)]                            ::  app liveness sub
+      ==                                                ::
       $:  %g                                            ::    to %gall
-          $>(?(%deal %view) task:gall)                  ::  app talk/liveness
+          $>(%deal task:gall)                           ::  talk to app
       ==                                                ::
       $:  %j                                            ::    to self
           $>(%listen task)                              ::  set ethereum source
@@ -170,8 +177,11 @@
       $:  %behn                                         ::
           $>(%wake gift:behn)                           ::
       ==                                                ::
+      $:  %clay                                         ::
+          $>(%tire gift:clay)                           ::  app liveness
+      ==                                                ::
       $:  %gall                                         ::
-          $>(?(%unto %view) gift:gall)                  ::
+          $>(%unto gift:gall)                           ::
       ==                                                ::
   ==                                                    ::
 --  ::
@@ -239,6 +249,7 @@
               ::
               now=@da
               eny=@uvJ
+              rof=roof
           ==
           ::  all vane state
           ::
@@ -318,20 +329,30 @@
     ::  watch .pax on that agent for %writ-response / %anew-response
     ::  facts (attestation verdicts, fresh self-attestations) and
     ::  %azimuth-udiffs facts (ongoing chain updates); and we watch
-    ::  the agent's liveness through gall %view, reacting to
-    ::  suspension as %gost, revival as %ghul, and deletion by
-    ::  breaching (but not snubbing) its peers and deregistering.
+    ::  the agent's liveness through clay %tire (subscribed on first
+    ::  registration), reacting to its desk going down as %gost and
+    ::  coming back up as %ghul.
     ::
         %anex
       =/  dom
         ?>  ?=([[%gall %use @ @ *] *] hen)
         ;;(term i.t.t.i.hen)
       ?<  (~(has by dos) dom)
-      =.  dos  (~(put by dos) dom [pax.tac liv=& hep=~])
+      ::  resolve the agent's desk for %tire liveness tracking
+      ::
+      =/  dek=desk
+        =/  res  (rof [~ ~] /jael %gd [our dom da+now] /$)
+        ?:  ?=([~ ~ *] res)  ;;(desk q.q.u.u.res)
+        ::  XX  shouldn't happen for a live sender; fall back to the
+        ::      1:1 naming convention
+        dom
+      =/  fis  =(~ dos)
+      =.  dos  (~(put by dos) dom [pax.tac dek liv=& hep=~])
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
       =.  sus  (emit-peer:sus dom pax.tac)
-      (emit:sus hen %pass /vew/[dom] %g %view dom)
+      ?.  fis  sus
+      (emit:sus hen %pass /tire %c %tire ~ ~)
     ::
     ::  verify a pki attestation
     ::    [%writ dom=@tas =ship =pass]
@@ -382,7 +403,7 @@
     ::  ignored) and block its verified peers in ames.  the
     ::  registration and peer set are retained for %ghul to restore.
     ::  this same effect fires causally when gall reports the agent
-    ::  suspended (%view %idle in +take); no-op if already down.
+    ::  suspended (%tire %dead/%held in +take); no-op if already down.
     ::
         %gost
       ?~  reg=(~(get by dos) dom.tac)
@@ -403,7 +424,7 @@
     ::
     ::  undo %gost: mark the domain live again and mass-unsnub its
     ::  peers.  fires causally when gall reports the agent back up
-    ::  (%view %live in +take); no-op if already live.
+    ::  (%tire %live in +take); no-op if already live.
     ::
         %ghul
       ?~  reg=(~(get by dos) dom.tac)
@@ -425,10 +446,10 @@
     ::  domain, drop and %ruin every peer verified through it, and
     ::  block them in ames.  NB: jael never stops the agent itself
     ::  (gall owns liveness); nuking the agent instead of sending
-    ::  %bane breaches without snubbing (see %view %nuke in +take).
-    ::  XX  the gall %view subscription has no unsubscribe yet, so
-    ::      it stays up after deregistration; %view gifts for
-    ::      unregistered domains are ignored.
+    ::  agent deletion looks identical to suspension through %tire,
+    ::  so it only ever acts as %gost; this task is the sole
+    ::  destructive path.  the %tire subscription stays up after
+    ::  deregistration; waves for unregistered desks are ignored.
     ::
         %bane
       ?~  reg=(~(get by dos) dom.tac)
@@ -806,52 +827,42 @@
       %-  curd  =<  abet
       (sources:~(feel su hen now pki etn) ships source)
     ::
-        [%gall %view *]
-      ::  a registered pki-domain agent changed liveness.  suspension
-      ::  and revival act as %gost and %ghul on its peers.  deletion
-      ::  is NOT %bane: agents get nuked for ordinary bug-fixing
-      ::  reasons, so we breach the domain's peers (their points must
-      ::  re-verify from scratch when a new agent registers) but do
-      ::  not snub them; the registration is dropped and a
-      ::  re-installed agent starts fresh via %anex.
+        [%clay %tire *]
+      ::  clay reports app liveness per desk.  a registered domain's
+      ::  desk going %dead or %held acts as %gost on its peers;
+      ::  coming back %live acts as %ghul.  %tire does not
+      ::  distinguish deletion from suspension, so no reaction here
+      ::  is destructive: breaching/deregistering a compromised
+      ::  domain remains solely the %bane task's job.
       ::
-      ?>  ?=([%vew @ ~] tea)
-      =/  dom  ;;(term i.t.tea)
-      ?~  reg=(~(get by dos) dom)
+      ?:  ?=(%& -.p.hin)
+        ::  initial snapshot: the only registered domain at
+        ::  subscribe time just proved itself live by sending %anex;
+        ::  nothing to reconcile
+        ::
         +>.$
-      ?-    sate.hin
-          %idle
-        ?.  liv.u.reg
-          +>.$
-        =.  dos  (~(put by dos) dom u.reg(liv |))
-        %-  curd  =<  abet
-        %+  emit:~(. su hen now pki etn)
-          hen
-        [%pass /gost %a %snub %deny ~(tap in hep.u.reg)]
+      ?.  ?=(%zest -.p.p.hin)
+        +>.$
+      =/  lov  =(%live zest.p.p.hin)
+      =/  dol
+        %+  skim  ~(tap by dos)
+        |=([* q=dom-state] =(dek.q desk.p.p.hin))
+      ::  XX  at most one domain per desk in practice; generalize to
+      ::      a fold if a desk ever hosts multiple domain agents
       ::
-          %live
-        ?:  liv.u.reg
-          +>.$
-        =.  dos  (~(put by dos) dom u.reg(liv &))
-        %-  curd  =<  abet
-        %+  emit:~(. su hen now pki etn)
-          hen
+      ?~  dol
+        +>.$
+      =/  dom  p.i.dol
+      =/  reg  q.i.dol
+      ?:  =(lov liv.reg)
+        +>.$
+      =.  dos  (~(put by dos) dom reg(liv lov))
+      %-  curd  =<  abet
+      %+  emit:~(. su hen now pki etn)
+        hen
+      ?:  lov
         [%pass /ghul %a %snub %deny ~]
-      ::
-          %nuke
-        =.  dos  (~(del by dos) dom)
-        =.  pos.zim.pki
-          %-  ~(rep in hep.u.reg)
-          |=  [=ship pos=_pos.zim.pki]
-          (~(del by pos) ship)
-        =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
-        =/  sus  ~(. su hen now pki etn)
-        =;  core=_sus
-          (curd abet:core)
-        %-  ~(rep in hep.u.reg)
-        |=  [=ship s=_sus]
-        (exec:s dus %give %public-keys %breach ship)
-      ==
+      [%pass /gost %a %snub %deny ~(tap in hep.reg)]
     ::
         [%gall %unto *]
       ?-    +>-.hin
@@ -865,9 +876,10 @@
         ::  a registered pki-domain agent restarted; resubscribe on
         ::  the same wire
         ::
-        ::  XX  ap-nuke's kicks land before the %view %nuke gift, so
-        ::      we may resubscribe to a just-nuked agent here; the
-        ::      resulting negative %watch-ack is logged and harmless
+        ::  XX  a nuked agent kicks us but stays registered (its
+        ::      desk reads as down via %tire, acting as %gost); the
+        ::      resubscribe below draws a negative %watch-ack, which
+        ::      is logged and harmless
         ::
         ?:  ?=(^ (dom-for-app app))
           %-  curd  =<  abet
@@ -1480,7 +1492,7 @@
   ::
   =/  =task  ((harden task) hic)
   =^  did  lex
-    abet:(~(call of [now eny] lex) hen task)
+    abet:(~(call of [now eny rof] lex) hen task)
   [did ..^$]
 ::                                                      ::  ++load
 ++  load                                                ::  upgrade
@@ -1844,7 +1856,7 @@
     ?~  who  [~ ~]
     :^  ~  ~  %atom
     !>  ^-  ship
-    (~(sein of [now eny] lex) u.who)
+    (~(sein of [now eny *roof] lex) u.who)
   ::
       %saxo
     ?.  ?=([@ ~] tyl)  [~ ~]
@@ -1854,7 +1866,7 @@
     ?~  who  [~ ~]
     :^  ~  ~  %noun
     !>  ^-  (list ship)
-    (~(saxo of [now eny] lex) u.who)
+    (~(saxo of [now eny *roof] lex) u.who)
   ::
       %sponsors
     ?.  ?=([@ ~] tyl)  [~ ~]
@@ -1864,7 +1876,7 @@
     ?~  who  [~ ~]
     :^  ~  ~  %noun
     !>  ^-  (list [=ship =point])
-    %+  turn  (~(saxo of [now eny] lex) u.who)
+    %+  turn  (~(saxo of [now eny *roof] lex) u.who)
     |=  =ship
     [ship (~(got by pos.zim.pki.lex) ship)]
   ::
@@ -1935,6 +1947,6 @@
   ?^  dud
     ~|(%jael-take-dud (mean tang.u.dud))
   ::
-  =^  did  lex  abet:(~(take of [now eny] lex) tea hen hin)
+  =^  did  lex  abet:(~(take of [now eny rof] lex) tea hen hin)
   [did ..^$]
 --
