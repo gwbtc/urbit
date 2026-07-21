@@ -903,6 +903,7 @@
         [%prod ships=(list ship)]
         [%sift ships=(list ship)]
         [%snub form=?(%allow %deny) ships=(list ship)]
+        [%anew ~]                                 ::  refresh our attestation
         [%spew veb=(list verb)]
         [%cong msg=@ud mem=@ud]
         [%stir arg=@t]
@@ -4303,12 +4304,34 @@
     ==
   ::
   +$  fiefs-result  (map ship (unit fief))
+  ::  $writ-result: outcome of one %writ attestation, given to %sybl
+  ::  subscribers as a %sybl gift.  %full carries the verified $point now stored in jael;
+  ::  %fail means the domain agent rejected the attestation; %lost means
+  ::  no agent is registered for the domain.
+  ::
+  +$  writ-result                                     ::  attestation outcome
+    $%  [%full dom=@tas =ship =point]                 ::  verified; point held
+        [%fail dom=@tas =ship]                        ::  failed validation
+        [%lost dom=@tas =ship]                        ::  unknown pki domain
+        [%anew dom=@tas =pass]                        ::  our fresh attestation
+    ==
+  ::  $writ-response: %fact payload a registered pki-domain agent gives
+  ::  jael on its watch path to answer a %jael-writ poke.  on success,
+  ::  res carries the on-chain-verified $point for .ship.
+  ::
+  +$  writ-response  [dom=@tas =ship res=(unit point)]
+  ::  $anew-response: %fact payload the domain agent gives jael to
+  ::  answer a %jael-anew poke: our own pass, re-encoded with the
+  ::  current off-chain reveal log in its (un-tweaked) xtr data.
+  ::
+  +$  anew-response  [dom=@tas =pass]
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
         [%boon payload=*]                             ::  ames response
         [%private-keys =life vein=(map life ring)]    ::  private keys
         [%public-keys =public-keys-result]            ::  PKI changes
+        [%sybl =writ-result]                          ::  attestation outcome
         [%fief =fiefs-result]                         ::  route changes
         [%turf turf=(list turf)]                      ::  domains
     ==                                                ::
@@ -4332,6 +4355,13 @@
         [%nuke whos=(set ship)]                       ::  cancel tracker from
         [%private-keys ~]                             ::  sub to privates
         [%public-keys ships=(set ship)]               ::  sub to publics
+        [%writ dom=@tas =ship =pass]                  ::  verify pki attestation; dom is committed in the pass tweak
+        [%anex pax=path]                              ::  register pki domain; the sending agent's name is the domain
+        [%anew dom=@tas]                              ::  request fresh self-attestation from the domain agent
+        [%sybl ~]                                     ::  sub to writ results
+        [%gost dom=@tas]                              ::  suspend pki domain (snub its peers)
+        [%ghul dom=@tas]                              ::  revive pki domain (unsnub)
+        [%bane dom=@tas]                              ::  destroy pki domain
         [%fief ships=(set ship)]                      ::  sub to routes
         [%rekey =life =ring]                          ::  update private keys
         [%resend ~]                                   ::  resend private key

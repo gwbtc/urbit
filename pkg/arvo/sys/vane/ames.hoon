@@ -135,7 +135,7 @@
       $%  [%ames $>(?(%tune %sage) gift)]
           [%behn $>(%wake gift:behn)]
           [%gall $>(?(%flub %unto %spur) gift:gall)]
-          [%jael $>(?(%private-keys %public-keys %turf %fief) gift:jael)]
+          [%jael $>(?(%private-keys %public-keys %turf %fief %sybl) gift:jael)]
           $:  @tas
               $>(?(%noon %boon %done) gift)
       ==  ==
@@ -167,6 +167,9 @@
                       %fief
                       %turf
                       %ruin
+                      %writ
+                      %sybl
+                      %anew
                   ==
               task:jael
           ==
@@ -446,11 +449,16 @@
       ::
       =+  ;;  [signature=@ signed=@]  (cue content.shot)
       =+  ;;  =open-packet            (cue signed)
-      ::  assert .our and .her and lives match
+      ::  assert .our and .her and lives match; a vanilla comet is
+      ::  always life 1, but a confidential (suite-%c) groundwire
+      ::  comet may re-attest at a higher life after rotating its
+      ::  keys on-chain
       ::
       ?>  .=       sndr.open-packet  sndr.shot
       ?>  .=       rcvr.open-packet  our
-      ?>  .=  sndr-life.open-packet  1
+      ?>  ?|  =('c' (end 3 pass.open-packet))
+              =(1 sndr-life.open-packet)
+          ==
       ?>  .=  rcvr-life.open-packet  our-life
       ::  only a star or comet can sponsor a comet
       ::
@@ -463,6 +471,20 @@
       ::
       ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
       open-packet
+    ::  +pass-pki-dom: extract the PKI domain a pass commits to
+    ::
+    ::    ~ for a vanilla (suite-%b) comet.  all and only suite-%c
+    ::    passes belong to confidential groundwire comets; the head of
+    ::    a suite-%c key's tweak data is the +mat-encoded domain tag,
+    ::    followed by the domain-specific attestation data.
+    ::
+    ++  pass-pki-dom
+      |=  a=pass
+      ^-  (unit @tas)
+      =/  cek  +<:(com:nu:cric:crypto a)
+      ?.  ?=([%c *] cek)
+        ~
+      ``@tas`q:(rub 0 dat.tw.pub.cek)
     ::  +etch-shut-packet: encrypt and packetize a $shut-packet
     ::
     ++  etch-shut-packet
@@ -577,6 +599,14 @@
     ::    This data structure gets signed and jammed to form the .contents
     ::    field of a $packet.
     ::
+    ::    the shape is shared by vanilla and confidential (groundwire)
+    ::    comets.  suite-%c passes are used exclusively by groundwire
+    ::    comets: the head of the key's tweak data is the +mat-encoded
+    ::    PKI domain tag (extracted with +rub; see +pass-pki-dom),
+    ::    followed by the domain-specific attestation data.  since a
+    ::    comet's name is the hash of its pass, the name itself commits
+    ::    to the domain, preventing cross-chain double-boot; and the
+    ::    packet shape is unchanged, so vanilla comets are untouched.
     ::
     +$  open-packet
       $:  =pass
@@ -4973,26 +5003,59 @@
           ::  assert the comet can't pretend to be a moon or other address
           ::
           ?>  ?=(%pawn (clan:title sndr.shot))
-          ::  if we already know .sndr, ignore duplicate attestation
-          ::
           =/  ship-state  (~(get by peers.ames-state) sndr.shot)
-          ?:  ?=([~ %known *] ship-state)
-            event-core
-          ::
           =/  =open-packet  (sift-open-packet [rof our now] shot our life.ames-state)
+          ::  if we already know .sndr at this life or later, ignore
+          ::  duplicate attestation; a confidential comet may
+          ::  legitimately re-attest at a higher life
+          ::
+          ?:  ?&  ?=([~ %known *] ship-state)
+                  (gte life.u.ship-state sndr-life.open-packet)
+              ==
+            event-core
           ::  add comet as an %alien if we haven't already
           ::
           =?  peers.ames-state  ?=(~ ship-state)
             (~(put by peers.ames-state) sndr.shot %alien *alien-agenda)
-          =/  lyf
-            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
-          ?:  ?=([~ ~ [* * ^]] lyf)
+          ::  what does jael already know about this comet?
+          ::  (mirrors +al-take-proof on the |mesa side)
+          ::
+          =/  lyf=(unit @ud)
+            =/  res
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
+            ?.  ?=([~ ~ *] res)  ~
+            ;;((unit @ud) q.q.u.u.res)
+          =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
+          ?:  ?&  ?=([%c *] cek)
+                  ?|  ?=(~ lyf)
+                      (lth u.lyf sndr-life.open-packet)
+                  ==
+              ==
+            ::  a confidential comet we don't know, or a new life: ask
+            ::  jael to verify the attestation on-chain.  the domain
+            ::  is committed at the head of the key's tweak data; the
+            ::  verdict comes back on the /sybl wire (+sy-sybl) and,
+            ::  on success, the point itself on /public-keys.
+            ::
+            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            %-  emil
+            :~  [duct %pass /public-keys %j %public-keys sndr.shot ~ ~]
+                :*  duct  %pass  /writ  %j
+                    %writ  dom  sndr.shot  pass.open-packet
+                ==
+            ==
+          ?^  lyf
+            ::  jael verified this comet, or we met it before and it's
+            ::  resending its attestation for some reason
+            ::
             (emit [duct %pass /public-keys %j %public-keys sndr.shot ~ ~])
+          ::  a vanilla comet we're encountering for the first time:
+          ::  upgrade it to %known
+          ::
+          ?>  =(1 sndr-life.open-packet)
           =/  old-alien=alien-agenda
             =-  ?>(?=(%alien -<) ->)
             (~(got by peers.ames-state) sndr.shot)
-          ::  upgrade comet to %known via on-publ-full
-          ::
           =.  event-core
             =/  crypto-suite=@ud  (sub (end 3 pass.open-packet) 'a')
             =/  keys
@@ -9176,6 +9239,18 @@
                 %cong  sy-abet:sy-cong:sy-core
                 %prod  sy-abet:(sy-prod:sy-core ships.task)
                 %snub  sy-abet:(sy-snub:sy-core [form ships]:task)
+                ::  ask our pki-domain agent (via jael) to re-encode
+                ::  our pass with the current off-chain reveal log;
+                ::  the fresh pass returns on /sybl (+sy-sybl %anew).
+                ::  no-op for vanilla (suite-%b) ships.
+                ::  XX  should also fire automatically when a peer
+                ::      rejects our attestation as stale
+                ::
+                  %anew
+                =/  dom  (pass-pki-dom pass.ames-state)
+                ?~  dom
+                  `ames-state
+                sy-abet:(sy-emit:sy-core hen %pass /sybl %j %anew u.dom)
                 %stun  sy-abet:(sy-stun:sy-core stun.task)
                 %dear  sy-abet:(sy-dear:sy-core +.task)
                 %tame  sy-abet:(sy-tame:sy-core ship.task)
@@ -9234,6 +9309,9 @@
                 sy-abet:(~(sy-priv sy hen) [life vein]:sign)
                   [%jael %public-keys *]
                 sy-abet:(~(sy-publ sy hen) wire +>.sign)
+              ::
+                  [%jael %sybl *]
+                sy-abet:(~(sy-sybl sy hen) writ-result.sign)
               ::
                   [%jael %turf *]
                 sy-abet:(~(sy-emit sy hen) unix-duct %give %turf +>.sign)
@@ -11000,7 +11078,10 @@
           :~  [hen %pass /turf %j %turf ~]
               [hen %pass /private-keys %j %private-keys ~]
               [hen %pass /public-keys %j %public-keys [n=our ~ ~]]
-              [hen %pass /fief %j %fief ~] 
+              [hen %pass /fief %j %fief ~]
+              ::  subscribe to %writ attestation verdicts (+sy-sybl)
+              ::
+              [hen %pass /sybl %j %sybl ~]
           ==
         ::
         ::  +on-cong: adjust congestion control parameters
@@ -11056,6 +11137,80 @@
             (sy-prod ~)
           %-  sy-emit
           [~[/ames] %pass /mesa/retry %b %wait `@da`(add now retry-timer)]
+        ::  +sy-sybl: hear a %writ attestation verdict from jael
+        ::
+        ::    the response to a %writ we sent from +al-take-proof (or
+        ::    +on-hear-open on the |ames side) when a confidential
+        ::    comet self-attested to us.
+        ::
+        ::    %full: the domain agent verified the comet's ownership
+        ::    chain and jael now holds its point.  funnel it into
+        ::    +sy-publ exactly like a %public-keys %full gift: the
+        ::    alien is promoted and its pending messages drain.
+        ::    %fail: the attestation failed on-chain verification.
+        ::    snub the claimed identity and drop its pending requests;
+        ::    a fraudulent attestation is not retried.
+        ::    %lost: no live agent is registered for the pki domain.
+        ::    stubbed out as a no-op for now.
+        ::
+        ++  sy-sybl
+          |=  =writ-result:jael
+          ^+  sy-core
+          ?-    -.writ-result
+              %full
+            %+  sy-publ  /sybl
+            [%full (my [ship.writ-result point.writ-result]~)]
+          ::
+              %fail
+            =*  her  ship.writ-result
+            %-  %-  trace
+                :*  %mesa  odd.veb.bug.ames-state  her
+                    ships.bug.ames-state
+                    |.("attestation writ failed; snubbing")
+                ==
+            ::  additive snub: don't clobber the rest of the blocklist
+            ::
+            =.  ships.snub.ames-state
+              ?-  form.snub.ames-state
+                %deny   (~(put in ships.snub.ames-state) her)
+                %allow  (~(del in ships.snub.ames-state) her)
+              ==
+            ::  drop pending requests from this identity; only alien
+            ::  state is dropped, an already-known peer is untouched
+            ::
+            =/  cum  (~(get by chums.ames-state) her)
+            =?  chums.ames-state  ?=([~ %alien *] cum)
+              (~(del by chums.ames-state) her)
+            =/  per  (~(get by peers.ames-state) her)
+            =?  peers.ames-state  ?=([~ %alien *] per)
+              (~(del by peers.ames-state) her)
+            sy-core
+          ::
+              %lost
+            %-  %-  trace
+                :*  %mesa  odd.veb.bug.ames-state  ship.writ-result
+                    ships.bug.ames-state
+                    |.("writ for unknown pki domain {<dom.writ-result>}")
+                ==
+            sy-core
+          ::
+          ::  our own freshly re-encoded pass, with an updated
+          ::  off-chain reveal log in its (un-tweaked) xtr data.
+          ::  the tweak proper is immutable, so our name must be
+          ::  unchanged; future self-attestations carry the new log.
+          ::  XX  not persisted in the boot keyfile; a fresh %anew
+          ::      round-trip after breach/boot re-derives it
+          ::
+              %anew
+            ?.  =(our fig:ex:(com:nu:cric:crypto pass.writ-result))
+              %.  sy-core
+              %-  trace
+              :*  %mesa  odd.veb.bug.ames-state  our
+                  ships.bug.ames-state
+                  |.("%anew pass does not hash to our name; dropped")
+              ==
+            sy-core(pass.ames-state pass.writ-result)
+          ==
         ::
         ++  sy-publ
           |=  [=wire =public-keys-result:jael]
@@ -11330,6 +11485,100 @@
                   (sy-meet-alien-chum ship point +.u.old-peer-state +.new-state)
                 ::
                 $(points t.points)
+            ::
+            ++  meet-alien-ship
+              |=  [=ship =point todos=alien-agenda]
+              ^+  sy-core
+              ::  init event-core:ames
+              ::
+              =/  ames-core  (ev:ames now^eny^rof hen ames-state)
+              ::  if we're a comet, send self-attestation packet first
+              ::
+              =?  ames-core  =(%pawn (clan:title our))
+                =/  =blob  (attestation-packet:ames-core ship life.point)
+                %-  send-blob:ames-core
+                [for=| ship blob (~(get by peers.ames-state) ship)]
+              ::  save current duct
+              ::
+              ::  XX armitage: ? nothing is ever done with original-duct
+              =/  original-duct  hen
+              ::  apply outgoing messages, reversing for FIFO order
+              ::
+              =.  ames-core
+                %+  reel  messages.todos
+                |=  [[=duct =plea] core=_ames-core]
+                ?:  =(plea [%$ /flow %cork ~])
+                  (on-cork:core(duct duct) ship)
+                (on-plea:core(duct duct) ship plea)
+              ::  apply outgoing packet blobs
+              ::
+              =.  ames-core
+                %+  roll  ~(tap in packets.todos)
+                |=  [b=blob c=_ames-core]
+                (send-blob:c for=| ship b (~(get by peers.ames-state) ship))
+              ::  apply remote scry requests
+              ::
+              =^  scry-moves  ames-state
+                =+  peer-core=(abed:pe:ames-core ship)
+                =<  abet  ^+  ames-core
+                =.  ames-core
+                  =<  abet  ^+  peer-core
+                  %-  ~(rep by keens.todos)
+                  |=  [[[=path =ints] ducts=(set duct)] cor=_peer-core]
+                  ::  XX some of these ints can be %tune(s) but they are
+                  ::  treated as %sage(s)
+                  (~(rep in ducts) |=([=duct c=_cor] (on-keen:c path duct)))
+                ::
+                %-  ~(rep by chums.todos)
+                |=  [[[=path =ints] ducts=(set duct)] cor=_ames-core]
+                ::  XX some of these ints can be %tune(s) but they are
+                ::  treated as %sage(s)
+                (~(rep in ducts) |=([=duct c=_cor] (on-chum:c ship^path)))
+              ::
+              (sy-emil scry-moves)
+            ::
+            ++  meet-alien-chum
+              |=  [=ship =point:jael todos=ovni-state =chum-state]
+              ^+  sy-core
+              ?.  ?=([%known *] chum-state)
+                ::  +insert-peer should have made this peer %known
+                ::
+                sy-core
+              ::  init ev-core with provided chum-state
+              ::
+              =+  per=ship^+.chum-state
+              =+  ev-core=(ev-abed:ev ~[//meet-chum] per)
+              ::
+              =.  ev-core
+                ::  apply outgoing messages
+                ::
+                %+  reel  pokes.todos  ::  reversing for FIFO order
+                |=  [[=duct mess=mesa-message] c=_ev-core]
+                ?+    -.mess  !!  :: XX log alien peer %boon?
+                    %plea
+                  (ev-req-plea:c(hen duct) +.mess)
+                ==
+              ::
+              =.  ev-core
+                ::  apply (public) remote scry requests
+                ::
+                %-  ~(rep by peeks.todos)
+                |=  [[[=path =ints] ducts=(set duct)] core=_ev-core]
+                %-  ~(rep in ducts)
+                |=  [=duct c=_core]
+                (ev-req-peek:c(hen duct) publ/life.+.per path)
+              ::
+              =.  ev-core
+                ::  apply (two-party) remote scry requests
+                ::
+                %-  ~(rep by chums.todos)
+                |=  [[[=path =ints] ducts=(set duct)] core=_ev-core]
+                %-  ~(rep in ducts)
+                |=  [=duct c=_core]
+                (ev-req-peek:c(hen duct) space=chum-to-our:c path)
+              =^  ev-moves  ames-state  ev-abet:ev-core
+              (sy-emil ev-moves)
+            ::
             --
           ::  on-publ-rift: XX
           ::
@@ -11463,8 +11712,8 @@
               |=  [[=path req=request-state] core=_ev-core]
               :: XX: zif: would send too many times
               =?  core  ?&  ?=(%pawn (clan:title our))
-                               ?=([%chum *] path)
-                               ?=(%unborn -.qos.per.core)
+                            ?=([%chum *] path)
+                            ?=(%unborn -.qos.per.core)
                            ==
                   =^  moves-al  ames-state.core
                     al-abet:(al-poke-proof:al-core:core ship per.core)
@@ -12369,13 +12618,34 @@
               ==
           ==
         ::
+        ::  +al-take-proof: hear a comet self-attestation ($open-packet)
+        ::
+        ::    three cases, discriminated by the crypto suite of the
+        ::    packet's pass and what jael already knows about the
+        ::    sender.  all and only suite-%c passes are confidential
+        ::    groundwire comets; the pki domain they commit to rides
+        ::    at the head of the key's tweak data (+pass-pki-dom).
+        ::
+        ::    - confidential comet, unknown to jael or attesting a
+        ::      newer life: forward the attestation to jael as a
+        ::      %writ.  jael pokes the domain's registered agent,
+        ::      which verifies the sat's ownership chain on-chain; the
+        ::      verdict comes back as a %sybl gift on the /sybl wire
+        ::      (+sy-sybl) and, on success, the point itself on
+        ::      /public-keys.  we subscribe to the latter before
+        ::      sending the writ so the promotion is heard.
+        ::    - a comet jael already knows at this life or later:
+        ::      just (re)subscribe to its public keys.
+        ::      XX %writ at an equal-or-lower life may also be where
+        ::      groundwire breach recovery gets handled
+        ::    - a vanilla (suite-%b, life-1) comet met for the first
+        ::      time: verify and register it locally, off-chain.
+        ::
         ++  al-take-proof
           |=  [=lane:pact hop=@ud =name:pact =data:pact =next:pact]
           ^+  al-core
           ?.  ?=(%pawn (clan:title her.name))
             al-core
-          ::
-          ?>  ?=([%publ lyf=%'1' res=*] pat.name)
           ::
           =+  path=(validate-path +>.pat.name)
           ?>  ?=(poof-pith path)
@@ -12394,15 +12664,50 @@
           ?>  ?=(^ gage)
           ?>  ?=(%open-packet p.gage)
           =+  ;;(=open-packet q.gage)
-          =/  =public-keys  ded:ex:(com:nu:cric:crypto pass.open-packet)
+          ::  the packet must be from .her, to us, at our current life
+          ::
+          ?>  =(her.name sndr.open-packet)
+          ?>  &(=(our rcvr.open-packet) =(life.ames-state rcvr-life.open-packet))
+          =/  cic  (com:nu:cric:crypto pass.open-packet)
+          ::  the comet's public key must hash to its @p address
+          ::
+          ?>  =(her.name fig:ex:cic)
+          =/  =public-keys  ded:ex:cic
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
-          ::  XX: check hasn't breached, only subscribe then
-          =/  lyf
-            (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
-          ?:  ?=([~ ~ [* * ^]] lyf)
+          ::  what does jael already know about this comet?
+          ::
+          =/  lyf=(unit @ud)
+            =/  res
+              (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
+            ?.  ?=([~ ~ *] res)  ~
+            ;;((unit @ud) q.q.u.u.res)
+          =/  cek  +<.cic
+          ?:  ?&  ?=([%c *] cek)
+                  ?|  ?=(~ lyf)
+                      (lth u.lyf sndr-life.open-packet)
+                  ==
+              ==
+            ::  a confidential comet we don't know, or a new life: ask
+            ::  jael to verify the attestation on-chain.  nothing is
+            ::  registered locally until the verdict comes back.
+            ::
+            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            %-  al-emil
+            :~  [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~]
+                [[//writ]~ %pass /writ %j %writ dom her.name pass.open-packet]
+            ==
+          ?^  lyf
+            ::  jael verified this comet, or we met it before and it's
+            ::  resending its attestation for some reason
+            ::  XX maybe this is where we handle groundwire breaches
+            ::
             (al-emit [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~])
+          ::  this is a vanilla comet we're encountering for the first
+          ::  time: check it hasn't breached, only register then
+          ::
+          ?>  ?=([%publ lyf=%'1' res=*] pat.name)
           =.  al-core
             (al-register-comet her.name com-life.path open-packet)
           =.  ames-state
@@ -13388,7 +13693,7 @@
         =.  peers.ames-state  (~(put by peers.ames-state) sndr.shot alien/alien)
         =.  chums.ames-state  (~(del by chums.ames-state) sndr.shot)
         ::  XX no need to call the ames-core again; +enqueue-alien-todo will say
-        ::  that the publick-keys gift is still pending
+        ::  that the public-keys gift is still pending
         ::
         ::  enqueue %ahoy $plea; poke /app/hood
         ::
@@ -13917,7 +14222,7 @@
     ::  flow-independent tasks
     ::
       $?  %vega  %init  %born  %snub  %spew  %stun  %gulp
-          %sift  %plug  %dear  %init  %tame  %cong
+          %sift  %plug  %dear  %init  %tame  %cong  %anew
       ==
     (call:me-core sample)
     ::  common tasks
@@ -13952,7 +14257,7 @@
       (take:me-core(ames-state ames-state.vane-gate) sample)
     [(weld ames-moves mesa-moves) vane-gate]
   ::
-  ?:  ?=([?(%mesa %private-keys %public-keys) *] wire)
+  ?:  ?=([?(%mesa %private-keys %public-keys %sybl) *] wire)
     ?~  flow-wire=(ev-parse-flow-wire:ev:me-core wire)
       (take:me-core sample)
     %.  sample
@@ -13978,6 +14283,7 @@
           ?=([%jael %public-keys *] sign)
           ?=([%jael %turf *] sign)
           ?=([%jael %fief *] sign)
+          ?=([%jael %sybl *] sign)
       ==
     ::  $keys gifts are captured in |sy:mesa
     ::
