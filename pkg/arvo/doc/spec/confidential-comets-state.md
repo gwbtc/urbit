@@ -3,7 +3,7 @@
 Updated: **2026-07-29**
 
 This is the handoff document for humans and fresh agents. It records what is
-merged, what exists only in the current worktree, and what protocol revision
+merged, what was preserved in the legacy source stash, and what protocol revision
 has been selected next. It is descriptive; normative behavior lives in
 [confidential-comets.md](confidential-comets.md), and unfinished work lives in
 [confidential-comets-todo.md](confidential-comets-todo.md).
@@ -47,6 +47,12 @@ untracked development pier, including a mounted `%base` mirror. On 2026-07-29
 it was archived intact outside the repository at `/Users/armitage/r/gwbtc/s/dev`;
 its binaries, LMDB state, logs, and mounted files are not authoritative and
 must not be committed. Documentation commits must stage their paths explicitly.
+
+After the split PRs were published, the remaining `cyc/cc-draft` source changes
+were preserved in the named stash
+`6db5a3f0c9c582822d57a0999d66e6f6bb60d4ba` (`stash@{0}` when created):
+`pre-split confidential-comets worktree; extracted to PRs 59-63`. This stash is
+local recovery provenance, not another candidate branch or protocol authority.
 
 ## Follow-up branch and pull-request split
 
@@ -151,20 +157,20 @@ The target supplies the state/genesis correctness baseline. The adversarial
 line supplies safety properties and test designs to port selectively. It does
 not make sense to rebase or transplant the adversarial commit wholesale.
 
-The Urbit worktree adds Aqua fixtures that drive the real
+The archived Urbit source stash contains Aqua fixtures that drive the real
 Ames -> Jael -> Gall -> Jael -> Ames asynchronous route without `bitcoind`.
 Production `%light-client` plus regtest E2E remains future work.
 
-## Source dirty Urbit worktree
+## Archived source Urbit worktree
 
-The following changes originated in the preserved `cyc/cc-draft` worktree and
-are separate from merged PR #57. The branch split above is the publication
-plan; this section records provenance rather than implying that all source
-hunks belong together.
+The following changes originated in the now-stashed `cyc/cc-draft` worktree and
+are separate from merged PR #57. The branch split above is their actual
+publication disposition; this section records provenance rather than implying
+that all source hunks belong together.
 
 ### Jael candidates
 
-`pkg/arvo/sys/vane/jael.hoon` currently contains:
+The stashed `pkg/arvo/sys/vane/jael.hoon` source contained:
 
 - exact duplicate `%anex` as an idempotent request to re-emit the retained
   Gall watch, while rejecting a changed path;
@@ -172,7 +178,7 @@ hunks belong together.
 - explicit leave of the registered Gall watch during `%bane`; and
 - rejection of unauthorized, post-bane, or already-queued udiff facts.
 
-`tests/sys/vane/jael.hoon` is untracked and tests those choices. Exact-duplicate
+`tests/sys/vane/jael.hoon` was untracked and tests those choices. Exact-duplicate
 idempotent re-watch is selected for a separate Jael `%base` PR; the tombstone
 still requires architect approval. Neither may be described as target behavior
 merely because tests exist.
@@ -187,19 +193,18 @@ still unmerged.
 
 ### Aqua and compatibility work
 
-The dirty tree also contains:
+The source stash also contains:
 
 - a deterministic test `%gw-btc` agent and suite-C fixtures;
 - new `attestation-hi`, `attestation-reject`, `attestation-life-2`, and
-  `attestation-malformed` Aqua scenarios (currently untracked);
+  `attestation-malformed` Aqua scenarios (formerly untracked);
 - route-table and synthetic-Azimuth fixture updates so legacy tests use suite-B
-  comets and the new tests use canonical suite-C identities;
+  comets and the new tests use prototype suite-C identities;
 - Jael-point `fief` propagation and Dawn/test shape updates; and
 - supporting Pharos file-copy/start/snub assertions.
 
-These edits should be split by purpose when eventually proposed: the malformed
-suite-C/Jael base fixes belong in a focused Urbit PR; protocol and userspace
-work belongs in the later cross-repository revision.
+These edits were split by purpose into #59–#63. The stale `sur/stealth.hoon`
+sketch and any superseded combined hunks remain only in the recovery stash.
 
 ## Revision 2: selected next architecture
 
@@ -267,7 +272,7 @@ The deleted `pkg/arvo/todo.md` has been fully absorbed as follows.
 | Gall liveness affordance | replaced by existing Clay `%tire` for desk liveness; app-nuke semantics remain open |
 | additive `%snub` task | still open; retained in the new TODO |
 | Ames boot `%sybl` subscription | merged in revision 0 |
-| Mesa intake hardening and registration flow | merged baseline; malformed-domain fail-closed fix is dirty/unmerged |
+| Mesa intake hardening and registration flow | merged baseline; malformed-domain fail-closed fix is ready in #59 but unmerged |
 | mirror confidential handling into legacy Ames | merged in revision 0 |
 | `%full`/`%fail`/`%lost` result handling | merged in revision 0 |
 | choose pass payload size | superseded by the selected bounded hybrid/economic-head revision |
@@ -291,6 +296,7 @@ The deleted `pkg/arvo/todo.md` has been fully absorbed as follows.
   fee, or witness authenticity.
 - Do not implement reorg handling in `%gw-btc` merely to make tests pass.
 - Do not use map traversal order as queue scheduling policy.
-- Do not stage `dev/` or unrelated dirty code in a documentation waypoint.
+- Do not restore the archived pier into a source tree or treat the recovery
+  stash as a branch to merge wholesale.
 - Do not reintroduce userspace migration/versioned `%gw-btc` state; this
   network revision begins after a planned breach.
