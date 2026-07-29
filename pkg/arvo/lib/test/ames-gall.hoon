@@ -86,6 +86,7 @@
           rift=bud.rift
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~bud]
     [%known peer-state]
@@ -100,6 +101,7 @@
           rift=nec.rift
           [public-keys=pub.saf pass=pass]:ames-state.nec
           sponsor=~nec
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~nec]
     [%known peer-state]
@@ -199,7 +201,7 @@
   ^-  @
   =/  sample     [now=~1111.1.1 eny=`@`0xdead.beef *roof]
   =/  ames-core  (ames-gate sample)
-  ?~  pact=(co-make-pact:co:mesa:ames-core spar `path per-rift)
+  ?~  pact=(co-make-pact:co:(mesa:ames-core sample) spar `path per-rift)
     !!
   p:(fax:plot (en:pact:ames u.pact))
 ::
