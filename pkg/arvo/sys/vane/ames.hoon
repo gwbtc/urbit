@@ -484,7 +484,10 @@
       =/  cek  +<:(com:nu:cric:crypto a)
       ?.  ?=([%c *] cek)
         ~
-      ``@tas`q:(rub 0 dat.tw.pub.cek)
+      =/  mat  (mole |.((rub 0 dat.tw.pub.cek)))
+      ?~  mat
+        ~
+      ``@tas`q.u.mat
     ::  +etch-shut-packet: encrypt and packetize a $shut-packet
     ::
     ++  etch-shut-packet
@@ -5013,6 +5016,14 @@
                   (gte life.u.ship-state sndr-life.open-packet)
               ==
             event-core
+          =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
+          =/  dom  (pass-pki-dom pass.open-packet)
+          ::  A suite-C pass whose tweak does not start with a valid
+          ::  +mat-encoded domain is not an attestation.  Drop it before
+          ::  creating alien peer state or asking Jael to verify it.
+          ::
+          ?:  &(?=([%c *] cek) ?=(~ dom))
+            event-core
           ::  add comet as an %alien if we haven't already
           ::
           =?  peers.ames-state  ?=(~ ship-state)
@@ -5025,7 +5036,6 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
           ?:  ?&  ?=([%c *] cek)
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
@@ -5037,11 +5047,11 @@
             ::  verdict comes back on the /sybl wire (+sy-sybl) and,
             ::  on success, the point itself on /public-keys.
             ::
-            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            ?>  ?=(^ dom)
             %-  emil
             :~  [duct %pass /public-keys %j %public-keys sndr.shot ~ ~]
                 :*  duct  %pass  /writ  %j
-                    %writ  dom  sndr.shot  pass.open-packet
+                    %writ  u.dom  sndr.shot  pass.open-packet
                 ==
             ==
           ?^  lyf
@@ -12676,6 +12686,13 @@
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
+          =/  cek  +<.cic
+          =/  dom  (pass-pki-dom pass.open-packet)
+          ::  Reject malformed suite-C tweaks before consulting Jael or
+          ::  emitting either the key subscription or the verifier writ.
+          ::
+          ?:  &(?=([%c *] cek) ?=(~ dom))
+            al-core
           ::  what does jael already know about this comet?
           ::
           =/  lyf=(unit @ud)
@@ -12683,7 +12700,6 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          =/  cek  +<.cic
           ?:  ?&  ?=([%c *] cek)
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
@@ -12693,10 +12709,10 @@
             ::  jael to verify the attestation on-chain.  nothing is
             ::  registered locally until the verdict comes back.
             ::
-            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            ?>  ?=(^ dom)
             %-  al-emil
             :~  [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~]
-                [[//writ]~ %pass /writ %j %writ dom her.name pass.open-packet]
+                [[//writ]~ %pass /writ %j %writ u.dom her.name pass.open-packet]
             ==
           ?^  lyf
             ::  jael verified this comet, or we met it before and it's
