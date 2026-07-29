@@ -435,7 +435,10 @@
     %.n
   =/  index=(unit @)  (find ~[ship] comets)
   ?~  index  %.n
-  |((lte u.index 2) &((gte u.index 6) (lte u.index 8)))
+  ?|  (lte u.index 2)
+      &((gte u.index 6) (lte u.index 8))
+      (gte u.index 12)
+  ==
 ::  +mesa-lane-to-ship: decode a ship from a mesa lane
 ::
 ::    Special-case some comets, since their addresses doesn't fit into a lane.
@@ -564,6 +567,9 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
+      :: prototype %gw-btc asynchronous-path identities
+      ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
+      ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
   ==
 :: +turfs: map from domain to comet
 ::
@@ -577,6 +583,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
+      /nomdyl/gw-ok   /rilfun/gw-fail
   ==
 ::
 ::  +zip: combine two equally long lists into one list of cells
