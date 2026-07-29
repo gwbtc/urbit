@@ -460,7 +460,7 @@
     ::
         %if
       ?.  =(0xdead.beef p.u.got)  ~
-      ?.  (lth q.u.got 12)  ~
+      ?.  (lth q.u.got (lent comets))  ~
       (some (snag q.u.got comets))
     ==
   ?-  -.lane
@@ -468,7 +468,7 @@
   ::
       %if
     ?:  ?&  =(0xdead.beef p.lane)
-            (lth q.lane 12)
+            (lth q.lane (lent comets))
         ==
       (some (snag q.lane comets))
     (some `@p``@`(cat 5 p.lane q.lane))
@@ -510,13 +510,13 @@
     ::
         %if
       ?.  =(0xdead.beef p.u.got)  ~
-      ?.  (lth q.u.got 12)  ~
+      ?.  (lth q.u.got (lent comets))  ~
       (some (snag q.u.got comets))
     ==
   ::
       %|
     ?:  ?&  =(0xdead.beef (end 5 p.lane))
-            (lth (rsh 5 p.lane) 12)
+            (lth (rsh 5 p.lane) (lent comets))
         ==
       (some (snag (rsh 5 p.lane) comets))
     (some `@p``@`p.lane)
