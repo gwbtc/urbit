@@ -50,18 +50,17 @@ must not be committed. Documentation commits must stage their paths explicitly.
 
 ## Follow-up branch and pull-request split
 
-The uncommitted follow-up is deliberately split instead of rebased or landed
-as one patch. Every independent branch below starts from this waypoint. The
-requested review state is part of the handoff contract even before GitHub
-assigns pull-request numbers.
+The follow-up was deliberately split instead of rebased or landed as one
+patch. Every independent kernel branch below starts from this waypoint; the
+Aqua prototype is stacked only on the compatibility branch.
 
-| Workstream | Head branch | Pull-request base | Review state | Scope |
+| Workstream | PR / head | Pull-request base | Review state | Scope and checked status |
 |---|---|---|---|---|
-| Ames malformed suite-C domain | `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | guarded domain parse, fail-closed legacy/Mesa intake, focused malformed regression |
-| Jael duplicate registration | `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact same-agent/same-path `%anex` re-watch; conflicting path remains rejected |
-| Jael domain retirement/authorization | `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | tombstone, explicit Gall leave, and registered/legacy-source udiff authorization experiment |
-| Test-suite compatibility | `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | existing Ames, Mesa, Dawn, and legacy Aqua fixture repairs only |
-| Async attestation Aqua prototype | `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | deterministic fake `%gw-btc` and valid success/reject/life-2 asynchronous scenarios |
+| Ames malformed suite-C domain | [#59](https://github.com/gwbtc/urbit/pull/59) / `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | guarded domain parse; fresh kernel boot and malformed Ames/Mesa cases pass without `%aqua-crash` |
+| Jael duplicate registration | [#60](https://github.com/gwbtc/urbit/pull/60) / `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact same-agent/same-path `%anex` re-watch; both focused Jael tests pass |
+| Jael domain retirement/authorization | [#61](https://github.com/gwbtc/urbit/pull/61) / `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | prototype tests pass, but the in-place `%5` mold change is unsafe and recovery/lifecycle policy is unresolved |
+| Test-suite compatibility | [#62](https://github.com/gwbtc/urbit/pull/62) / `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | Dawn and representative legacy Aqua pass; existing full-suite/Ames expectation failures are disclosed in the PR |
+| Async attestation Aqua prototype | [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | deterministic fake `%gw-btc`; obsolete packet vectors and current validation limits are explicit |
 
 The malformed-attestation Aqua regression travels with the Ames fix rather
 than being duplicated in the stacked Aqua prototype. The compatibility branch
@@ -83,6 +82,12 @@ hard-coded comet identities must be regenerated after the direct `dat` and
 state/economic envelope are frozen. It does not yet model `%light-client`
 facts, public/confidential ordering, economic admission, queue bounds, epochs,
 or callback cancellation.
+
+The first independent Aqua audit of #63 found that its two new comet names and
+seeds had no corresponding suite entries, causing `+zip` to fail before the
+attestation path. Commit `cd96be4e84` adds the two `%c` entries. This is useful
+evidence for retaining cross-list length checks and keeping #63 draft while its
+post-fix scenario matrix and canonical-vector replacement remain open.
 
 ## Revision 0: merged kernel integration
 
