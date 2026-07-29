@@ -275,7 +275,7 @@ Tracking PR: [#60](https://github.com/gwbtc/urbit/pull/60), branch
 The merged target rejects every duplicate registration. The selected follow-up
 accepts an exact duplicate from the same agent and path as an idempotent request
 to re-emit the retained Gall watch; a changed path remains a hard conflict. The
-dirty implementation is a candidate, not a landed fix.
+focused implementation is published in #60, not yet landed.
 
 - [ ] Reproduce pause/revive and true nuke/restart separately.
 - [ ] Observe Gall kick, Jael re-watch, watch acknowledgements, desk `%tire`, and
@@ -334,7 +334,7 @@ Options for a true nuke:
 
 ### 15. Decide `%bane` and additive snub semantics
 
-- [ ] Architect-review the dirty durable domain tombstone. The merged `%bane`
+- [ ] Architect-review the draft #61 durable domain tombstone. The merged `%bane`
   deregisters/destructively breaches but does not permanently reserve the
   domain name.
 - [ ] Decide whether `%bane` must leave the Gall watch explicitly and how queued
