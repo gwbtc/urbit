@@ -20,6 +20,33 @@ This is an ordered cross-repository work list. Read
 5. A test double may model an asynchronous dependency; it must not turn a
    light-client assertion into protocol proof.
 
+## Active pull-request map
+
+All heads start from `agent/confidential-comets-waypoint` except the Aqua
+prototype, which is intentionally stacked on the compatibility head.
+
+| Branch | Base | Requested state | Merge condition |
+|---|---|---|---|
+| `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | guarded parsing and focused regression pass |
+| `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact duplicate restores the watch without changing registration state |
+| `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | architect chooses retirement semantics; persisted-state migration and missing tests are supplied |
+| `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | compatibility provenance is documented and existing suites pass |
+| `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | canonical vectors and deterministic `%light-client` facts replace boolean verdict fixtures |
+
+Do not merge the draft Jael branch merely because it compiles. Before it can
+be ready, choose whether `%bane` is permanent, design recovery if needed,
+introduce a valid new Jael state version/migration for any persisted field,
+and test unregistered denial, registered/live allowance, configured legacy
+allowance, suspended denial, queued facts, and the real Gall/Clay lifecycle.
+
+Do not promote the Aqua draft by polishing the obsolete vectors. Retain its
+asynchronous Ames -> Jael -> Gall -> Jael -> Ames shape, but regenerate
+identities from the harmonized direct `dat` and replace boolean `xtr` verdicts
+with deterministic packet and `%light-client` test vectors. Add same-life
+state sequence, public/confidential arrival orders, bounded scheduling,
+deadline, stale callback, and cancellation coverage after those contracts are
+frozen.
+
 ## P0: freeze the revision-2 wire contract
 
 ### 1. Harmonize immutable `dat`
@@ -226,6 +253,8 @@ Accepted rule: latest custody-proven state wins regardless of visibility.
 
 ### 12. Land malformed suite-C intake as a focused fix
 
+Tracking branch: `agent/cc-ames-malformed-domain` (ready-for-review workstream).
+
 - [ ] Extract the guarded `+rub`/`+pass-pki-dom` change from the dirty tree.
 - [ ] Keep both Mesa and legacy paths fail-closed before alien allocation or
   Jael `%writ`.
@@ -238,6 +267,8 @@ must remain a separately testable change. Neither belongs in the Groundwire
 userspace PR.
 
 ### 13. Land the selected `%anex` restart fix
+
+Tracking branch: `agent/cc-jael-anex-rewatch` (ready-for-review workstream).
 
 The merged target rejects every duplicate registration. The selected follow-up
 accepts an exact duplicate from the same agent and path as an idempotent request
@@ -252,6 +283,22 @@ dirty implementation is a candidate, not a landed fix.
 - [ ] Verify a different path and a different agent cannot take over the
   registration.
 - [ ] Land this in the separate Jael `%base` PR, with its focused tests.
+
+### 13a. Decide Jael domain retirement and generic udiff authorization
+
+Tracking branch: `agent/cc-jael-bane-auth` (draft only).
+
+- [ ] Decide whether `%bane` permanently tombstones a domain or permits an
+  explicit architected recovery path.
+- [ ] If a tombstone is persisted, introduce a new Jael state version and a
+  valid migration from existing `%5`; never add the field directly to `%5`.
+- [ ] Decide whether `%bane` explicitly leaves the Gall watch or whether Gall
+  lifecycle ownership should close it through another path.
+- [ ] Review the proposed ingress rule: generic udiffs are accepted only from
+  a live registered domain or an explicitly configured legacy source, with a
+  tombstone overriding a dual-role legacy registration.
+- [ ] Add positive and negative authorization tests and exercise queued facts,
+  suspension/revival, app nuke/restart, and watch acknowledgements.
 
 ### 14. Decide app-nuke recovery and re-attestation
 

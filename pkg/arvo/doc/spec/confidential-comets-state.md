@@ -43,10 +43,46 @@ The paired documentation/implementation waypoint branch is
 
 At the beginning of this documentation waypoint there were no staged changes,
 15 modified tracked files, and six untracked status entries. `dev/` is an
-untracked mounted-desk mirror; in particular,
-`dev/base/doc/spec/confidential-comets.md` and `dev/base/todo.md` are not
-authoritative and must not be committed. Documentation commits must stage
-their paths explicitly.
+untracked development pier, including a mounted `%base` mirror. On 2026-07-29
+it was archived intact outside the repository at `/Users/armitage/r/gwbtc/s/dev`;
+its binaries, LMDB state, logs, and mounted files are not authoritative and
+must not be committed. Documentation commits must stage their paths explicitly.
+
+## Follow-up branch and pull-request split
+
+The uncommitted follow-up is deliberately split instead of rebased or landed
+as one patch. Every independent branch below starts from this waypoint. The
+requested review state is part of the handoff contract even before GitHub
+assigns pull-request numbers.
+
+| Workstream | Head branch | Pull-request base | Review state | Scope |
+|---|---|---|---|---|
+| Ames malformed suite-C domain | `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | guarded domain parse, fail-closed legacy/Mesa intake, focused malformed regression |
+| Jael duplicate registration | `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact same-agent/same-path `%anex` re-watch; conflicting path remains rejected |
+| Jael domain retirement/authorization | `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | tombstone, explicit Gall leave, and registered/legacy-source udiff authorization experiment |
+| Test-suite compatibility | `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | existing Ames, Mesa, Dawn, and legacy Aqua fixture repairs only |
+| Async attestation Aqua prototype | `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | deterministic fake `%gw-btc` and valid success/reject/life-2 asynchronous scenarios |
+
+The malformed-attestation Aqua regression travels with the Ames fix rather
+than being duplicated in the stacked Aqua prototype. The compatibility branch
+is the sole base of the Aqua branch; the three kernel branches remain
+independent so each kernel issue can be reviewed and merged separately.
+
+The draft Jael retirement branch is intentionally not represented as safe to
+merge. Its current tombstone adds a field directly to persisted Jael `%5`
+state without a `%5` to `%6` migration, has no unban/recovery task, and lacks
+positive authorization and live Gall/Clay lifecycle coverage. The direct
+state edit is incorrect for existing `%5` snapshots. The earlier decision not
+to version fresh `%gw-btc` state does not apply to Jael's already-persisted
+kernel state.
+
+The draft Aqua branch preserves a useful end-to-end control-path scaffold,
+not a revision-2 protocol fixture. Its current valid vectors use the
+superseded jam-based satpoint encoding and a boolean synthetic `xtr`; the
+hard-coded comet identities must be regenerated after the direct `dat` and
+state/economic envelope are frozen. It does not yet model `%light-client`
+facts, public/confidential ordering, economic admission, queue bounds, epochs,
+or callback cancellation.
 
 ## Revision 0: merged kernel integration
 
@@ -111,9 +147,12 @@ The Urbit worktree adds Aqua fixtures that drive the real
 Ames -> Jael -> Gall -> Jael -> Ames asynchronous route without `bitcoind`.
 Production `%light-client` plus regtest E2E remains future work.
 
-## Current dirty Urbit worktree
+## Source dirty Urbit worktree
 
-The following changes are separate from merged PR #57.
+The following changes originated in the preserved `cyc/cc-draft` worktree and
+are separate from merged PR #57. The branch split above is the publication
+plan; this section records provenance rather than implying that all source
+hunks belong together.
 
 ### Jael candidates
 
