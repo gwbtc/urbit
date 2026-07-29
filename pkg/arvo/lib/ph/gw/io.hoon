@@ -7,6 +7,36 @@
   ;<  ~  bind:m  %*($ init-ship ship ship, fake fake, core core)
   (pure:m ~)
 ::
+++  install-gw-btc
+  |=  =ship
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ~?  >>  loud  [tag "{(cite:title ship)}: install test %gw-btc"]
+  ;<  ~  bind:m  (mount ship %base)
+  ;<  ~  bind:m  (copy-file ship /app/gw-btc/hoon gw-btc-agent)
+  ;<  ~  bind:m  (dojo ship "|start %gw-btc")
+  ;<  ~  bind:m  (wait-for-output ship "booted %gw-btc")
+  ::  Let jael consume the agent's asynchronous %anex card before
+  ::  the first attestation reaches ames.
+  ;<  ~  bind:m  (sleep ~s2)
+  (pure:m ~)
+::
+++  assert-snubbed
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /snubbed/noun
+  =+  ;;  val=(unit [form=?(%allow %deny) ships=(list @p)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  ?>  =(%deny form.u.val)
+  ?>  (lien ships.u.val |=(her=@p =(who her)))
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
+  (pure:m ~)
+::
 ++  start-gw-comet
   |=  [comet=@p core=?(%ames %mesa) =onchain]
   =.  onchain  (sort-onchain onchain)

@@ -217,6 +217,19 @@
     ==
   --
 ::
+++  gw-comet-ok
+  ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
+::
+++  gw-comet-fail
+  ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
+::
+::  Prototype-only encoding retained to exercise the asynchronous kernel
+::  path.  Revision 2 replaces this jammed satpoint and regenerates the
+::  derived identities before these vectors can become normative.
+++  gw-dat
+  |=  [txid=@ vout=@ off=@]
+  (cat 0 q:(mat %gw-btc) (jam [txid vout off]))
+::
 ++  get-keys
   |=  [who=@p lyfe=life]
   ?~  cum=(~(get by comets) who)
@@ -224,9 +237,15 @@
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%b ~]
   ?.  =(lyfe 1)
+    ?:  =(who gw-comet-ok)
+      (pit:nu:cric:crypto 512 lyfe %c [(gw-dat 0x1111 0 0) (jam [%.y lyfe])])
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%c 0xdead.beef.cafe]
+  ?:  =(who gw-comet-ok)
+    (pit:nu:cric:crypto 512 1 %c [(gw-dat 0x1111 0 0) (jam %.y)])
+  ?:  =(who gw-comet-fail)
+    (pit:nu:cric:crypto 512 2 %c [(gw-dat 0x2222 1 0) (jam %.n)])
   ?:  ?=(%b suite.u.cum)
     (pit:nu:cric:crypto 512 seed.u.cum %b ~)
   (pit:nu:cric:crypto 512 seed.u.cum %c 0xdead.beef.cafe)
@@ -261,6 +280,9 @@
         ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
         ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
         ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
+        :: prototype %gw-btc asynchronous-path identities
+        gw-comet-ok
+        gw-comet-fail
     ==
   %+  zip
     ::  comet suites
@@ -292,6 +314,8 @@
       2~det.i-jOI.OVI8v.9ldMk.16MGj.AZxso.qsTpQ.inrUz.aE1sa
       0w~w9s8.YLtr3.bSQ8H.SIK5g.Dnh9M.aIcT2.mqIqG.geVWH.
       lJUzq.OTuUl.oM9ww.7MwQh.pQ7Q9.NB38f.FzzKE.S7is8.~0Gg-
+      `@uw`1
+      `@uw`2
   ==
 ::  +zip: combine two lists into a list of cells of their elements
 ::
