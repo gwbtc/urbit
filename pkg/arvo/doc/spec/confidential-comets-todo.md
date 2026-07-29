@@ -25,13 +25,13 @@ This is an ordered cross-repository work list. Read
 All heads start from `agent/confidential-comets-waypoint` except the Aqua
 prototype, which is intentionally stacked on the compatibility head.
 
-| Branch | Base | Requested state | Merge condition |
+| PR / branch | Base | State | Merge condition |
 |---|---|---|---|
-| `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | guarded parsing and focused regression pass |
-| `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact duplicate restores the watch without changing registration state |
-| `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | architect chooses retirement semantics; persisted-state migration and missing tests are supplied |
-| `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | compatibility provenance is documented and existing suites pass |
-| `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | canonical vectors and deterministic `%light-client` facts replace boolean verdict fixtures |
+| [#59](https://github.com/gwbtc/urbit/pull/59) / `agent/cc-ames-malformed-domain` | `agent/confidential-comets-waypoint` | ready | review guarded parsing and the downstream timeout/no-crash regression limitation |
+| [#60](https://github.com/gwbtc/urbit/pull/60) / `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | review exact-duplicate re-watch; add lifecycle integration separately |
+| [#61](https://github.com/gwbtc/urbit/pull/61) / `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | choose retirement semantics, add a real `%5 -> %6` migration, recovery, source matrix, and lifecycle tests |
+| [#62](https://github.com/gwbtc/urbit/pull/62) / `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | review provenance and focused passes with the disclosed baseline-red suites |
+| [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | finish post-fix validation; replace prototype identities, jammed satpoint, and boolean verdicts with canonical vectors and deterministic `%light-client` facts |
 
 Do not merge the draft Jael branch merely because it compiles. Before it can
 be ready, choose whether `%bane` is permanent, design recovery if needed,
@@ -253,13 +253,14 @@ Accepted rule: latest custody-proven state wins regardless of visibility.
 
 ### 12. Land malformed suite-C intake as a focused fix
 
-Tracking branch: `agent/cc-ames-malformed-domain` (ready-for-review workstream).
+Tracking PR: [#59](https://github.com/gwbtc/urbit/pull/59), branch
+`agent/cc-ames-malformed-domain` (ready for review).
 
-- [ ] Extract the guarded `+rub`/`+pass-pki-dom` change from the dirty tree.
-- [ ] Keep both Mesa and legacy paths fail-closed before alien allocation or
-  Jael `%writ`.
-- [ ] Land the malformed-attestation regression independently of revision 2 if
-  practical.
+- [x] Extract the guarded `+rub`/`+pass-pki-dom` change from the dirty tree.
+- [x] Keep legacy intake fail-closed before alien insertion, and Mesa intake
+  fail-closed before Jael lookup/cards inside its already-created `al-core`.
+- [x] Publish the malformed-attestation regression independently of revision 2.
+- [ ] Land it after review.
 
 This is a separate Ames fail-closed bug fix. It may share a focused kernel PR
 with the Jael `%base` work if review prefers, but it is not the same bug and
@@ -268,7 +269,8 @@ userspace PR.
 
 ### 13. Land the selected `%anex` restart fix
 
-Tracking branch: `agent/cc-jael-anex-rewatch` (ready-for-review workstream).
+Tracking PR: [#60](https://github.com/gwbtc/urbit/pull/60), branch
+`agent/cc-jael-anex-rewatch` (ready for review).
 
 The merged target rejects every duplicate registration. The selected follow-up
 accepts an exact duplicate from the same agent and path as an idempotent request
@@ -286,7 +288,8 @@ dirty implementation is a candidate, not a landed fix.
 
 ### 13a. Decide Jael domain retirement and generic udiff authorization
 
-Tracking branch: `agent/cc-jael-bane-auth` (draft only).
+Tracking PR: [#61](https://github.com/gwbtc/urbit/pull/61), branch
+`agent/cc-jael-bane-auth` (draft only; unsafe for live `%5` upgrades).
 
 - [ ] Decide whether `%bane` permanently tombstones a domain or permits an
   explicit architected recovery path.
