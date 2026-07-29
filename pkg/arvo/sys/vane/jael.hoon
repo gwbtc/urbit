@@ -37,6 +37,7 @@
 +$  state-5
   $:  %5
       dos=(map @tas dom-state)                          ::  pki domain registry
+      ban=(set @tas)                                    ::  permanently banned domains
       pki=state-pki-5                                   ::
       etn=state-eth-node                                ::  eth connection state
       tim=[%plea (unit resend-timer)]                   ::  nacked plea timer
@@ -337,6 +338,7 @@
       =/  dom
         ?>  ?=([[%gall %use @ @ *] *] hen)
         ;;(term i.t.t.i.hen)
+      ?<  (~(has in ban) dom)
       =/  reg  (~(get by dos) dom)
       ?^  reg
         ::  A restarted verifier repeats its +on-init %anex.  The
@@ -458,12 +460,16 @@
     ::  (gall owns liveness); nuking the agent instead of sending
     ::  agent deletion looks identical to suspension through %tire,
     ::  so it only ever acts as %gost; this task is the sole
-    ::  destructive path.  the %tire subscription stays up after
-    ::  deregistration; waves for unregistered desks are ignored.
+    ::  destructive path.  the domain is durably tombstoned so the
+    ::  compromised agent cannot re-register or continue in a dual
+    ::  legacy-source role.  the gall watch is explicitly left before
+    ::  deregistration; the %tire subscription stays up, and waves for
+    ::  unregistered desks are ignored.
     ::
         %bane
       ?~  reg=(~(get by dos) dom.tac)
         +>.$
+      =.  ban  (~(put in ban) dom.tac)
       =.  dos  (~(del by dos) dom.tac)
       ::  forget the compromised points so a fresh attestation is
       ::  re-verified from scratch rather than trusted as known
@@ -474,6 +480,7 @@
         (~(del by pos) ship)
       =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
       =/  sus  ~(. su hen now pki etn)
+      =.  sus  (leave-peer:sus dom.tac pax.u.reg)
       =.  sus  (emit:sus hen %pass /bane %a %snub %deny ~(tap in hep.u.reg))
       =;  core=_sus
         (curd abet:core)
@@ -956,11 +963,24 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %anew dom.res pass.res]
-        ::  anything else is chain updates (udiffs) from a pki
-        ::  source; drop them if the domain is suspended
+        ::  anything else is chain updates (udiffs) from either a
+        ::  registered pki-domain agent or a configured legacy source.
+        ::  Requiring one of those identities also closes the race where
+        ::  an already-queued fact arrives after %bane deleted the domain.
         ::
+        =/  app-dom  ;;(@tas app)
         =/  dom  (dom-for-app app)
-        ?:  &(?=(^ dom) !liv:(~(got by dos) u.dom))
+        =/  allowed
+          ?:  (~(has in ban) app-dom)
+            |
+          ?^  dom
+            liv:(~(got by dos) u.dom)
+          ::  Legacy local ethereum sources are retained in the reverse
+          ::  source index as [%| app].  No other Gall agent may supply
+          ::  Azimuth updates implicitly.
+          ::
+          (~(has by sources-reverse.etn) [%| ;;(term app)])
+        ?.  allowed
           +>.$
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
         %-  curd  =<  abet
@@ -1037,6 +1057,19 @@
     ?~  whol  this-su
     =.  this-su  (emit-peer app /(scot %p i.whol))
     $(whol t.whol)
+  ++  leave-peer
+    |=  [app=term =path]
+    %-  emit
+    :*  hen
+        %pass
+        [app path]
+        %g
+        %deal
+        [our our /jael]
+        app
+        %leave
+        ~
+    ==
   ::
   ++  public-keys-give
     |=  [yen=(set duct) =public-keys-result]
@@ -1615,6 +1648,7 @@
     ^-  state-5
     :*  %5
         dos=~
+        ban=~
         ^=  pki
         %=    pki.old
             zim
