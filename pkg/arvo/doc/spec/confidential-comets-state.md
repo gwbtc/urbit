@@ -60,7 +60,7 @@ Aqua prototype is stacked only on the compatibility branch.
 | Jael duplicate registration | [#60](https://github.com/gwbtc/urbit/pull/60) / `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | exact same-agent/same-path `%anex` re-watch; both focused Jael tests pass |
 | Jael domain retirement/authorization | [#61](https://github.com/gwbtc/urbit/pull/61) / `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | prototype tests pass, but the in-place `%5` mold change is unsafe and recovery/lifecycle policy is unresolved |
 | Test-suite compatibility | [#62](https://github.com/gwbtc/urbit/pull/62) / `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | Dawn and representative legacy Aqua pass; existing full-suite/Ames expectation failures are disclosed in the PR |
-| Async attestation Aqua prototype | [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | deterministic fake `%gw-btc`; obsolete packet vectors and current validation limits are explicit |
+| Async attestation Aqua prototype | [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | Ames accept/reject pass; life-2 hangs before a second verifier request; Mesa rerun and canonical vectors remain open |
 
 The malformed-attestation Aqua regression travels with the Ames fix rather
 than being duplicated in the stacked Aqua prototype. The compatibility branch
@@ -86,8 +86,11 @@ or callback cancellation.
 The first independent Aqua audit of #63 found that its two new comet names and
 seeds had no corresponding suite entries, causing `+zip` to fail before the
 attestation path. Commit `cd96be4e84` adds the two `%c` entries. This is useful
-evidence for retaining cross-list length checks and keeping #63 draft while its
-post-fix scenario matrix and canonical-vector replacement remain open.
+evidence for retaining cross-list length checks. After that fix, Ames accept
+and reject reach `done` without `%aqua-crash`; life-2 establishes life 1, then
+hangs with `%fine-mismatch our=[0 2] her=[comet 0 1]` and never emits a second
+fake-verifier request. Mesa was not rerun under the synchronous time bound.
+These results and the canonical-vector replacement keep #63 explicitly draft.
 
 ## Revision 0: merged kernel integration
 

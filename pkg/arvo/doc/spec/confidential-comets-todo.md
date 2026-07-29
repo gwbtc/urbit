@@ -31,7 +31,7 @@ prototype, which is intentionally stacked on the compatibility head.
 | [#60](https://github.com/gwbtc/urbit/pull/60) / `agent/cc-jael-anex-rewatch` | `agent/confidential-comets-waypoint` | ready | review exact-duplicate re-watch; add lifecycle integration separately |
 | [#61](https://github.com/gwbtc/urbit/pull/61) / `agent/cc-jael-bane-auth` | `agent/confidential-comets-waypoint` | draft | choose retirement semantics, add a real `%5 -> %6` migration, recovery, source matrix, and lifecycle tests |
 | [#62](https://github.com/gwbtc/urbit/pull/62) / `agent/cc-test-compat` | `agent/confidential-comets-waypoint` | ready | review provenance and focused passes with the disclosed baseline-red suites |
-| [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | finish post-fix validation; replace prototype identities, jammed satpoint, and boolean verdicts with canonical vectors and deterministic `%light-client` facts |
+| [#63](https://github.com/gwbtc/urbit/pull/63) / `agent/cc-aqua-attestation` | `agent/cc-test-compat` | draft | diagnose the life-2 second-handshake hang, rerun Mesa, and replace prototype identities/jammed satpoint/boolean verdicts with canonical vectors and deterministic `%light-client` facts |
 
 Do not merge the draft Jael branch merely because it compiles. Before it can
 be ready, choose whether `%bane` is permanent, design recovery if needed,
@@ -359,6 +359,15 @@ Options for a true nuke:
 
 ### 17. Aqua without external Bitcoin
 
+Tracking draft: [#63](https://github.com/gwbtc/urbit/pull/63), stacked on
+[#62](https://github.com/gwbtc/urbit/pull/62).
+
+- [x] Run the prototype Ames accept and reject paths after repairing the suite
+  inventory; both reach `done` without `%aqua-crash`.
+- [ ] Diagnose the life-2 second-handshake hang. The bounded run never emits a
+  second verifier request after `%fine-mismatch our=[0 2] her=[comet 0 1]`.
+- [ ] Rerun all three prototype cases under Mesa after the life-2 flow is
+  understood.
 - [ ] Preserve the current async success, rejection, malformed, and life-2
   scenarios while replacing old delta/current packet fixtures.
 - [ ] Inject delayed and out-of-order `%light-client` answers to exercise job
