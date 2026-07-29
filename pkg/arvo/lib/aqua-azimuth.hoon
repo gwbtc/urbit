@@ -287,7 +287,7 @@
   %+  zip
     ::  comet suites
     ^-  (list ?(%b %c))
-    ~[%c %c %c %b %b %b %c %c %c %b %b %b]
+    ~[%c %c %c %b %b %b %c %c %c %b %b %b %c %c]
   ::  comet seeds
   ^-  (list @uw)
   :~  0w2.5sfF0.~inVv.dQ7zb.ykQSG.aX5nF.uGQsm.keVzY.6Pu1S.
