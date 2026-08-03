@@ -423,11 +423,7 @@
       =.  dos  (~(put by dos) dom.tac u.reg(liv |))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
-      ::  XX %snub sets the blocklist wholesale; this clobbers any
-      ::  manually-snubbed ships.  see the confidential-comets spec
-      ::  for the additive %snub variant this wants.
-      ::
-      (emit:sus hen %pass /gost %a %snub %deny ~(tap in hep.u.reg))
+      (emit:sus hen %pass /gost %a %snub %deny %add ~(tap in hep.u.reg))
     ::
     ::  recover a suspended pki domain
     ::    [%ghul dom=@tas]
@@ -444,10 +440,7 @@
       =.  dos  (~(put by dos) dom.tac u.reg(liv &))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
-      ::  XX wholesale %snub semantics again: clearing the blocklist
-      ::  unsnubs everyone, not just this domain's peers.
-      ::
-      (emit:sus hen %pass /ghul %a %snub %deny ~)
+      (emit:sus hen %pass /ghul %a %snub %deny %del ~(tap in hep.u.reg))
     ::
     ::  destroy a pki domain
     ::    [%bane dom=@tas]
@@ -474,7 +467,7 @@
         (~(del by pos) ship)
       =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
       =/  sus  ~(. su hen now pki etn)
-      =.  sus  (emit:sus hen %pass /bane %a %snub %deny ~(tap in hep.u.reg))
+      =.  sus  (emit:sus hen %pass /bane %a %snub %deny %add ~(tap in hep.u.reg))
       =;  core=_sus
         (curd abet:core)
       %-  ~(rep in hep.u.reg)
@@ -956,12 +949,44 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %anew dom.res pass.res]
-        ::  anything else is chain updates (udiffs) from a pki
-        ::  source; drop them if the domain is suspended
+        ::  %stale-notice: the domain agent observed a verified ship's
+        ::  attestation go out of date on-chain (its identity utxo was
+        ::  spent).  forget the point so the ship's next packet is
+        ::  re-verified from scratch, and tell %sybl subscribers
+        ::  (ames) to drop the peer.  never a snub: staleness is not
+        ::  fraud, and the replacement packet must be able to arrive.
+        ::
+        ?:  ?=(%stale-notice p.cage.p.+>.hin)
+          =+  ;;(res=stale-notice q.q.cage.p.+>.hin)
+          ?~  reg=(~(get by dos) dom.res)
+            +>.$
+          ?.  &(liv.u.reg =(dom.res app))
+            +>.$
+          ?.  (~(has in hep.u.reg) ship.res)
+            +>.$
+          =.  dos
+            %+  ~(put by dos)  dom.res
+            u.reg(hep (~(del in hep.u.reg) ship.res))
+          =.  pos.zim.pki  (~(del by pos.zim.pki) ship.res)
+          %-  curd  =<  abet
+          %+  exec:~(. su hen now pki etn)
+            syl.zim.pki
+          [%give %sybl %stale dom.res ship.res]
+        ::  anything else is chain updates (udiffs).  only a live
+        ::  registered pki domain or an explicitly configured legacy
+        ::  source (%listen with an agent source) may inject them;
+        ::  facts from any other agent are dropped.
         ::
         =/  dom  (dom-for-app app)
-        ?:  &(?=(^ dom) !liv:(~(got by dos) u.dom))
-          +>.$
+        ?:  ?=(^ dom)
+          ?.  liv:(~(got by dos) u.dom)
+            +>.$
+          =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
+          %-  curd  =<  abet
+          (~(new-event su hen now pki etn) udiffs)
+        ?.  (~(has by sources-reverse.etn) [%| ;;(term app)])
+          %.  +>.$
+          (slog leaf+"jael: dropped udiffs from unregistered {<app>}" ~)
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
@@ -1662,7 +1687,7 @@
       ?=  $?  %lyfe  %life  %rift  %ryft
               %deed  %sein  %saxo  %turf
               %fief  %pont  %pynt  %sponsors
-              %lamp
+              %lamp  %dome
           ==
           syd
       ==
@@ -1777,6 +1802,29 @@
     ?:  fak.own.pki.lex  [~ ~]
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ``[%noun !>(pos)]
+  ::
+      %dome                                             ::  pki domain of ship
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex  ``[%noun !>(~)]
+    =/  pos  (~(get by pos.zim.pki.lex) u.who)
+    ?~  pos  ``[%noun !>(~)]
+    =/  key  (~(get by keys.u.pos) life.u.pos)
+    ?~  key  ``[%noun !>(~)]
+    ::  mirror of +pass-pki-dom:ames: a suite-%c pass commits its
+    ::  pki domain as the +mat-encoded head of its tweak data.
+    ::  ~ for anything else; keep in sync with the ames arm.
+    ::
+    =/  cek  +<:(com:nu:cric:crypto pass.u.key)
+    ?.  ?=([%c *] cek)
+      ``[%noun !>(~)]
+    =/  mat  (mole |.((rub 0 dat.tw.pub.cek)))
+    ?~  mat
+      ``[%noun !>(~)]
+    ``[%noun !>((some `@tas`q.u.mat))]
   ::
       %vein
     ?.  ?=([@ ~] tyl)  [~ ~]

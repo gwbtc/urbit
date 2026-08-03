@@ -3276,7 +3276,7 @@
             wrapped-task
           ^-  task-12-til-16
           ?+  -.task  task
-            %snub  [%snub %deny ships.task]
+            %snub  [%snub %deny %set ships.task]
           ==
         ==
       ::
@@ -9248,7 +9248,7 @@
                 %born  sy-abet:sy-born:sy-core
                 %cong  sy-abet:sy-cong:sy-core
                 %prod  sy-abet:(sy-prod:sy-core ships.task)
-                %snub  sy-abet:(sy-snub:sy-core [form ships]:task)
+                %snub  sy-abet:(sy-snub:sy-core [form act ships]:task)
                 ::  ask our pki-domain agent (via jael) to re-encode
                 ::  our pass with the current off-chain reveal log;
                 ::  the fresh pass returns on /sybl (+sy-sybl %anew).
@@ -11162,6 +11162,11 @@
         ::    a fraudulent attestation is not retried.
         ::    %lost: no live agent is registered for the pki domain.
         ::    stubbed out as a no-op for now.
+        ::    %stale: the ship's verified attestation went out of date
+        ::    on-chain and jael dropped its point.  drop the peer --
+        ::    known or alien -- but snub nothing: staleness is not
+        ::    fraud, and the ship's replacement attestation packet
+        ::    must be able to arrive and re-enter verification.
         ::
         ++  sy-sybl
           |=  =writ-result:jael
@@ -11202,6 +11207,17 @@
                     ships.bug.ames-state
                     |.("writ for unknown pki domain {<dom.writ-result>}")
                 ==
+            sy-core
+          ::
+              %stale
+            =*  her  ship.writ-result
+            %-  %-  trace
+                :*  %mesa  odd.veb.bug.ames-state  her
+                    ships.bug.ames-state
+                    |.("attestation stale; dropping peer")
+                ==
+            =.  chums.ames-state  (~(del by chums.ames-state) her)
+            =.  peers.ames-state  (~(del by peers.ames-state) her)
             sy-core
           ::
           ::  our own freshly re-encoded pass, with an updated
@@ -11678,10 +11694,33 @@
           --
         ::  +sy-snub: handle request to change ship blacklist
         ::
+        ::    %set replaces the whole list with .ships in mode .form.
+        ::    %add and %del edit the current list without changing its
+        ::    mode: %add asks that .ships be blocked (%deny) or
+        ::    admitted (%allow) and %del undoes that, whichever mode
+        ::    the list is actually in.  jael's pki-domain suspension
+        ::    (%gost/%ghul/%bane) uses the editing forms so it never
+        ::    clobbers a manually curated list.
+        ::
         ++  sy-snub
-          |=  [form=?(%allow %deny) ships=(list ship)]
+          |=  [form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
           ^+  sy-core
-          =.  snub.ames-state  [form (^sy ships)]
+          =/  new  (^sy ships)
+          =.  snub.ames-state
+            ?-    act
+                %set  [form new]
+                %add
+              :-  form.snub.ames-state
+              ?:  =(form form.snub.ames-state)
+                (~(uni in ships.snub.ames-state) new)
+              (~(dif in ships.snub.ames-state) new)
+            ::
+                %del
+              :-  form.snub.ames-state
+              ?:  =(form form.snub.ames-state)
+                (~(dif in ships.snub.ames-state) new)
+              (~(uni in ships.snub.ames-state) new)
+            ==
           sy-core
         ::
         ++  sy-stun
