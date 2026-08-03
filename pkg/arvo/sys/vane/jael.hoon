@@ -864,8 +864,8 @@
       %+  emit:~(. su hen now pki etn)
         hen
       ?:  lov
-        [%pass /ghul %a %snub %deny ~]
-      [%pass /gost %a %snub %deny ~(tap in hep.reg)]
+        [%pass /ghul %a %snub %deny %del ~(tap in hep.reg)]
+      [%pass /gost %a %snub %deny %add ~(tap in hep.reg)]
     ::
         [%gall %unto *]
       ?-    +>-.hin
