@@ -1,11 +1,26 @@
 # Confidential Comets: TODO and Architect Decisions
 
-Updated: **2026-07-29**
+Updated: **2026-08-03**
 
 This is an ordered cross-repository work list. Read
 [confidential-comets-state.md](confidential-comets-state.md) first. Items marked
 **decision** must not be silently resolved in implementation. Items marked
 **deferred** are not release blockers.
+
+> **2026-08-03 amendment.** The OP_RETURN revision and its decisions addendum
+> (`gwbtc/groundwire/groundwire/doc/opret-revision/`, files `01` and `04`)
+> resolve or descope many items below; where they conflict with this list,
+> they win. In particular: §§5–9 economic admission, probe pools, receipts,
+> reservations and scheduling are **descoped** (single-flight-per-ship
+> dedup in the agent replaces them; on-chain cost is the sybil resistance);
+> §11's two-fragment reassembly path is **descoped** (one-fragment bound);
+> §1's `dat` layout is superseded by the Kelvin-9 hiding commitment; §13a's
+> udiff authorization is landed (tombstone still deferred pending a state
+> migration); §14's stale-vs-`%fail` and re-attestation items are resolved
+> by the `%stale` flow; §15's additive `%snub` is landed. The remaining
+> live kernel items are: the #63 life-2 hang diagnosis, Mesa scenario
+> reruns, fixture regeneration against the frozen formats, and the shared
+> golden vectors.
 
 ## Working rules
 

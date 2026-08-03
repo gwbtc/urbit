@@ -1,8 +1,10 @@
 # Confidential Comets: Kernel Integration Specification
 
-Status: **waypoint specification**. The Jael/Ames integration is merged; the
-economic-admission packet revision described below is selected but not yet
-implemented.
+Status: **waypoint specification, amended**. The Jael/Ames integration is
+merged. The on-Bitcoin format authority is now the OP_RETURN revision and its
+decisions addendum in the Groundwire repo (see below); the economic-admission
+machinery and the two-fragment packet bound described in §3 are **descoped**
+by that addendum and retained here only as historical context.
 
 Companion documents:
 
@@ -10,8 +12,38 @@ Companion documents:
 - [remaining work and architect decisions](confidential-comets-todo.md)
 - Groundwire userspace specification:
   `gwbtc/groundwire/groundwire/doc/confidential-comets-agent.md`
+- **Format and scope authority** (supersedes conflicting sections here):
+  `gwbtc/groundwire/groundwire/doc/opret-revision/01-spec-revision.md` and
+  `04-decisions-addendum.md`
 
 ## Revision history
+
+- **2026-08-03 — OP_RETURN revision and decisions addendum adopted.** Where
+  this document conflicts with the Groundwire OP_RETURN revision docs, they
+  win. Summary of kernel-relevant deltas, all landed on this branch:
+  - The canonical `dat` is now
+    `(can 0 (mat %gw-btc) (mat 9) [256 d] ~)` — domain tag first (all the
+    kernel ever reads), then a Kelvin protocol version (starting at 9,
+    counting down), then a 32-byte hiding commitment to the spawn satpoint.
+    The `can`/`mat` satpoint layout §2.1 shows is superseded.
+  - Every snapshot change increments life (a rift bump implies a life bump),
+    so Ames's life-based intake triage is a total order and no same-life
+    re-verification path is needed.
+  - Stale attestations: `$stale-notice` fact → jael forgets the point →
+    `[%sybl %stale]` → Ames drops the peer without snubbing. Resolves the
+    stale-vs-`%fail` and remote re-attestation questions (owner-driven;
+    no peer-directed request API).
+  - Additive `[%snub form act ships]` Ames task; `%gost`/`%ghul`/`%bane`
+    no longer clobber manual blocklists. Resolves todo §15's snub item.
+  - Jael `%dome` scry: the PKI domain committed in a ship's pass.
+  - Udiff source authorization landed without the `%bane` tombstone's
+    unsafe state edit; a durable tombstone remains deferred pending a
+    proper Jael state migration.
+  - First-contact attestations must fit **one** Mesa fragment; the
+    two-fragment bound and bounded anonymous reassembly path (§3.2,
+    todo §11) are descoped. Economic-admission staging (§3.3–3.4) is
+    descoped in favor of plain single-flight-per-ship deduplication in
+    the domain agent; on-chain cost is the sybil resistance.
 
 - **2026-07-29 — first maintained verbal waypoint.** Separates three things
   that earlier drafts mixed together: the kernel integration merged by Urbit
