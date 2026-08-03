@@ -953,8 +953,9 @@
         ::  attestation go out of date on-chain (its identity utxo was
         ::  spent).  forget the point so the ship's next packet is
         ::  re-verified from scratch, and tell %sybl subscribers
-        ::  (ames) to drop the peer.  never a snub: staleness is not
-        ::  fraud, and the replacement packet must be able to arrive.
+        ::  (ames) to demote the peer to an alien.  never a snub:
+        ::  staleness is not fraud, and the replacement packet must
+        ::  be able to arrive.
         ::
         ?:  ?=(%stale-notice p.cage.p.+>.hin)
           =+  ;;(res=stale-notice q.q.cage.p.+>.hin)

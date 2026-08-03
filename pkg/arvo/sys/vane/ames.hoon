@@ -11163,10 +11163,13 @@
         ::    %lost: no live agent is registered for the pki domain.
         ::    stubbed out as a no-op for now.
         ::    %stale: the ship's verified attestation went out of date
-        ::    on-chain and jael dropped its point.  drop the peer --
-        ::    known or alien -- but snub nothing: staleness is not
-        ::    fraud, and the ship's replacement attestation packet
-        ::    must be able to arrive and re-enter verification.
+        ::    on-chain and jael dropped its point.  demote a %known
+        ::    peer to a fresh %alien: messaging state is wiped (as on
+        ::    breach) and outbound requests made while unverified
+        ::    queue in the alien agenda, draining through the normal
+        ::    promotion machinery when a fresh attestation verifies.
+        ::    snub nothing: staleness is not fraud, and the ship's
+        ::    replacement packet must be able to arrive.
         ::
         ++  sy-sybl
           |=  =writ-result:jael
@@ -11214,10 +11217,30 @@
             %-  %-  trace
                 :*  %mesa  odd.veb.bug.ames-state  her
                     ships.bug.ames-state
-                    |.("attestation stale; dropping peer")
+                    |.("attestation stale; demoting peer to alien")
                 ==
-            =.  chums.ames-state  (~(del by chums.ames-state) her)
-            =.  peers.ames-state  (~(del by peers.ames-state) her)
+            =/  peer  (find-peer her)
+            ?~  +.peer
+              sy-core
+            ?:  ?=([?(%ames %mesa) ~ %alien *] peer)
+              sy-core
+            ::  cancel pump timers, as +on-publ-breach does
+            ::
+            =?  sy-core    ?=(%ames -.peer)
+              %+  roll  ~(tap by snd.u.peer)
+              |=  [[=snd=bone =message-pump-state] core=_sy-core]
+              ^+  core
+              ?~  next-wake=next-wake.packet-pump-state.message-pump-state
+                core
+              =/  wire  (make-pump-timer-wire her snd-bone)
+              =/  duct  ~[/ames]
+              (sy-emit:core duct %pass wire %b %rest u.next-wake)
+            ::  demote to a fresh %alien with an empty agenda
+            ::
+            =?  chums.ames-state  ?=(%mesa -.peer)
+              (~(put by chums.ames-state) her alien/*ovni-state)
+            =?  peers.ames-state  ?=(%ames -.peer)
+              (~(put by peers.ames-state) her alien/*alien-agenda)
             sy-core
           ::
           ::  our own freshly re-encoded pass, with an updated
