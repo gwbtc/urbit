@@ -1055,4 +1055,77 @@
       !>  (~(has by peers.ames-state.bud) our-comet)
   ::
   ==
+::  additive %snub (decisions-addendum section 9): %set replaces the
+::  list wholesale, while %add/%del edit it in place without clobbering
+::  a manually-curated blocklist.  see +sy-snub.
+::
+++  test-snub-set-replaces  ^-  tang
+  ::  %set replaces both mode and list wholesale
+  ::
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev ~rus]])
+  =^  m2  nec  (call nec ~[//unix] [%snub %allow %set ~[~fed]])
+  (expect-eq !>([%allow (silt ~[~fed])]) !>(snub.ames-state.nec))
+::
+++  test-snub-add-preserves-manual  ^-  tang
+  ::  a manual deny list must survive an additive add (no clobber)
+  ::
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev ~rus]])
+  =^  m2  nec  (call nec ~[//unix] [%snub %deny %add ~[~fed]])
+  (expect-eq !>([%deny (silt ~[~dev ~rus ~fed])]) !>(snub.ames-state.nec))
+::
+++  test-snub-del-removes  ^-  tang
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev ~rus ~fed]])
+  =^  m2  nec  (call nec ~[//unix] [%snub %deny %del ~[~dev]])
+  (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
+::
+++  test-snub-mode-mismatch  ^-  tang
+  ::  against a %deny list, an %allow %add unblocks (set-difference) and
+  ::  an %allow %del blocks (set-union); the list stays in %deny mode.
+  ::
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev ~rus]])
+  =^  m2  nec  (call nec ~[//unix] [%snub %allow %add ~[~dev]])
+  =/  after-add  snub.ames-state.nec
+  =^  m3  nec  (call nec ~[//unix] [%snub %allow %del ~[~fed]])
+  ;:  weld
+    (expect-eq !>([%deny (silt ~[~rus])]) !>(after-add))
+    (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
+  ==
+::  %stale writ-result (decisions-addendum section 3): a %known peer
+::  whose on-chain attestation goes stale is DEMOTED to a fresh %alien
+::  (empty agenda), never deleted, and nothing is snubbed.  an already
+::  %alien peer is left untouched.  see +sy-sybl.
+::
+++  test-stale-demotes-known-to-alien  ^-  tang
+  =/  snub-before  snub.ames-state.nec
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %stale %gw-btc ~bud])
+  ;:  weld
+    ::  ~bud demoted to a fresh alien, not deleted
+    ::
+    %+  expect-eq
+      !>  `[%alien *alien-agenda:ames]
+    !>  (~(get by peers.ames-state.nec) ~bud)
+    ::  still a known-of ship
+    ::
+    (expect-eq !>(&) !>((~(has by peers.ames-state.nec) ~bud)))
+    ::  staleness is not fraud: the blocklist is untouched
+    ::
+    (expect-eq !>(snub-before) !>(snub.ames-state.nec))
+    ::  no cards emitted (no pump timers to cancel, no snub)
+    ::
+    (expect-eq !>(~) !>(moves))
+  ==
+::
+++  test-stale-leaves-alien-untouched  ^-  tang
+  ::  bud holds our-comet as an %alien; a stale notice is a no-op.
+  ::
+  =/  before  peers.ames-state.bud
+  =/  snub-before  snub.ames-state.bud
+  =^  moves  bud
+    (take bud /sybl ~[/ames] [%jael %sybl %stale %gw-btc our-comet])
+  ;:  weld
+    (expect-eq !>(before) !>(peers.ames-state.bud))
+    (expect-eq !>(snub-before) !>(snub.ames-state.bud))
+    (expect-eq !>(~) !>(moves))
+  ==
 --
