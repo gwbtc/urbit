@@ -58,7 +58,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
-      /nomdyl/gw-ok   /rilfun/gw-fail
+      /podlug/gw-ok   /rinpel/gw-fail
   ==
 ::
 ++  comets
@@ -79,9 +79,10 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-      :: prototype %gw-btc asynchronous-path identities
-      ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
-      ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
+      :: %gw-btc (kelvin 9) confidential identities.  derived from the
+      :: fixture dat, never written out: see +gw-comet-ok:aqua-azimuth.
+      gw-comet-ok:az
+      gw-comet-fail:az
   ==
 ::
 ++  gw-agent
@@ -133,9 +134,75 @@
   --
   '''
 ::
+::  +gw-btc-agent: the fake %gw-btc verifier the scenarios register
+::
+::    Stands in for the real on-chain verifier.  It cannot see a chain,
+::    so it checks everything about a self-attestation that does not
+::    need one: the pass must be suite %c, its tweak data must parse as
+::    a %gw-btc kelvin-9 dat, its xtr must cue to a $custody-log, the
+::    log's spawn entry must open the dat's hiding commitment, and the
+::    newest opened snapshot must commit to the messaging key actually
+::    in the pass.  The verdict is that computation's result -- the
+::    fixtures do not tell it what to say.  The point it hands back is
+::    built from the snapshot, so life, rift, sponsor and fief all come
+::    from the comet's own attested state.
+::
 ++  gw-btc-agent
   '''
-  /+  default-agent
+  /+  default-agent, gwp=gw-btc-pass
+  =>  |%
+      ::  +spawn-opening: entry 0's blind-opening, if it has one
+      ::
+      ::    exactly one entry -- the spawn -- opens the dat commitment.
+      ::
+      ++  spawn-opening
+        |=  log=custody-log:gwp
+        ^-  (unit blind-opening:gwp)
+        ?~  log  ~
+        ?~  opening.i.log  ~
+        blind-opening.u.opening.i.log
+      ::  +last-snapshot: the newest opened state in the log
+      ::
+      ++  last-snapshot
+        |=  log=custody-log:gwp
+        ^-  (unit snapshot:gwp)
+        =|  las=(unit snapshot:gwp)
+        |-
+        ?~  log  las
+        %=  $
+          log  t.log
+          las  ?~(opening.i.log las `snapshot.u.opening.i.log)
+        ==
+      ::  +verify: the whole oracle.  ~ means "reject".
+      ::
+      ++  verify
+        |=  [who=@p =pass]
+        ^-  (unit point:jael)
+        =/  cic  (com:nu:cric:crypto pass)
+        ?.  ?=(%c suite.+<.cic)  ~
+        =/  met  (parse-dat:gwp dat.tw.pub.+<.cic)
+        ?~  met  ~
+        ?.  &(=(domain:gwp dom.u.met) =(kelvin:gwp kel.u.met))  ~
+        =/  log  (mole |.(;;(custody-log:gwp (cue xtr.tw.pub.+<.cic))))
+        ?~  log  ~
+        ::  the spawn entry must open the dat's hiding commitment
+        ::
+        ?~  bo=(spawn-opening u.log)  ~
+        ?.  (verify-dat:gwp dat.tw.pub.+<.cic u.bo)  ~
+        ::  the newest opened snapshot is the comet's current state, and
+        ::  must commit to the messaging key actually in the pass
+        ::
+        ?~  snp=(last-snapshot u.log)  ~
+        =*  snap  u.snp
+        ?.  =(key.snap cry.pub.+<.cic)  ~
+        :-  ~
+        :*  rift=rift.snap
+            life=life.snap
+            keys=(my [life.snap num:ex:cic pass]~)
+            sponsor=`?~(sponsor.snap who u.sponsor.snap)
+            fief=fief.snap
+        ==
+      --
   =|  (list [dom=@tas ship=@p pass=@])
   =*  pending  -
   ^-  agent:gall
@@ -177,24 +244,8 @@
     ?~  pending
       [~ this]
     =/  req  i.pending
-    =/  cic  (com:nu:cric:crypto pass.req)
-    ?>  ?=([%c *] +<.cic)
-    =/  verdict  (cue xtr.tw.pub:+<.cic)
-    =/  ok=?
-      ?@  verdict
-        ;;(? verdict)
-      ;;(? -.verdict)
-    =/  verified-life=life
-      ?@  verdict
-        1
-      ;;(life +.verdict)
-    =/  keys=(map life [@ud pass])
-      (~(put by *(map life [@ud pass])) verified-life [2 pass.req])
-    ::  Aqua's prototype gw-ok comet is route-table index 12.
-    =/  point=point:jael
-      [rift=0 life=verified-life keys sponsor=`ship.req fief=`[%if `@`0xdead.beef 12]]
-    =/  res=(unit point:jael)  ?:(ok `point ~)
-    ~&  [%gw-btc-test %response ship.req ok]
+    =/  res=(unit point:jael)  (verify ship.req pass.req)
+    ~&  [%gw-btc-test %response ship.req ?=(^ res)]
     =/  fact=card:agent:gall
       [%give %fact ~[/writs] %writ-response !>([dom.req ship.req res])]
     :_  this(pending t.pending)

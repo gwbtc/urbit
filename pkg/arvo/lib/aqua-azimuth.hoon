@@ -1,5 +1,5 @@
 /-  dice, *aquarium
-/+  ethereum, azimuth
+/+  ethereum, azimuth, gwp=gw-btc-pass
 ::
 |%
 ::
@@ -217,18 +217,149 @@
     ==
   --
 ::
-++  gw-comet-ok
-  ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
+::  +gw-comet-ok, +gw-comet-fail: the %gw-btc (kelvin-9) fixture comets
 ::
-++  gw-comet-fail
-  ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
+::    Both names are DERIVED, never chosen.  A confidential comet's @p
+::    is (shaf %cfig) of its tweaked signing key, and the tweak hashes
+::    .dat, so any change to a fixture's spawn satpoint, blind, or seed
+::    renames it.  Everything that lists these comets (+comets below,
+::    +comets/+turfs in lib/ph/gw/util.hoon and ted/aqua/ames.hoon)
+::    refers to these arms rather than repeating a literal, because
+::    those lists are +zip'ped with a strict equal-length check and a
+::    stale name crashes long before any attestation logic runs.
 ::
-::  Prototype-only encoding retained to exercise the asynchronous kernel
-::  path.  Revision 2 replaces this jammed satpoint and regenerates the
-::  derived identities before these vectors can become normative.
+::    Current values, for grepping:
+::      ok    ~sogmyr-ritwyx-ladfet-hidrup--polhep-hattyn-narful-podlug
+::      fail  ~wicdev-fablyr-radryp-hadtyp--nacfed-siptus-rilsep-rinpel
+::
+++  gw-comet-ok    ^~(`@p`(gw-fig %ok))
+++  gw-comet-fail  ^~(`@p`(gw-fig %fail))
+::  +gw-fig: a fixture comet's derived name
+::
+++  gw-fig
+  |=  which=?(%ok %fail)
+  ^-  @p
+  `@p`fig:ex:(gw-keys which 1)
+::  +gw-seed: a fixture comet's master seed (its entry in +comets)
+::
+++  gw-seed
+  |=  which=?(%ok %fail)
+  ^-  @
+  ?:(?=(%ok which) 1 2)
+::  +gw-spawn: the spawn satpoint a fixture comet's dat commits to
+::
+++  gw-spawn
+  |=  which=?(%ok %fail)
+  ^-  sont:gwp
+  ?:(?=(%ok which) [0x1111 0 0] [0x2222 1 0])
+::  +gw-dat: the immutable kelvin-9 tweak data
+::
+::    A hiding commitment to the spawn satpoint under a seed-derived
+::    blind; the satpoint itself is never in the clear.
+::
 ++  gw-dat
-  |=  [txid=@ vout=@ off=@]
-  (cat 0 q:(mat %gw-btc) (jam [txid vout off]))
+  |=  which=?(%ok %fail)
+  ^-  @
+  (make-dat:gwp (gw-spawn which) (make-blind:gwp (gw-seed which)))
+::  +gw-sed: the 64-byte cric seed of a fixture comet at .lyfe
+::
+::    Suite C splits the seed into a signing half (bytes 0-31, which
+::    fixes the @p through the tweak) and a messaging half (bytes
+::    32-63).  Rekeying a confidential comet rotates ONLY the messaging
+::    half: life rides in the on-chain snapshot, never in the seed.
+::    Deriving both halves from a life-dependent seed -- as this fixture
+::    used to -- gives every life a different signing key and therefore
+::    a different @p, so the life-2 self-attestation fingerprints to a
+::    ship that is not the sender and the receiver correctly refuses it.
+::
+++  gw-sed
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  @
+  =/  base  (shal 64 (gw-seed which))
+  =/  sgn   (end 8 base)
+  =/  cry   (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
+  (can 3 ~[[32 sgn] [32 cry]])
+::  +gw-crub: activate a suite-%c core from an explicit 64-byte seed
+::
+::    +pit:nu:cric derives the whole seed by hashing one number, which
+::    cannot express "same signing key, new messaging key".  This builds
+::    the same $ring +pit would, with the seed supplied outright.
+::
+++  gw-crub
+  |=  [sed=@ dat=@ xtr=@]
+  %-  nol:nu:cric:crypto
+  ^-  ring
+  =<  p
+  %-  fax:plot
+  :-  0
+  :*  [s+~ 3 [1 'C'] ~]
+      [s+~ 3 [64 sed] ~]
+      (mat dat)
+      ?:  =(0 xtr)  ~
+      [(met 0 xtr)^xtr ~]
+  ==
+::  +gw-cry: a fixture comet's messaging public key at .lyfe
+::
+::    Independent of dat and xtr, so it can be computed before the
+::    custody log that commits to it.
+::
+++  gw-cry
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  @
+  cry:ded:ex:(gw-crub (gw-sed which lyfe) 0 0)
+::  +gw-internal-key: 33-byte compressed P2TR internal key (secp G)
+::
+::    The Aqua fixtures have no chain to check taproot output keys
+::    against, so this is decorative; it matches the golden vectors.
+::
+++  gw-internal-key
+  ^-  @ux
+  0x2.79be.667e.f9dc.bbac.55a0.6295.ce87.0b07.029b.fcdb.2dce.28d9.59f2.815b.16f8.1798
+::
+++  gw-start-height  778.000
+::  +gw-log: a fixture comet's custody log, oldest entry first
+::
+::    One entry per life.  Entry 0 is the spawn: it alone carries the
+::    $blind-opening that opens the pass's hiding dat commitment.  Later
+::    entries are rekeys, each opening the snapshot committed at that
+::    custody hop; the newest snapshot is the comet's current state.
+::
+::    The %fail fixture is broken deliberately and minimally: its
+::    blind-opening names a satpoint its dat does NOT commit to, so the
+::    verifier's commitment check -- and only that check -- must fail.
+::    Give it (gw-spawn %fail) instead and it verifies like %ok.
+::
+++  gw-log
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  custody-log:gwp
+  =/  open=blind-opening:gwp
+    :+  ?:(?=(%ok which) (gw-spawn which) [0x3333 1 0])
+      gw-start-height
+    (make-blind:gwp (gw-seed which))
+  ::  index in +comets, which ted/aqua/ames.hoon uses as a fake lane
+  ::
+  =/  idx  ?:(?=(%ok which) 12 13)
+  %+  turn  (gulf 1 lyfe)
+  |=  l=life
+  ^-  custody-entry:gwp
+  :+  `@ux`(add 0x1111.0000 l)
+    (add gw-start-height (dec l))
+  :-  ~
+  :+  gw-internal-key
+    :*  life=l
+        rift=0
+        key=(gw-cry which l)
+        sponsor=~
+        fief=`[%if `@`0xdead.beef `@`idx]
+    ==
+  ?:(=(1 l) `open ~)
+::  +gw-keys: a fixture comet's full suite-%c core at .lyfe
+::
+++  gw-keys
+  |=  [which=?(%ok %fail) lyfe=life]
+  %^  gw-crub  (gw-sed which lyfe)
+    (gw-dat which)
+  (jam (gw-log which lyfe))
 ::
 ++  get-keys
   |=  [who=@p lyfe=life]
@@ -236,16 +367,12 @@
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%b ~]
+  ?:  =(who gw-comet-ok)    (gw-keys %ok lyfe)
+  ?:  =(who gw-comet-fail)  (gw-keys %fail lyfe)
   ?.  =(lyfe 1)
-    ?:  =(who gw-comet-ok)
-      (pit:nu:cric:crypto 512 lyfe %c [(gw-dat 0x1111 0 0) (jam [%.y lyfe])])
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%c 0xdead.beef.cafe]
-  ?:  =(who gw-comet-ok)
-    (pit:nu:cric:crypto 512 1 %c [(gw-dat 0x1111 0 0) (jam %.y)])
-  ?:  =(who gw-comet-fail)
-    (pit:nu:cric:crypto 512 2 %c [(gw-dat 0x2222 1 0) (jam %.n)])
   ?:  ?=(%b suite.u.cum)
     (pit:nu:cric:crypto 512 seed.u.cum %b ~)
   (pit:nu:cric:crypto 512 seed.u.cum %c 0xdead.beef.cafe)
@@ -280,7 +407,7 @@
         ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
         ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
         ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-        :: prototype %gw-btc asynchronous-path identities
+        :: %gw-btc (kelvin 9) confidential identities, derived above
         gw-comet-ok
         gw-comet-fail
     ==

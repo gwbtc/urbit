@@ -6,7 +6,7 @@
 ::  to drop them.
 ::
 /-  aquarium, spider
-/+  aqua-vane-thread
+/+  aqua-vane-thread, az=aqua-azimuth
 /=  ames-raw  /sys/vane/ames
 =,  aquarium
 |%
@@ -356,20 +356,22 @@
       ::
       =+  ;;(out=(soft [~ signature=@ signed=@]) (mole |.((cue content))))
       =+  ;;(open=(soft [~ open-packet:ames-raw]) (mole |.((cue signed:(need (need out))))))
-      ?|  ?&  ?=(~ open)
-              ::  if this is not an attestation packet, check that the receiver
-              ::  has the peer as known
-              ::
-              !?=([~ %.y] is-known)
-          ==
-          ?&  ?=(^ open)
-              ::  if this is an attestation packet, check if the rcvr has the comet
-              ::  as %known -- this is a workaround to prevent a bail:evil that will
-              ::  end up blocking the queue of the %aqua host, when it tries to decrypt
-              ::  an open-packet
-              ::
-              ?=([~ %.y] is-known)
-  ==  ==  ==
+      ::  if this is not an attestation packet, check that the receiver
+      ::  has the peer as known
+      ::
+      ?=(~ open)
+      !?=([~ %.y] is-known)
+      ::
+      ::  Attestations are always delivered, even to a receiver that
+      ::  already knows the comet.  They used to be dropped in that
+      ::  case, to dodge a bail:evil that blocked the %aqua host's
+      ::  queue: +on-hear-packet:ames routed a comet's packet to the
+      ::  decrypter as soon as the comet was %known, so a plaintext
+      ::  attestation arriving after promotion was fed to AES-SIV.
+      ::  Ames now recognises an attestation by its shape
+      ::  (+is-open-packet:ames), and dropping them here would hide the
+      ::  only thing that tells a peer a confidential comet rekeyed.
+  ==
 ::  +get-known: get known peers before send
 ::
 ++  get-known
@@ -567,9 +569,10 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-      :: prototype %gw-btc asynchronous-path identities
-      ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
-      ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
+      :: %gw-btc (kelvin 9) confidential identities.  derived from the
+      :: fixture dat, never written out: see +gw-comet-ok:aqua-azimuth.
+      gw-comet-ok:az
+      gw-comet-fail:az
   ==
 :: +turfs: map from domain to comet
 ::
@@ -583,7 +586,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
-      /nomdyl/gw-ok   /rilfun/gw-fail
+      /podlug/gw-ok   /rinpel/gw-fail
   ==
 ::
 ::  +zip: combine two equally long lists into one list of cells

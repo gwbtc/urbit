@@ -17,10 +17,10 @@ This is an ordered cross-repository work list. Read
 > §1's `dat` layout is superseded by the Kelvin-9 hiding commitment; §13a's
 > udiff authorization is landed (tombstone still deferred pending a state
 > migration); §14's stale-vs-`%fail` and re-attestation items are resolved
-> by the `%stale` flow; §15's additive `%snub` is landed. The remaining
-> live kernel items are: the #63 life-2 hang diagnosis, Mesa scenario
-> reruns, fixture regeneration against the frozen formats, and the shared
-> golden vectors.
+> by the `%stale` flow; §15's additive `%snub` is landed; §17's life-2 hang is
+> diagnosed and fixed and the Aqua fixtures are regenerated against the
+> kelvin-9 formats. The remaining live kernel items are Mesa scenario
+> reruns and the shared golden vectors.
 
 ## Working rules
 
@@ -379,12 +379,28 @@ Tracking draft: [#63](https://github.com/gwbtc/urbit/pull/63), stacked on
 
 - [x] Run the prototype Ames accept and reject paths after repairing the suite
   inventory; both reach `done` without `%aqua-crash`.
-- [ ] Diagnose the life-2 second-handshake hang. The bounded run never emits a
-  second verifier request after `%fine-mismatch our=[0 2] her=[comet 0 1]`.
-- [ ] Rerun all three prototype cases under Mesa after the life-2 flow is
-  understood.
-- [ ] Preserve the current async success, rejection, malformed, and life-2
-  scenarios while replacing old delta/current packet fixtures.
+- [x] Diagnose the life-2 second-handshake hang. Three independent causes, all
+  fixed: (a) `+get-keys:aqua-azimuth` derived each life from a different seed,
+  so the suite-C signing half — and therefore the comet's `@p` — changed on
+  rekey; the seed is now split, with only the messaging half rotating.
+  (b) `+on-hear-packet:ames` routed a comet's packet to `+on-hear-open` only
+  while the comet was *not* `%known`, so the re-attestation that follows a
+  rekey was fed to the SIV decrypter; authentication failure there is a `%evil`
+  bail, which under Aqua killed the host event and blocked the behn queue (this
+  also broke plain `attestation-hi`, whose comet re-attests while the verifier
+  is still deciding). Ames now recognises an attestation by shape
+  (`+is-open-packet`). (c) Nothing made a rekeyed comet re-attest at all;
+  `+sy-priv` now sends a fresh self-attestation to every known peer when our
+  own life changes, which is the only signal a confidential comet's peers can
+  get. The `known-filter` workaround in `ted/aqua/ames.hoon`, which dropped
+  attestations to `%known` receivers to dodge (b), is removed.
+- [ ] Rerun all four scenarios under Mesa.
+- [x] Preserve the current async success, rejection, malformed, and life-2
+  scenarios while replacing old delta/current packet fixtures. Fixtures are now
+  kelvin-9: `dat` is the hiding spawn commitment (`lib/gw-btc-pass.hoon`,
+  a reduced mirror of the groundwire desk's codec, pinned by the shared golden
+  vectors), `xtr` is a real `$custody-log`, and the fake `%gw-btc` agent
+  computes its own verdict from that log instead of reading a jammed boolean.
 - [ ] Inject delayed and out-of-order `%light-client` answers to exercise job
   epochs, successor handling, timeout, and cancellation rules.
 - [ ] Cover public/confidential arrival in both orders and confirm that verified
