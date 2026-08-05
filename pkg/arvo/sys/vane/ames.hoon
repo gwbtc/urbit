@@ -471,6 +471,34 @@
       ::
       ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
       open-packet
+    ::  +is-open-packet: does .shot carry a comet self-attestation?
+    ::
+    ::    A $shot from a comet is either a plaintext self-attestation or
+    ::    an encrypted $shut-packet, and nothing in the header tells
+    ::    them apart.  Peer state is not a usable discriminator: a
+    ::    confidential (suite-%c) comet re-attests at a higher life
+    ::    while we already know it, and any comet keeps re-attesting
+    ::    during the window in which its domain verifier is still
+    ::    deciding -- so attestations do arrive from peers we have
+    ::    already promoted to %known.  Handing one of those to
+    ::    +sift-shut-packet is fatal rather than merely wrong: SIV
+    ::    authentication failure is a %evil bail, not a ~.
+    ::
+    ::    Structure only, no crypto -- +sift-open-packet still does the
+    ::    real checking.  A $shut-packet's ciphertext cueing into this
+    ::    exact shape, with a sender that matches the header, is not a
+    ::    case worth defending against.
+    ::
+    ++  is-open-packet
+      |=  =shot
+      ^-  ?
+      =/  res=(unit ?)
+        %-  mole
+        |.
+        =+  ;;([signature=@ signed=@] (cue content.shot))
+        =+  ;;(=open-packet (cue signed))
+        =(sndr.shot sndr.open-packet)
+      ?~(res | u.res)
     ::  +pass-pki-dom: extract the PKI domain a pass commits to
     ::
     ::    ~ for a vanilla (suite-%b) comet.  all and only suite-%c
@@ -4945,8 +4973,19 @@
           ::
           ?:  =(%keys content.shot)
             on-hear-keys
+          ::  a comet's packet is an attestation if we don't know it yet,
+          ::  or if it simply looks like one.  the second case is not
+          ::  redundant: a comet re-attests while its verifier is still
+          ::  deciding, and a suite-%c comet re-attests at every new
+          ::  life, so attestations arrive from %known peers too.
+          ::  +on-hear-open expects this and ignores stale ones; routing
+          ::  them to +on-hear-shut instead kills the event on a %evil
+          ::  bail out of the decrypter.
+          ::
           ?:  ?&  ?=(%pawn (clan:title sndr.shot))
-                  !?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
+                  ?|  !?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
+                      (is-open-packet shot)
+                  ==
               ==
             on-hear-open
           on-hear-shut
@@ -11615,7 +11654,39 @@
             known/peer-state(symmetric-key symmetric-key)
           =.  peers.ames-state  peers
           =.  life.ames-state   life
-          sy-core(moves (weld keen-moves moves))
+          =.  sy-core  sy-core(moves (weld keen-moves moves))
+          ::  a comet has no chain for its peers to read, so the only
+          ::  thing that can tell them it rekeyed is a fresh
+          ::  self-attestation.  send one to everyone we know: until
+          ::  they hear it they still believe our old life, and every
+          ::  packet we send is dropped on a sndr-tick mismatch with no
+          ::  diagnostic and no retry -- the flow simply stalls.  a
+          ::  suite-%c comet's attestation goes back through its PKI
+          ::  domain's verifier (+on-hear-open), which is what promotes
+          ::  the peer's point to the new life.
+          ::
+          ?.  =(%pawn (clan:title our))
+            sy-core
+          =/  ames-core  (ev:ames now^eny^rof hen ames-state)
+          =^  attest-moves  ames-state
+            =<  abet
+            ^+  ames-core
+            =.  ames-core
+              %+  roll  ~(tap by peers.ames-state)
+              |=  [[=ship =ship-state] core=_ames-core]
+              ^+  core
+              ?.  ?=(%known -.ship-state)
+                core
+              =/  =blob  (attestation-packet:core ship life.+.ship-state)
+              (send-blob:core for=| ship blob `ship-state)
+            %+  roll  ~(tap by chums.ames-state)
+            |=  [[=ship =chum-state] core=_ames-core]
+            ^+  core
+            ?.  ?=(%known -.chum-state)
+              core
+            =/  =blob  (attestation-packet:core ship life.+.chum-state)
+            (send-blob:core for=| ship blob ~)
+          (sy-emil attest-moves)
         ::
         ++  sy-prod
           |=  ships=(list @p)
