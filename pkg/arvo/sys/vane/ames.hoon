@@ -471,6 +471,69 @@
       ::
       ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
       open-packet
+    ::  +open-jam-shaped: is .a a bounded (jam [signature=@ signed=@])?
+    ::
+    ::    Structural pre-check that never allocates and never calls +cue.
+    ::    It exists because +cue is NOT SAFE on peer-controlled bytes: a
+    ::    backreference whose index does not fit in a direct atom (>= 2^63)
+    ::    makes +cue bail %meme, and %meme is not catchable -- +mole/+mule
+    ::    run under +mink, and the runtime re-raises anything that is not
+    ::    %exit back out of the virtualization frame (u3m_soft_run's
+    ::    "case 3: rebail w/trace").  The event dies, the packet is never
+    ::    acked, and an honest sender retransmits the same bytes forever.
+    ::
+    ::    That is not hypothetical.  A $shut-packet's SIV ciphertext is
+    ::    pseudorandom, and ~1 packet in 500 cues into such a bomb: root
+    ::    tag %11 (1/4) times >= 7 leading zeros in the +mat index
+    ::    (~1/128).  On mainnet two healthy, mutually-attested comets hit
+    ::    one and could not exchange another packet for six hours -- with
+    ::    no diagnostic beyond a bare `bail: meme`.  AES-SIV is
+    ::    deterministic, so the retransmission is byte-identical and the
+    ::    livelock is permanent.
+    ::
+    ::    A self-attestation's .content is always
+    ::    (jam [signature=@ signed=@]): a cell tag, then two bare atoms,
+    ::    consuming the atom exactly.  An atom that passes this decodes
+    ::    into exactly two length-bounded atoms and can meet no
+    ::    backreference at all.
+    ::
+    ++  open-jam-shaped
+      |=  a=@
+      ^-  ?
+      =/  m  (met 0 a)
+      |^  ?.  =(0b1 (cut 0 [0 2] a))     ::  root is a cell
+            |
+          ?.  =(0 (cut 0 [2 1] a))       ::  head is a bare atom
+            |
+          ?~  hed=(mat-at 3)             ::  .signature, <= 1kB
+            |
+          ?.  (lte len.u.hed 8.192)
+            |
+          =/  pos  (add 3 wid.u.hed)
+          ?.  =(0 (cut 0 [pos 1] a))     ::  tail is a bare atom
+            |
+          ?~  tal=(mat-at +(pos))        ::  .signed, <= 16kB
+            |
+          ?.  (lte len.u.tal 131.072)
+            |
+          =(m (add +(pos) wid.u.tal))    ::  consumes .a exactly
+      ::
+      ++  mat-at
+        ::  width and value-length of the +mat at .pos; never allocates
+        ::
+        |=  pos=@ud
+        ^-  (unit [wid=@ud len=@ud])
+        =/  c=@ud  0
+        |-  ^-  (unit [wid=@ud len=@ud])
+        ?:  (gth c 20)  ~                ::  bound the length-of-length
+        ?:  (gte (add pos c) m)  ~
+        ?:  =(0 (cut 0 [(add pos c) 1] a))
+          $(c +(c))
+        ?:  =(0 c)  `[1 0]
+        =/  d  (add pos +(c))
+        =/  e  (add (bex (dec c)) (cut 0 [d (dec c)] a))
+        `[(add (add c c) e) e]
+      --
     ::  +is-open-packet: does .shot carry a comet self-attestation?
     ::
     ::    A $shot from a comet is either a plaintext self-attestation or
@@ -492,6 +555,11 @@
     ++  is-open-packet
       |=  =shot
       ^-  ?
+      ::  never hand unvalidated bytes to +cue; see +open-jam-shaped.
+      ::  a %meme bail escapes the +mole below and kills the event.
+      ::
+      ?.  (open-jam-shaped content.shot)
+        |
       =/  res=(unit ?)
         %-  mole
         |.
@@ -11554,6 +11622,32 @@
                 ::
                 =?  rift.ames-state  =(our ship)
                   rift.point
+                ::  push a committed route to the runtime, exactly as
+                ::  +on-publ-fief does for a [%diff @ %fief *].
+                ::
+                ::    A whole point arrives here, fief and all, from three
+                ::    places: jael's %public-keys %full, +on-publ-rekey's
+                ::    not-yet-known fallback, and -- the one that matters --
+                ::    a confidential-comet %writ verdict (+sy-sybl %full ->
+                ::    +sy-publ /sybl).  Only the incremental %fief diff used
+                ::    to reach the runtime, so a comet whose route we learn
+                ::    from a VERDICT got a jael point with a fief in it that
+                ::    ames then never routed to: /pynt showed the route and
+                ::    ames still answered "no route to".  Confidential
+                ::    identities are deliberately excluded from %gw-btc's
+                ::    udiffs, so the verdict is the only carrier they have,
+                ::    and this was the whole of it going missing.
+                ::
+                ::    Idempotent: the runtime compares the resolved lane and
+                ::    ignores an unchanged one, so re-pushing an already
+                ::    known fief costs nothing.
+                ::
+                =?    sy-core
+                    ?&  ?=(^ unix-duct.ames-state)
+                        ?=(^ fief.point)
+                    ==
+                  %-  sy-emit
+                  [unix-duct.ames-state %give %fief (my [ship fief.point]~)]
                 ::
                 ::  XX not needed?
                 :: =?  sy-core  =(our ship)

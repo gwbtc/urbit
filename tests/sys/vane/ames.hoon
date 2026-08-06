@@ -1128,4 +1128,104 @@
     (expect-eq !>(snub-before) !>(snub.ames-state.bud))
     (expect-eq !>(~) !>(moves))
   ==
+::  A whole POINT carrying a fief must push that fief to the runtime,
+::  the way an incremental [%diff @ %fief *] does (+on-publ-fief).
+::
+::    Only the diff used to, so a route learned from a confidential
+::    comet's %writ verdict -- which arrives as [%sybl %full] and lands
+::    in +on-publ-full -- was stored in jael, reported by /pynt, and
+::    never routed to.  Confidential identities are excluded from
+::    %gw-btc's udiffs by design, so the verdict is the ONLY carrier
+::    they have and this was all of it.
+::
+++  test-publ-full-pushes-the-fief  ^-  tang
+  =/  fef=fief  [%if .206.189.188.16 49.818]
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-peer') %b ~)
+  =/  =sign:ames
+    :*  %jael  %sybl  %full  %gw-btc  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=`fef
+    ==
+  =.  unix-duct.ames-state.nec  ~[//newt/0v1n]
+  =^  moves  nec  (take nec /sybl ~[/ames] sign)
+  =/  want=move:ames
+    [~[//newt/0v1n] %give %fief (my [our-comet `fef]~)]
+  =/  ms=(list move:ames)  moves
+  =/  found=?
+    |-  ^-  ?
+    ?~  ms  %.n
+    ?:  =(i.ms want)  %.y
+    $(ms t.ms)
+  (expect !>(found))
+::
+++  test-publ-full-without-a-fief-pushes-nothing  ^-  tang
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-peer2') %b ~)
+  =/  =sign:ames
+    :*  %jael  %sybl  %full  %gw-btc  our-comet2
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =.  unix-duct.ames-state.nec  ~[//newt/0v1n]
+  =^  moves  nec  (take nec /sybl ~[/ames] sign)
+  =/  ms=(list move:ames)  moves
+  =/  found=?
+    |-  ^-  ?
+    ?~  ms  %.n
+    ?:  ?=([* %give %fief *] i.ms)  %.y
+    $(ms t.ms)
+  (expect !>(!found))
+::  A packet whose payload is not a well-formed, bounded
+::  (jam [signature=@ signed=@]) must be classified WITHOUT calling +cue.
+::
+::    +cue bails %meme on a backreference index that does not fit in a
+::    direct atom, and %meme escapes +mole -- the runtime re-raises any
+::    non-%exit ball out of the virtualization frame -- so the whole
+::    event dies.  A $shut-packet's SIV ciphertext is pseudorandom and
+::    roughly one packet in 500 is such a bomb; because AES-SIV is
+::    deterministic the sender then retransmits the identical bytes
+::    forever.  Live on mainnet that permanently livelocked two healthy,
+::    mutually-attested comets.  The atom below is the real payload of
+::    the packet that did it, captured off the wire.
+::
+++  test-is-open-packet-rejects-a-cue-bomb  ^-  tang
+  =/  bomb=@
+    0x5f71.d5ce.9153.a875.20f8.fc95.b1d8.533e.3734.3386.
+      fc4f.6993.3ba9.766a.001c.9e5d.a8bf.e4e2.4690.aaaf.
+      e503.17b8.6203
+  ::  a bare backreference: tag %11, then a +mat-encoded 88-bit index
+  ::
+  =/  synthetic=@
+    (can 0 ~[[2 0b11] [8 0b1000.0000] [88 0x11.2233.4455.6677.8899.aabb]])
+  ;:  weld
+    (expect !>(!(open-jam-shaped:ames bomb)))
+    (expect !>(!(open-jam-shaped:ames synthetic)))
+    ::  and random-looking ciphertext of assorted lengths is rejected too
+    ::
+    =/  ns=(list @ud)  (gulf 1 64)
+    =/  clean=?
+      |-  ^-  ?
+      ?~  ns  %.y
+      ?:  (open-jam-shaped:ames (shaz (add 0xdead.0000 i.ns)))  %.n
+      $(ns t.ns)
+    (expect !>(clean))
+  ==
+::
+++  test-is-open-packet-accepts-a-real-attestation  ^-  tang
+  ::  the shape +etch-open-packet actually produces: (jam [@ @])
+  ::
+  ;:  weld
+    (expect !>((open-jam-shaped:ames (jam [(shaz 'sig') (shaz 'signed')]))))
+    (expect !>((open-jam-shaped:ames (jam [0 0]))))
+    ::  ... and nothing else: an atom, a 3-tuple, or trailing bytes
+    ::
+    (expect !>(!(open-jam-shaped:ames (jam 42))))
+    (expect !>(!(open-jam-shaped:ames (jam [1 2 3]))))
+    (expect !>(!(open-jam-shaped:ames (lsh [0 1] (jam [1 2])))))
+  ==
 --

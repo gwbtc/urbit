@@ -67,6 +67,21 @@
   |=  [vane=_bus dom=@tas =desk liv=? hep=(set ship)]
   ^+  bus
   vane(dos.lex (~(put by dos.lex.vane) dom [/writs desk liv hep]))
+::  +point-with-fief: the same minimal point, plus a committed route
+::
+++  point-with-fief
+  |=  [=pass fef=fief]
+  ^-  point:jael
+  [rift=0 life=1 keys=(malt ~[[1 [crypto-suite=2 pass]]]) sponsor=~ fief=`fef]
+::  +with-fel: install a general (whos=~) %fief subscriber duct
+::
+::    ames subscribes exactly this way in +sy-init ([hen %pass /fief %j
+::    %fief ~]), which is what lands its duct in fel.zim.
+::
+++  with-fel
+  |=  [vane=_bus =duct]
+  ^+  bus
+  vane(fel.zim.pki.lex (~(put in fel.zim.pki.lex.vane) duct))
 ::  +with-syl: install a %writ-result (sybl) subscriber duct
 ::
 ++  with-syl
@@ -212,4 +227,43 @@
     !>  moves
     (expect-eq !>(%.y) !>(liv:(~(got by dos.lex.b) %gw-btc)))
   ==
+::  A %writ-response carrying a point with a committed FIEF must publish
+::  that fief to %fief subscribers, exactly as a %fief udiff does.  This
+::  is the only route by which a CONFIDENTIAL comet's on-chain route can
+::  reach the runtime at all: %gw-btc deliberately keeps confidential
+::  identities out of its udiffs, so the verdict is the only carrier.
+::  Live on mainnet a comet's verified fief became a jael point, showed
+::  up in /pynt, and never became a route.
+::
+++  test-writ-response-publishes-the-fief
+  ^-  tang
+  =/  fef=fief  [%if .206.189.188.16 49.818]
+  =/  pt  (point-with-fief (mk-c-pass 'wes') fef)
+  =/  b  bus
+  =.  b  (with-dom b %gw-btc %gw-btc-desk %.y ~)
+  =.  b  (with-fel b gw-duct)
+  =^  moves  b  (take-fact b %gw-btc %writ-response !>([%gw-btc ~wes `pt]))
+  ;:  weld
+    ::  the route is now in jael's own fief registry
+    ::
+    (expect-eq !>(`fef) !>((~(get by fes.zim.pki.lex.b) ~wes)))
+    ::  ... and was pushed to the %fief subscriber
+    ::
+    %-  expect
+    !>  %+  lien  moves
+        |=  =move:bus
+        =(+.move [%give %fief (my [~wes `fef]~)])
+  ==
+::
+++  test-writ-response-without-a-fief-publishes-nothing
+  ^-  tang
+  =/  b  bus
+  =.  b  (with-dom b %gw-btc %gw-btc-desk %.y ~)
+  =.  b  (with-fel b gw-duct)
+  =^  moves  b
+    (take-fact b %gw-btc %writ-response !>([%gw-btc ~wes `(point-for (mk-c-pass 'wes'))]))
+  %-  expect
+  !>  ?!
+      %+  lien  moves
+      |=(=move:bus ?=([* %give %fief *] move))
 --
