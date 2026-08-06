@@ -6,10 +6,14 @@ decisions addendum in the Groundwire repo (see below); the economic-admission
 machinery and the two-fragment packet bound described in §3 are **descoped**
 by that addendum and retained here only as historical context.
 
-Companion documents:
+Companion documents. All of them describe the Groundwire `%gw-btc` PKI domain,
+which base arvo deliberately does not implement, so all of them live in the
+Groundwire repository:
 
-- [implementation state](confidential-comets-state.md)
-- [remaining work and architect decisions](confidential-comets-todo.md)
+- implementation state:
+  `gwbtc/groundwire/groundwire/doc/confidential-comets-state.md`
+- remaining work and architect decisions:
+  `gwbtc/groundwire/groundwire/doc/confidential-comets-todo.md`
 - Groundwire userspace specification:
   `gwbtc/groundwire/groundwire/doc/confidential-comets-agent.md`
 - **Format and scope authority** (supersedes conflicting sections here):
@@ -376,4 +380,4 @@ remain in the TODO.
   confirmations, spends, and reorg behavior.
 
 The exact implementation and acceptance sequence is maintained in
-[confidential-comets-todo.md](confidential-comets-todo.md).
+`gwbtc/groundwire/groundwire/doc/confidential-comets-todo.md`.

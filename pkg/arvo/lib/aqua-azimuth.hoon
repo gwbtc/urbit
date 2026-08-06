@@ -1,5 +1,5 @@
 /-  dice, *aquarium
-/+  ethereum, azimuth, gwp=gw-btc-pass
+/+  ethereum, azimuth
 ::
 |%
 ::
@@ -217,16 +217,42 @@
     ==
   --
 ::
+::  Confidential-comet fixtures for the Aqua simulation.
+::
+::    Base arvo implements GENERIC pluggable comet PKI: a suite-%c pass
+::    carries a +mat-tagged domain plus opaque domain data, jael routes
+::    it to whichever agent claimed the domain, ames holds the peer
+::    until a verdict.  Nothing in this kernel knows -- or may learn --
+::    what a domain's data MEANS.
+::
+::    So the two arms below are CHECKED-IN DATA, not a computation.
+::    .dat and .xtr are byte-for-byte outputs of the one authoritative
+::    %gw-btc codec, which lives in the groundwire desk as
+::    lib/gw-btc-pass.hoon.  Arvo treats them as the opaque atoms they
+::    are: it hands them to +gw-crub and never looks inside.
+::
+::    TO REGENERATE, on a ship with the groundwire desk installed:
+::
+::        +groundwire!aqua-fixtures
+::
+::    (gen/aqua-fixtures.hoon in that desk; it prints every literal in
+::    this file, and is the only place the fixture inputs -- seeds 1
+::    and 2, spawn satpoints, start height, internal key, comet indices
+::    -- are written down).  Paste its output back here.  The desk's
+::    codec is pinned in turn by vectors/gw-kelvin-9.json, which
+::    Causeway's TypeScript and Python implementations also match.
+::
 ::  +gw-comet-ok, +gw-comet-fail: the %gw-btc (kelvin-9) fixture comets
 ::
-::    Both names are DERIVED, never chosen.  A confidential comet's @p
-::    is (shaf %cfig) of its tweaked signing key, and the tweak hashes
-::    .dat, so any change to a fixture's spawn satpoint, blind, or seed
-::    renames it.  Everything that lists these comets (+comets below,
-::    +comets/+turfs in lib/ph/gw/util.hoon and ted/aqua/ames.hoon)
-::    refers to these arms rather than repeating a literal, because
-::    those lists are +zip'ped with a strict equal-length check and a
-::    stale name crashes long before any attestation logic runs.
+::    Both names are DERIVED from the fixture data by the kernel's own
+::    generic cric, never chosen.  A confidential comet's @p is
+::    (shaf %cfig) of its tweaked signing key and the tweak hashes
+::    .dat, so any change to a fixture renames it.  Everything that
+::    lists these comets (+comets below, +comets/+turfs in
+::    lib/ph/gw/util.hoon and ted/aqua/ames.hoon) refers to these arms
+::    rather than repeating a literal, because those lists are +zip'ped
+::    with a strict equal-length check and a stale name crashes long
+::    before any attestation logic runs.
 ::
 ::    Current values, for grepping:
 ::      ok    ~sogmyr-ritwyx-ladfet-hidrup--polhep-hattyn-narful-podlug
@@ -246,21 +272,81 @@
   |=  which=?(%ok %fail)
   ^-  @
   ?:(?=(%ok which) 1 2)
-::  +gw-spawn: the spawn satpoint a fixture comet's dat commits to
+::  +gw-dat: the immutable tweak data, as an opaque fixture atom
 ::
-++  gw-spawn
-  |=  which=?(%ok %fail)
-  ^-  sont:gwp
-  ?:(?=(%ok which) [0x1111 0 0] [0x2222 1 0])
-::  +gw-dat: the immutable kelvin-9 tweak data
-::
-::    A hiding commitment to the spawn satpoint under a seed-derived
-::    blind; the satpoint itself is never in the clear.
+::    In the %gw-btc domain this is a +mat-tagged domain and kelvin
+::    followed by a hiding commitment to a spawn satpoint -- but that
+::    is the domain's business, not arvo's.  Here it is forty-odd bytes
+::    that ride the pass and fix the name; only the leading +mat is
+::    kernel business, and only ames reads it.
 ::
 ++  gw-dat
   |=  which=?(%ok %fail)
   ^-  @
-  (make-dat:gwp (gw-spawn which) (make-blind:gwp (gw-seed which)))
+  ?:  ?=(%ok which)
+    0x39f5.b92d.7973.d9b4.1950.de86.6970.c18e.faa8.cbc1.1bed.791d.e45f.
+    850b.9de6.3a32.4637.4622.d776.77c0
+  0x1c.874d.b2f1.5e5c.b31a.29dd.df28.41c0.9d6e.7b1d.44b5.3d7d.96a5.
+  f90d.ae69.1614.5cd2.4637.4622.d776.77c0
+::  +gw-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
+::
+::    Excluded from the key tweak, so it may grow without renaming the
+::    comet -- +gw-fig is deliberately taken at life 1 and the life-2
+::    fixture below has the same @p.  In the %gw-btc domain it is a
+::    jammed custody log; arvo neither knows nor cares.
+::
+::    The %fail fixture is broken deliberately and minimally: the
+::    groundwire generator gives it a spawn its .dat does not commit
+::    to, so a real %gw-btc verifier fails that check and only that
+::    check.  The Aqua oracle in lib/ph/gw/util.hoon cannot see a
+::    chain and does not repeat that check -- see its comment.
+::
+::    Only lives 1 and 2 exist: the scenarios boot at life 1 and the
+::    rekey scenario advances to life 2.  Asking for more must crash
+::    loudly rather than silently produce a pass no fixture describes.
+::
+++  gw-xtr
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  @
+  ?:  ?=(%ok which)
+    ?+  lyfe  ~|([%no-gw-fixture-for-life which lyfe] !!)
+        %1
+      0x17.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
+      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
+      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
+      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+      8000.ec05
+    ::
+        %2
+      0x1.5402.8720.3a94.943e.bb94.44be.8d19.5cdc.ecc3.0cb4.17c9.7010.
+      95a7.f00c.ffbd.42f7.8027.de01.0019.90b4.f8d9.bdf1.1480.c444.000b.
+      602f.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
+      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
+      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
+      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+      8000.ec05
+    ==
+  ?+  lyfe  ~|([%no-gw-fixture-for-life which lyfe] !!)
+      %1
+    0x534.96d1.1887.e452.a602.91f8.27be.5875.9949.986d.2dbc.e5f0.d20d.
+    e40e.e254.6ba8.37fc.0175.1b63.999e.8167.486f.56df.7782.01cc.d3e0.
+    6662.a9a7.7c37.b9fd.2013.7356.a892.442a.b599.c5d2.4133.8b36.61da.
+    f5a4.c727.ec9c.c4ff.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+    c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+    8000.ec05
+  ::
+      %2
+    0x2.a865.0ea3.cef6.b16b.3b9d.2332.228a.0a24.2751.3361.3c1d.17e9.
+    59f7.03ea.2e5b.b960.26f9.df60.0664.2d3e.366f.7c45.2031.1100.02d8.
+    0b34.96d1.1887.e452.a602.91f8.27be.5875.9949.986d.2dbc.e5f0.d20d.
+    e40e.e254.6ba8.37fc.0175.1b63.999e.8167.486f.56df.7782.01cc.d3e0.
+    6662.a9a7.7c37.b9fd.2013.7356.a892.442a.b599.c5d2.4133.8b36.61da.
+    f5a4.c727.ec9c.c4ff.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+    c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+    8000.ec05
+  ==
 ::  +gw-sed: the 64-byte cric seed of a fixture comet at .lyfe
 ::
 ::    Suite C splits the seed into a signing half (bytes 0-31, which
@@ -298,68 +384,13 @@
       ?:  =(0 xtr)  ~
       [(met 0 xtr)^xtr ~]
   ==
-::  +gw-cry: a fixture comet's messaging public key at .lyfe
-::
-::    Independent of dat and xtr, so it can be computed before the
-::    custody log that commits to it.
-::
-++  gw-cry
-  |=  [which=?(%ok %fail) lyfe=life]
-  ^-  @
-  cry:ded:ex:(gw-crub (gw-sed which lyfe) 0 0)
-::  +gw-internal-key: 33-byte compressed P2TR internal key (secp G)
-::
-::    The Aqua fixtures have no chain to check taproot output keys
-::    against, so this is decorative; it matches the golden vectors.
-::
-++  gw-internal-key
-  ^-  @ux
-  0x2.79be.667e.f9dc.bbac.55a0.6295.ce87.0b07.029b.fcdb.2dce.28d9.59f2.815b.16f8.1798
-::
-++  gw-start-height  778.000
-::  +gw-log: a fixture comet's custody log, oldest entry first
-::
-::    One entry per life.  Entry 0 is the spawn: it alone carries the
-::    $blind-opening that opens the pass's hiding dat commitment.  Later
-::    entries are rekeys, each opening the snapshot committed at that
-::    custody hop; the newest snapshot is the comet's current state.
-::
-::    The %fail fixture is broken deliberately and minimally: its
-::    blind-opening names a satpoint its dat does NOT commit to, so the
-::    verifier's commitment check -- and only that check -- must fail.
-::    Give it (gw-spawn %fail) instead and it verifies like %ok.
-::
-++  gw-log
-  |=  [which=?(%ok %fail) lyfe=life]
-  ^-  custody-log:gwp
-  =/  open=blind-opening:gwp
-    :+  ?:(?=(%ok which) (gw-spawn which) [0x3333 1 0])
-      gw-start-height
-    (make-blind:gwp (gw-seed which))
-  ::  index in +comets, which ted/aqua/ames.hoon uses as a fake lane
-  ::
-  =/  idx  ?:(?=(%ok which) 12 13)
-  %+  turn  (gulf 1 lyfe)
-  |=  l=life
-  ^-  custody-entry:gwp
-  :+  `@ux`(add 0x1111.0000 l)
-    (add gw-start-height (dec l))
-  :-  ~
-  :+  gw-internal-key
-    :*  life=l
-        rift=0
-        key=(gw-cry which l)
-        sponsor=~
-        fief=`[%if `@`0xdead.beef `@`idx]
-    ==
-  ?:(=(1 l) `open ~)
 ::  +gw-keys: a fixture comet's full suite-%c core at .lyfe
 ::
 ++  gw-keys
   |=  [which=?(%ok %fail) lyfe=life]
   %^  gw-crub  (gw-sed which lyfe)
     (gw-dat which)
-  (jam (gw-log which lyfe))
+  (gw-xtr which lyfe)
 ::
 ++  get-keys
   |=  [who=@p lyfe=life]
