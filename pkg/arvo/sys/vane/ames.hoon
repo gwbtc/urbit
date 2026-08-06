@@ -445,6 +445,15 @@
       ~/  %sift-open-packet
       |=  [[rof=roof our=ship now=@da] =shot our=ship our-life=@]
       ^-  open-packet
+      ::  never +cue peer-controlled bytes unguarded; see
+      ::  +open-jam-shaped.  callers are expected to have routed on
+      ::  +is-open-packet, but this arm is reachable from more than one
+      ::  place and must not depend on its callers for memory safety.
+      ::  crash %exit, which +mole/+mule catch, rather than let +cue
+      ::  crash %meme, which they do not.
+      ::
+      ?.  (open-jam-shaped content.shot)
+        ~|(%open-packet-malformed !!)
       ::  deserialize and type-check packet contents
       ::
       =+  ;;  [signature=@ signed=@]  (cue content.shot)
@@ -5041,22 +5050,52 @@
           ::
           ?:  =(%keys content.shot)
             on-hear-keys
-          ::  a comet's packet is an attestation if we don't know it yet,
-          ::  or if it simply looks like one.  the second case is not
-          ::  redundant: a comet re-attests while its verifier is still
-          ::  deciding, and a suite-%c comet re-attests at every new
-          ::  life, so attestations arrive from %known peers too.
-          ::  +on-hear-open expects this and ignores stale ones; routing
-          ::  them to +on-hear-shut instead kills the event on a %evil
-          ::  bail out of the decrypter.
           ::
-          ?:  ?&  ?=(%pawn (clan:title sndr.shot))
-                  ?|  !?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
-                      (is-open-packet shot)
-                  ==
-              ==
+          ?.  ?=(%pawn (clan:title sndr.shot))
+            on-hear-shut
+          ::  a comet's packet is either a plaintext self-attestation or
+          ::  an encrypted $shut-packet, and nothing in the header tells
+          ::  them apart.  classify it by shape, never by peer state --
+          ::  state is wrong in BOTH directions.
+          ::
+          ::    A comet we already know still attests: it re-attests
+          ::    while its domain verifier is still deciding, and a
+          ::    suite-%c comet re-attests at every new life.  So %known
+          ::    is no reason to skip +on-hear-open; +on-hear-open
+          ::    expects these and ignores the stale ones, whereas
+          ::    +on-hear-shut dies on a %evil bail out of the decrypter.
+          ::
+          ::    A comet we do not know is, symmetrically, no reason to
+          ::    assume attestation.  .sndr is unauthenticated and the
+          ::    comet space is 2^128, so "a comet we have never seen" is
+          ::    a free label anyone can wear.  Trusting it here fed
+          ::    arbitrary attacker bytes straight to the bare +cue in
+          ::    +sift-open-packet: one un-catchable %meme bail per
+          ::    packet, pre-auth, with no per-sender state to rate-limit
+          ::    against.  See +open-jam-shaped.
+          ::
+          ?:  (is-open-packet shot)
             on-hear-open
-          on-hear-shut
+          ::  not an attestation.  only a comet we have already promoted
+          ::  can be sending us a $shut-packet: otherwise we hold no
+          ::  symmetric key to decrypt it with, and +on-hear-shut would
+          ::  again die on a %evil bail.  so this packet has nowhere
+          ::  legitimate to go -- drop it.
+          ::
+          ?:  ?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
+            on-hear-shut
+          on-hear-drop
+        ::  +on-hear-drop: discard a packet we have no way to interpret
+        ::
+        ::    A gate rather than a bare .event-core because the dispatch
+        ::    in +on-hear-packet selects an arm and only then applies
+        ::    .+< to it; a drop has to be selectable the same way.
+        ::
+        ++  on-hear-drop
+          |=  [=lane =shot dud=(unit goof)]
+          ^+  event-core
+          %-  (ev-trace rcv.veb sndr.shot |.("dropped unroutable packet"))
+          event-core
         ::  +on-hear-forward: maybe forward a packet to someone else
         ::
         ::    Note that this performs all forwarding requests without

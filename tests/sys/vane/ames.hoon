@@ -341,6 +341,47 @@
     [~ ~]
   ``val
 ::
+++  pki-roof
+  ::  the two scries a comet self-attestation makes: who sponsors the
+  ::  comet (+sein, asserted by +sift-open-packet) and what life jael
+  ::  already knows for it (+on-hear-open).  every other scry keeps the
+  ::  fixtures' `(list turf)` stub.
+  ::
+  |=  lyf=(unit @ud)
+  ^-  roof
+  |=  [lyc=gang pov=path vis=view bem=beam]
+  ^-  (unit (unit cage))
+  ?.  =(vis %j)
+    ``noun+!>(*(list turf))
+  ?+  q.bem  ``noun+!>(*(list turf))
+    %sein  ``noun+!>(`ship`~marbud)
+    %lyfe  ``noun+!>(lyf)
+  ==
+::
+++  attestation
+  ::  a comet self-attestation as it goes on the wire
+  ::
+  |=  [=open-packet:ames saf=keypairs:ames]
+  ^-  blob:ames
+  (etch-shot:ames (etch-open-packet:ames open-packet saf))
+::
+++  known-comet
+  ::  peer state for a comet we have already promoted
+  ::
+  |=  [=symmetric-key:ames lyf=@ud comet=_comet]
+  ^-  ship-state:ames
+  =|  =peer-state:ames
+  =.  -.peer-state
+    :*  symmetric-key=symmetric-key
+        life=lyf
+        rift=0
+        [public-keys=pub.saf pass=pass]:ames-state.comet
+        sponsor=~marbud
+        fief=~
+    ==
+  =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
+  [%known peer-state]
+::
 ++  n-frags
   |=  n=@
   ^-  @ux
@@ -1227,5 +1268,150 @@
     (expect !>(!(open-jam-shaped:ames (jam 42))))
     (expect !>(!(open-jam-shaped:ames (jam [1 2 3]))))
     (expect !>(!(open-jam-shaped:ames (lsh [0 1] (jam [1 2])))))
+  ==
+::  +on-hear-packet routes a comet's packet by SHAPE, and drops what it
+::  cannot route.  Four cases, and the obvious fixes break one of them:
+::
+::    1. unknown comet + valid attestation -> +on-hear-open.  this is
+::       the whole comet onboarding path, and the regression a careless
+::       fix causes.
+::    2. known comet + re-attestation -> +on-hear-open.  a comet
+::       re-attests while its domain verifier is still deciding, and a
+::       suite-%c comet re-attests at every new life, so attestations
+::       do arrive from peers we have already promoted.  routing one to
+::       +on-hear-shut feeds plaintext to AES-SIV, which bails %evil;
+::       that livelocked two healthy mainnet comets for six hours.
+::    3. known comet + $shut-packet -> +on-hear-shut.
+::    4. unknown comet + anything else -> DROPPED.  .sndr is
+::       unauthenticated and the comet space is 2^128, so "a comet we
+::       have never seen" is a label any attacker can wear.  routing on
+::       that alone -- as this used to -- handed arbitrary bytes to the
+::       bare +cue in +sift-open-packet: one un-catchable %meme bail
+::       per packet, pre-auth, with no per-sender state to rate-limit
+::       against.
+::
+::    Note how case 4 fails if it regresses: %meme escapes +mole and
+::    +mule, so the test thread CRASHES rather than reporting FAILED.
+::
+++  test-hear-attestation-from-unknown-comet  ^-  tang
+  ::  case 1: first contact.  ~nec has never seen .our-comet, and this
+  ::  is a genuine, correctly signed self-attestation.
+  ::
+  =/  =open-packet:ames
+    :*  pass=pass.ames-state.comet
+        sndr=our-comet
+        sndr-life=1
+        rcvr=~nec
+        rcvr-life=2
+    ==
+  =/  =blob:ames  (attestation open-packet saf.ames-state.comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] blob)
+  ::  it reached +on-hear-open and the comet was promoted
+  ::
+  %+  expect-eq
+    !>  %.y
+  !>  ?=([~ %known *] (~(get by peers.ames-state.nec) our-comet))
+::
+++  test-hear-reattestation-from-known-comet  ^-  tang
+  ::  case 2: ~nec already knows .our-comet at life 1 and it attests
+  ::  again.  +on-hear-open recognises the duplicate and ignores it;
+  ::  +on-hear-shut would bail %evil on the plaintext.  so simply
+  ::  arriving here, with the peer intact, is the assertion.
+  ::
+  =/  nec-comet-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.comet sek.saf.ames-state.nec)
+  =.  peers.ames-state.nec
+    %+  ~(put by peers.ames-state.nec)  our-comet
+    (known-comet nec-comet-sym 1 comet)
+  =/  =open-packet:ames
+    :*  pass=pass.ames-state.comet
+        sndr=our-comet
+        sndr-life=1
+        rcvr=~nec
+        rcvr-life=2
+    ==
+  =/  =blob:ames  (attestation open-packet saf.ames-state.comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof `1)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    %+  expect-eq  !>(0)  !>((lent moves))
+  ::
+    %+  expect-eq
+      !>  %.y
+    !>  ?=([~ %known *] (~(get by peers.ames-state.nec) our-comet))
+  ==
+::
+++  test-hear-shut-packet-from-known-comet  ^-  tang
+  ::  case 3: a comet we know sends real traffic.  it must reach the
+  ::  decrypter, not the attestation path.
+  ::
+  =/  nec-comet-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.comet sek.saf.ames-state.nec)
+  =/  comet-nec-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.nec sek.saf.ames-state.comet)
+  =.  peers.ames-state.comet
+    %+  ~(put by peers.ames-state.comet)  ~nec
+    =|  =peer-state:ames
+    =.  -.peer-state
+      :*  symmetric-key=comet-nec-sym
+          life=2
+          rift=0
+          [public-keys=pub.saf pass=pass]:ames-state.nec
+          sponsor=~nec
+          fief=~
+      ==
+    =.  route.peer-state  `[direct=%.y `lane:ames`[%& ~nec]]
+    [%known peer-state]
+  =.  peers.ames-state.nec
+    %+  ~(put by peers.ames-state.nec)  our-comet
+    (known-comet nec-comet-sym 1 comet)
+  =/  poke-plea  [%g /talk [%get %post]]
+  =^  moves1  comet  (call comet ~[/g/talk] %plea ~nec poke-plea)
+  =^  moves2  nec
+    (call nec(rof (pki-roof `1)) ~[//unix] %hear (snag-packet 0 moves1))
+  ::  ~nec decrypted it and handed the $plea up to gall
+  ::
+  %+  expect-eq
+    !>  [our-comet poke-plea]
+  !>  (snag-plea 0 moves2)
+::
+++  test-hear-drops-unroutable-comet-packet  ^-  tang
+  ::  case 4: the attack.  .sndr is spoofed as a comet ~nec has never
+  ::  seen, and the payload is the real mainnet packet that %meme
+  ::  bombed +cue (see +test-is-open-packet-rejects-a-cue-bomb).
+  ::
+  =/  bomb=@
+    0x5f71.d5ce.9153.a875.20f8.fc95.b1d8.533e.3734.3386.
+      fc4f.6993.3ba9.766a.001c.9e5d.a8bf.e4e2.4690.aaaf.
+      e503.17b8.6203
+  =/  spoof
+    |=  cot=@
+    ^-  blob:ames
+    %-  etch-shot:ames
+    :*  [sndr=our-comet2 rcvr=~nec]
+        req=&  sam=&
+        sndr-tick=0b1
+        rcvr-tick=0b10
+        origin=~
+        content=cot
+    ==
+  =^  moves1  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] (spoof bomb))
+  ::  and a payload that IS jam-shaped, but decodes to nothing that
+  ::  names the sender -- the guard is not just +open-jam-shaped
+  ::
+  =^  moves2  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] (spoof (jam [0 0])))
+  ;:  weld
+    ::  the event survived both, and answered neither
+    ::
+    %+  expect-eq  !>(0)  !>((lent moves1))
+    %+  expect-eq  !>(0)  !>((lent moves2))
+    ::  and no per-ship state was allocated for the spoofed sender
+    ::
+    %+  expect-eq
+      !>  %.n
+    !>  (~(has by peers.ames-state.nec) our-comet2)
   ==
 --
