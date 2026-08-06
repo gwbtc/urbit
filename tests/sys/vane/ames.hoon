@@ -1098,7 +1098,7 @@
 ++  test-stale-demotes-known-to-alien  ^-  tang
   =/  snub-before  snub.ames-state.nec
   =^  moves  nec
-    (take nec /sybl ~[/ames] [%jael %sybl %stale %gw-btc ~bud])
+    (take nec /sybl ~[/ames] [%jael %sybl %stale %test-dom ~bud])
   ;:  weld
     ::  ~bud demoted to a fresh alien, not deleted
     ::
@@ -1122,7 +1122,7 @@
   =/  before  peers.ames-state.bud
   =/  snub-before  snub.ames-state.bud
   =^  moves  bud
-    (take bud /sybl ~[/ames] [%jael %sybl %stale %gw-btc our-comet])
+    (take bud /sybl ~[/ames] [%jael %sybl %stale %test-dom our-comet])
   ;:  weld
     (expect-eq !>(before) !>(peers.ames-state.bud))
     (expect-eq !>(snub-before) !>(snub.ames-state.bud))
@@ -1134,15 +1134,15 @@
 ::    Only the diff used to, so a route learned from a confidential
 ::    comet's %writ verdict -- which arrives as [%sybl %full] and lands
 ::    in +on-publ-full -- was stored in jael, reported by /pynt, and
-::    never routed to.  Confidential identities are excluded from
-::    %gw-btc's udiffs by design, so the verdict is the ONLY carrier
+::    never routed to.  A domain whose identities are confidential
+::    publishes no udiffs for them, so the verdict is the ONLY carrier
 ::    they have and this was all of it.
 ::
 ++  test-publ-full-pushes-the-fief  ^-  tang
   =/  fef=fief  [%if .206.189.188.16 49.818]
   =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-peer') %b ~)
   =/  =sign:ames
-    :*  %jael  %sybl  %full  %gw-btc  our-comet
+    :*  %jael  %sybl  %full  %test-dom  our-comet
         rift=0
         life=1
         keys=(malt ~[[1 [crypto-suite=1 pass]]])
@@ -1164,7 +1164,7 @@
 ++  test-publ-full-without-a-fief-pushes-nothing  ^-  tang
   =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-peer2') %b ~)
   =/  =sign:ames
-    :*  %jael  %sybl  %full  %gw-btc  our-comet2
+    :*  %jael  %sybl  %full  %test-dom  our-comet2
         rift=0
         life=1
         keys=(malt ~[[1 [crypto-suite=1 pass]]])

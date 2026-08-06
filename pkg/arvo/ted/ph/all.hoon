@@ -38,8 +38,24 @@
     ==
   ::
       [%all ~]
-    =+  .^(=arch %cy /(scot %p our.bowl)/base/(scot %da now.bowl)/ted/ph)
-    %+  turn  (sort (turn ~(tap by dir.arch) head) aor)
+    ::  .dir also names the SUBDIRECTORIES that group scenarios, which
+    ::  are not threads themselves, and %load-pill, which is a utility
+    ::  the scenarios call rather than a scenario in its own right (and
+    ::  which needs an argument this loop cannot supply).  Keep only the
+    ::  names that are actually a thread, i.e. that have a /hoon under
+    ::  them -- clay files live at /<name>/hoon, so a scenario and a
+    ::  grouping directory are both childful nodes and only the /hoon
+    ::  tells them apart.
+    ::
+    =/  bem=path  /(scot %p our.bowl)/base/(scot %da now.bowl)/ted/ph
+    =+  top=.^(arch %cy bem)
+    %+  turn
+      %+  skim  (sort (turn ~(tap by dir.top) head) aor)
+      |=  nom=@ta
+      ^-  ?
+      ?:  =(%load-pill nom)  %.n
+      =+  kid=.^(arch %cy ^-(path (snoc bem nom)))
+      (~(has by dir.kid) %hoon)
     |=  =term
     (cat 3 'ph-' term)
   ::

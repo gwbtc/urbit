@@ -1,11 +1,11 @@
-/+  gw-io=ph-gw-io
+/+  cc-io=ph-cc-io
 |=  arg=vase
 =/  m  (strand:rand ,vase)
 =/  core=?(%ames %mesa)  (fall !<((unit ?(%ames %mesa)) arg) %ames)
 ::
 =/  loud  %.y
 =/  tag  %az-star-hi
-=/  io  ~(. gw-io loud tag)
+=/  io  ~(. cc-io loud tag)
 
 ::
 ::  Keep this legacy synthetic-PKI case on suite-B comets.  Suite-C
@@ -37,15 +37,15 @@
 ::  simulated Azimuth snapshot just like the vanilla interop tests.
 ;<  ~  bind:m
   ?:  =(%ames core)
-    (start-gw-comet:io comet-1 core onchain)
+    (start-cc-comet:io comet-1 core onchain)
   (init-ship-core:io comet-1 | core)
 ;<  ~  bind:m
   ?:  =(%ames core)
-    (start-gw-comet:io comet-2 core onchain)
+    (start-cc-comet:io comet-2 core onchain)
   (init-ship-core:io comet-2 | core)
 ;<  ~  bind:m
   ?:  =(%ames core)
-    (start-gw-comet:io comet-3 core onchain)
+    (start-cc-comet:io comet-3 core onchain)
   (init-ship-core:io comet-3 | core)
 ::
 ::  Vanilla Mesa comets first discover the default hierarchy.  Ames skips

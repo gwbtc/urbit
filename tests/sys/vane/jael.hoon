@@ -4,12 +4,16 @@
 =/  bus  (jael-raw ~bus)
 =/  now  ~1111.1.1
 =/  eny  `@uvJ`0xdead.beef
-=/  gw-duct=duct  [[%gall %use %gw-btc '0' ~] ~]
+=/  dom-duct=duct  [[%gall %use %test-dom '0' ~] ~]
 ::
-::  suite-%c %gw-btc pass, kelvin 9: the dat tweak whose leading +mat is
-::  the pki domain that +dome and +pass-pki-dom:ames read back out.
+::  a suite-%c dat: a +mat-encoded pki domain, then opaque domain data.
 ::
-=/  gw-dat=@  (can 0 ~[(mat %gw-btc) (mat 9) [256 0xdead.beef.cafe]])
+::    The leading +mat is the whole of the kernel's contract with a dat --
+::    it is what +dome and +pass-pki-dom:ames read back out, and the
+::    kernel never looks past it.  What follows is the domain's business,
+::    so this test says nothing about its shape.
+::
+=/  test-dat=@  (can 0 ~[(mat %test-dom) [32 0xdead.beef]])
 =>
 |%
 ++  call
@@ -27,21 +31,21 @@
   ^-  move:bus
   :*  duct
       %pass
-      /gw-btc/writs
+      /test-dom/writs
       %g
       %deal
       [~bus ~bus /jael]
-      %gw-btc
+      %test-dom
       %watch
       /writs
   ==
-::  +mk-c-pass: a suite-%c pass committing the %gw-btc dat tweak
+::  +mk-c-pass: a suite-%c pass committing the %test-dom dat tweak
 ::
 ++  mk-c-pass
   |=  sed=@
   ^-  pass
   =<  pub:ex
-  (pit:nu:cric:crypto 512 (shaz sed) %c gw-dat 0x1234)
+  (pit:nu:cric:crypto 512 (shaz sed) %c test-dat 0x1234)
 ::  +mk-b-pass: an ordinary suite-%b pass (no dat tweak)
 ::
 ++  mk-b-pass
@@ -108,14 +112,14 @@
   |=  [vane=_bus app=@tas =mark =vase]
   ^-  [(list move:bus) _bus]
   =/  core  (vane now=now eny=eny rof=*roof)
-  (take:core ~[app] gw-duct dud=~ [%gall %unto %fact mark vase])
+  (take:core ~[app] dom-duct dud=~ [%gall %unto %fact mark vase])
 ::  +take-tire: hand jael a clay %tire zest change for .desk
 ::
 ++  take-tire
   |=  [vane=_bus =desk zst=?(%dead %live %held)]
   ^-  [(list move:bus) _bus]
   =/  core  (vane now=now eny=eny rof=*roof)
-  (take:core /tire gw-duct dud=~ [%clay %tire %| %zest desk zst])
+  (take:core /tire dom-duct dud=~ [%clay %tire %| %zest desk zst])
 --
 ::
 |%
@@ -124,11 +128,11 @@
 ::
 ++  test-anex-exact-duplicate-rewatches
   ^-  tang
-  =^  first-moves  bus  (call bus gw-duct %anex /writs)
+  =^  first-moves  bus  (call bus dom-duct %anex /writs)
   =/  before  (stay bus)
-  =^  duplicate-moves  bus  (call bus gw-duct %anex /writs)
+  =^  duplicate-moves  bus  (call bus dom-duct %anex /writs)
   =/  after  (stay bus)
-  =/  expected=(list move:bus)  [(watch-move gw-duct) ~]
+  =/  expected=(list move:bus)  [(watch-move dom-duct) ~]
   ;:  weld
     (expect-eq !>(expected) !>(duplicate-moves))
     (expect-eq !>(before) !>(after))
@@ -139,9 +143,9 @@
 ::
 ++  test-anex-conflicting-path-rejected
   ^-  tang
-  =^  first-moves  bus  (call bus gw-duct %anex /writs)
+  =^  first-moves  bus  (call bus dom-duct %anex /writs)
   %-  expect-fail
-  |.  (call bus gw-duct %anex /other)
+  |.  (call bus dom-duct %anex /other)
 ::  %dome scry (decisions-addendum section 10): a suite-%c ship resolves
 ::  to its committed pki domain; a suite-%b ship and an unknown ship both
 ::  resolve to ~.  Mirrors +pass-pki-dom:ames.
@@ -149,7 +153,7 @@
 ++  test-dome-suite-c
   ^-  tang
   =/  b  (with-point bus ~wes (point-for (mk-c-pass 'c')))
-  (expect-eq !>(`%gw-btc) !>((dome b ~wes)))
+  (expect-eq !>(`%test-dom) !>((dome b ~wes)))
 ::
 ++  test-dome-suite-b-is-null
   ^-  tang
@@ -167,10 +171,10 @@
 ++  test-stale-notice-drops-point
   ^-  tang
   =/  b  bus
-  =.  b  (with-dom b %gw-btc %gw-btc-desk %.y (silt ~[~wes ~dev]))
+  =.  b  (with-dom b %test-dom %test-dom-desk %.y (silt ~[~wes ~dev]))
   =.  b  (with-point b ~wes (point-for (mk-c-pass 'wes')))
-  =.  b  (with-syl b gw-duct)
-  =^  moves  b  (take-fact b %gw-btc %stale-notice !>([%gw-btc ~wes]))
+  =.  b  (with-syl b dom-duct)
+  =^  moves  b  (take-fact b %test-dom %stale-notice !>([%test-dom ~wes]))
   ;:  weld
     ::  point gone from pos
     ::
@@ -179,11 +183,11 @@
     ::
     %+  expect-eq
       !>  (silt ~[~dev])
-    !>  hep:(~(got by dos.lex.b) %gw-btc)
+    !>  hep:(~(got by dos.lex.b) %test-dom)
     ::  a %sybl %stale gift to the lone subscriber, no snub
     ::
     %+  expect-eq
-      !>  ~[[gw-duct %give %sybl %stale %gw-btc ~wes]]
+      !>  ~[[dom-duct %give %sybl %stale %test-dom ~wes]]
     !>  moves
   ==
 ::
@@ -193,7 +197,7 @@
   ^-  tang
   =/  b  bus
   =.  b  (with-point b ~wes (point-for (mk-c-pass 'wes')))
-  =^  moves  b  (take-fact b %gw-btc %stale-notice !>([%gw-btc ~wes]))
+  =^  moves  b  (take-fact b %test-dom %stale-notice !>([%test-dom ~wes]))
   ;:  weld
     (expect-eq !>(%.y) !>((~(has by pos.zim.pki.lex.b) ~wes)))
     (expect-eq !>(~) !>(moves))
@@ -204,45 +208,45 @@
 ::
 ++  test-tire-dead-adds-snub
   ^-  tang
-  =/  b  (with-dom bus %gw-btc %gw-btc-desk %.y (silt ~[~wes]))
-  =^  moves  b  (take-tire b %gw-btc-desk %dead)
+  =/  b  (with-dom bus %test-dom %test-dom-desk %.y (silt ~[~wes]))
+  =^  moves  b  (take-tire b %test-dom-desk %dead)
   ;:  weld
     %+  expect-eq
-      !>  ~[[gw-duct %pass /gost %a %snub %deny %add ~[~wes]]]
+      !>  ~[[dom-duct %pass /gost %a %snub %deny %add ~[~wes]]]
     !>  moves
     ::  the domain is now marked suspended
     ::
-    (expect-eq !>(%.n) !>(liv:(~(got by dos.lex.b) %gw-btc)))
+    (expect-eq !>(%.n) !>(liv:(~(got by dos.lex.b) %test-dom)))
   ==
 ::
 ++  test-tire-live-dels-snub
   ^-  tang
   ::  a suspended domain's desk coming back live unsnubs its peers
   ::
-  =/  b  (with-dom bus %gw-btc %gw-btc-desk %.n (silt ~[~wes]))
-  =^  moves  b  (take-tire b %gw-btc-desk %live)
+  =/  b  (with-dom bus %test-dom %test-dom-desk %.n (silt ~[~wes]))
+  =^  moves  b  (take-tire b %test-dom-desk %live)
   ;:  weld
     %+  expect-eq
-      !>  ~[[gw-duct %pass /ghul %a %snub %deny %del ~[~wes]]]
+      !>  ~[[dom-duct %pass /ghul %a %snub %deny %del ~[~wes]]]
     !>  moves
-    (expect-eq !>(%.y) !>(liv:(~(got by dos.lex.b) %gw-btc)))
+    (expect-eq !>(%.y) !>(liv:(~(got by dos.lex.b) %test-dom)))
   ==
 ::  A %writ-response carrying a point with a committed FIEF must publish
-::  that fief to %fief subscribers, exactly as a %fief udiff does.  This
-::  is the only route by which a CONFIDENTIAL comet's on-chain route can
-::  reach the runtime at all: %gw-btc deliberately keeps confidential
-::  identities out of its udiffs, so the verdict is the only carrier.
-::  Live on mainnet a comet's verified fief became a jael point, showed
-::  up in /pynt, and never became a route.
+::  that fief to %fief subscribers, exactly as a %fief udiff does.  A
+::  domain whose identities are confidential has no udiff stream to
+::  carry them, so the verdict is the only route by which such a comet's
+::  committed lane can reach the runtime at all.  Live on mainnet a
+::  comet's verified fief became a jael point, showed up in /pynt, and
+::  never became a route.
 ::
 ++  test-writ-response-publishes-the-fief
   ^-  tang
   =/  fef=fief  [%if .206.189.188.16 49.818]
   =/  pt  (point-with-fief (mk-c-pass 'wes') fef)
   =/  b  bus
-  =.  b  (with-dom b %gw-btc %gw-btc-desk %.y ~)
-  =.  b  (with-fel b gw-duct)
-  =^  moves  b  (take-fact b %gw-btc %writ-response !>([%gw-btc ~wes `pt]))
+  =.  b  (with-dom b %test-dom %test-dom-desk %.y ~)
+  =.  b  (with-fel b dom-duct)
+  =^  moves  b  (take-fact b %test-dom %writ-response !>([%test-dom ~wes `pt]))
   ;:  weld
     ::  the route is now in jael's own fief registry
     ::
@@ -258,10 +262,10 @@
 ++  test-writ-response-without-a-fief-publishes-nothing
   ^-  tang
   =/  b  bus
-  =.  b  (with-dom b %gw-btc %gw-btc-desk %.y ~)
-  =.  b  (with-fel b gw-duct)
+  =.  b  (with-dom b %test-dom %test-dom-desk %.y ~)
+  =.  b  (with-fel b dom-duct)
   =^  moves  b
-    (take-fact b %gw-btc %writ-response !>([%gw-btc ~wes `(point-for (mk-c-pass 'wes'))]))
+    (take-fact b %test-dom %writ-response !>([%test-dom ~wes `(point-for (mk-c-pass 'wes'))]))
   %-  expect
   !>  ?!
       %+  lien  moves

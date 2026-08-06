@@ -569,10 +569,10 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-      :: %gw-btc (kelvin 9) confidential identities.  derived from the
-      :: fixture dat, never written out: see +gw-comet-ok:aqua-azimuth.
-      gw-comet-ok:az
-      gw-comet-fail:az
+      :: confidential (suite-%c) identities.  derived from the
+      :: fixture dat, never written out: see +cc-comet-ok:aqua-azimuth.
+      cc-comet-ok:az
+      cc-comet-fail:az
   ==
 :: +turfs: map from domain to comet
 ::
@@ -586,7 +586,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
-      /podlug/gw-ok   /rinpel/gw-fail
+      /test-pki/ok    /test-pki/fail
   ==
 ::
 ::  +zip: combine two equally long lists into one list of cells

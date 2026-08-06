@@ -58,7 +58,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
-      /podlug/gw-ok   /rinpel/gw-fail
+      /test-pki/ok    /test-pki/fail
   ==
 ::
 ++  comets
@@ -79,13 +79,18 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-      :: %gw-btc (kelvin 9) confidential identities.  derived from the
-      :: fixture dat, never written out: see +gw-comet-ok:aqua-azimuth.
-      gw-comet-ok:az
-      gw-comet-fail:az
+      :: confidential (suite-%c) identities.  derived from the fixture
+      :: dat, never written out: see +cc-comet-ok:aqua-azimuth.
+      cc-comet-ok:az
+      cc-comet-fail:az
   ==
+::  +udiff-agent: the fake udiff source the scenarios install
 ::
-++  gw-agent
+::    Stands in for %azimuth: it registers with jael as an udiff source
+::    and republishes whatever the scenario pokes into it.  Nothing
+::    confidential travels this way -- see +pki-agent below.
+::
+++  udiff-agent
   '''
   /+  default-agent
   ^-  agent:gall
@@ -95,17 +100,17 @@
   ++  on-init
     ^-  (quip card:agent:gall _this)
     :_  this
-    [%pass /listen %arvo %j %listen ~ %| %gw]~
+    [%pass /listen %arvo %j %listen ~ %| %test-udiff]~
   ++  on-poke
     |=  [=mark =vase]
     ^-  (quip card:agent:gall _this)
-    ?>  ?=(%groundwire-udiffs mark)
+    ?>  ?=(%test-udiffs mark)
     =+  !<(=udiffs:point:jael vase)
     :_  this
-    [%give %fact ~[/] %groundwire-udiffs !>(udiffs)]~
+    [%give %fact ~[/] %test-udiffs !>(udiffs)]~
   ++  on-watch
     |=  =path
-    ~&  [%gw %on-watch path=path]
+    ~&  [%test-udiff %on-watch path=path]
     ^-  (quip card:agent:gall _this)
     ?>  ?=(~ path)
     `this
@@ -134,14 +139,14 @@
   --
   '''
 ::
-::  +gw-btc-agent: the fake %gw-btc verifier the scenarios register
+::  +pki-agent: the fake domain verifier the scenarios register
 ::
-::    Stands in for the real on-chain verifier.  It is a LOOKUP TABLE,
-::    not an implementation -- base arvo must not contain one.  The
-::    real %gw-btc verifier, the code that parses a dat, opens its
-::    hiding commitment and checks a custody log against the chain,
-::    lives in the groundwire desk (lib/gw-btc-pass,
-::    lib/self-attestation, app/gw-btc) and is tested there.
+::    Stands in for a real on-chain verifier.  It is a LOOKUP TABLE,
+::    not an implementation -- base arvo must not contain one.  A real
+::    verifier, the code that parses a domain's dat, opens whatever
+::    commitment it carries and checks an ownership history against the
+::    chain that domain lives on, belongs in that domain's own desk and
+::    is tested there.
 ::
 ::    What these scenarios exercise is the KERNEL's half of pluggable
 ::    comet PKI, and that half is identical whatever the oracle
@@ -151,35 +156,38 @@
 ::    accordingly.  So the oracle answers from a fixture table.  It
 ::    accepts a pass byte-identical to the fixture pass for that ship
 ::    at that life, and rejects everything else -- including
-::    ~wicdev-...-rinpel, the deliberately-broken fixture, which no row
-::    names.  What a real verifier would reject it FOR (its opening
-::    names a satpoint its dat does not commit to) is the groundwire
-::    desk's business, not arvo's.
+::    +cc-comet-fail:aqua-azimuth, the deliberately-broken fixture,
+::    which no row names.  What a real verifier would reject that one
+::    FOR is its own domain's business, not arvo's.
 ::
-::    The table is derived from +gw-keys:aqua-azimuth and rendered into
+::    The agent's name is +cc-domain:aqua-azimuth, because jael routes
+::    a %writ to the agent named by the leading +mat of the pass, and
+::    the fixture dats commit to that domain.
+::
+::    The table is derived from +cc-keys:aqua-azimuth and rendered into
 ::    the agent's source below, so it cannot go stale against the
 ::    fixtures.
 ::
-++  gw-btc-agent
+++  pki-agent
   ^-  @t
   %-  crip
   %-  zing
-  :~  (trip gw-btc-agent-head)
+  :~  (trip pki-agent-head)
       "\0a"
-      ::  index 12 is ~sogmyr's slot in +comets, which ted/aqua/ames
-      ::  decodes as its fake %if lane
+      ::  index 12 is +cc-comet-ok's slot in +comets, which
+      ::  ted/aqua/ames decodes as its fake %if lane
       ::
-      (gw-oracle-row gw-comet-ok:az %ok 1 12)
-      (gw-oracle-row gw-comet-ok:az %ok 2 12)
+      (oracle-row cc-comet-ok:az %ok 1 12)
+      (oracle-row cc-comet-ok:az %ok 2 12)
       "  ==\0a"
-      (trip gw-btc-agent-body)
+      (trip pki-agent-body)
   ==
-::  +gw-oracle-row: one fixture verdict, as a line of agent source
+::  +oracle-row: one fixture verdict, as a line of agent source
 ::
-++  gw-oracle-row
+++  oracle-row
   |=  [who=@p which=?(%ok %fail) lyfe=life fef=@ud]
   ^-  tape
-  =/  =pass  pub:ex:(gw-keys:az which lyfe)
+  =/  =pass  pub:ex:(cc-keys:az which lyfe)
   ;:  weld
     "      ["  (scow %p who)
     " "        (scow %ud lyfe)
@@ -188,19 +196,19 @@
     "]\0a"
   ==
 ::
-++  gw-btc-agent-head
+++  pki-agent-head
   '''
   /+  default-agent
   ::  $oracle: the Aqua fixture verdict table, [ship life pass fief-index]
   ::
-  ::    Generated by +gw-btc-agent:ph-gw-util.  A pass not named here is
+  ::    Generated by +pki-agent:ph-cc-util.  A pass not named here is
   ::    rejected; this stands in for a chain the simulation does not have.
   ::
   =/  oracle=(list [who=@p lyfe=@ud pas=@ux fef=@ud])
     :~
   '''
 ::
-++  gw-btc-agent-body
+++  pki-agent-body
   '''
   =>  |%
       ::  +verify: the whole oracle.  ~ means "reject".
@@ -249,7 +257,7 @@
     ?:  (lien pending |=(old=[dom=@tas ship=@p pass=@] =(old req)))
       [~ this]
     =/  wen=@da  (add now.bowl ~s1)
-    ~&  [%gw-btc-test %queued ship.task]
+    ~&  [%test-pki %queued ship.task]
     :_  this(pending (weld pending ~[req]))
     ?:  ?=(~ pending)
       [%pass /verify %arvo %b %wait wen]~
@@ -269,7 +277,7 @@
       [~ this]
     =/  req  i.pending
     =/  res=(unit point:jael)  (verify oracle ship.req pass.req)
-    ~&  [%gw-btc-test %response ship.req ?=(^ res)]
+    ~&  [%test-pki %response ship.req ?=(^ res)]
     =/  fact=card:agent:gall
       [%give %fact ~[/writs] %writ-response !>([dom.req ship.req res])]
     :_  this(pending t.pending)

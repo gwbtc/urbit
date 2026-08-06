@@ -225,91 +225,103 @@
 ::    until a verdict.  Nothing in this kernel knows -- or may learn --
 ::    what a domain's data MEANS.
 ::
-::    So the two arms below are CHECKED-IN DATA, not a computation.
-::    .dat and .xtr are byte-for-byte outputs of the one authoritative
-::    %gw-btc codec, which lives in the groundwire desk as
-::    lib/gw-btc-pass.hoon.  Arvo treats them as the opaque atoms they
-::    are: it hands them to +gw-crub and never looks inside.
+::    So the arms below are CHECKED-IN DATA, not a computation.  The
+::    opaque halves of .dat and .xtr are byte-for-byte output of a real
+::    confidential-comet PKI implementation, which lives in its own desk
+::    and not here.  Arvo treats them as the atoms they are: it hands
+::    them to +cc-crub and never looks inside.
 ::
-::    TO REGENERATE, on a ship with the groundwire desk installed:
+::    TO REGENERATE, on a ship with such a desk installed, run that
+::    desk's fixture generator against +cc-domain below and paste the
+::    printed literals back here.  The generator is the only place the
+::    fixture inputs are written down; this file records only what the
+::    kernel itself can check.  (For the Groundwire desk that generator
+::    is +groundwire!aqua-fixtures, in gen/aqua-fixtures.hoon.)
 ::
-::        +groundwire!aqua-fixtures
+::  +cc-domain: the pki domain the fixture comets commit to
 ::
-::    (gen/aqua-fixtures.hoon in that desk; it prints every literal in
-::    this file, and is the only place the fixture inputs -- seeds 1
-::    and 2, spawn satpoints, start height, internal key, comet indices
-::    -- are written down).  Paste its output back here.  The desk's
-::    codec is pinned in turn by vectors/gw-kelvin-9.json, which
-::    Causeway's TypeScript and Python implementations also match.
+::    Base arvo has no domain of its own, so the fixtures name one that
+::    exists only for the simulation.  The fake verifier the scenarios
+::    install is a Gall agent of exactly this name, because jael routes
+::    a %writ to the agent named by the pass's leading +mat -- see
+::    +pki-agent:ph-cc-util, which must stay in step with this.
 ::
-::  +gw-comet-ok, +gw-comet-fail: the %gw-btc (kelvin-9) fixture comets
+++  cc-domain  %test-pki
+::  +cc-comet-ok, +cc-comet-fail: the two fixture comets
 ::
 ::    Both names are DERIVED from the fixture data by the kernel's own
 ::    generic cric, never chosen.  A confidential comet's @p is
 ::    (shaf %cfig) of its tweaked signing key and the tweak hashes
 ::    .dat, so any change to a fixture renames it.  Everything that
 ::    lists these comets (+comets below, +comets/+turfs in
-::    lib/ph/gw/util.hoon and ted/aqua/ames.hoon) refers to these arms
+::    lib/ph/cc/util.hoon and ted/aqua/ames.hoon) refers to these arms
 ::    rather than repeating a literal, because those lists are +zip'ped
 ::    with a strict equal-length check and a stale name crashes long
 ::    before any attestation logic runs.
 ::
 ::    Current values, for grepping:
-::      ok    ~sogmyr-ritwyx-ladfet-hidrup--polhep-hattyn-narful-podlug
-::      fail  ~wicdev-fablyr-radryp-hadtyp--nacfed-siptus-rilsep-rinpel
+::      ok    ~tirdyn-hocpes-ribtyl-fitfyr--winrus-dabdyl-nardev-dapryc
+::      fail  ~hodwyn-topmul-sogfun-hatfeb--riblug-nomnep-fidben-macfun
 ::
-++  gw-comet-ok    ^~(`@p`(gw-fig %ok))
-++  gw-comet-fail  ^~(`@p`(gw-fig %fail))
-::  +gw-fig: a fixture comet's derived name
+++  cc-comet-ok    ^~(`@p`(cc-fig %ok))
+++  cc-comet-fail  ^~(`@p`(cc-fig %fail))
+::  +cc-fig: a fixture comet's derived name
 ::
-++  gw-fig
+++  cc-fig
   |=  which=?(%ok %fail)
   ^-  @p
-  `@p`fig:ex:(gw-keys which 1)
-::  +gw-seed: a fixture comet's master seed (its entry in +comets)
+  `@p`fig:ex:(cc-keys which 1)
+::  +cc-seed: a fixture comet's master seed (its entry in +comets)
 ::
-++  gw-seed
+++  cc-seed
   |=  which=?(%ok %fail)
   ^-  @
   ?:(?=(%ok which) 1 2)
-::  +gw-dat: the immutable tweak data, as an opaque fixture atom
+::  +cc-dat: the immutable tweak data
 ::
-::    In the %gw-btc domain this is a +mat-tagged domain and kelvin
-::    followed by a hiding commitment to a spawn satpoint -- but that
-::    is the domain's business, not arvo's.  Here it is forty-odd bytes
-::    that ride the pass and fix the name; only the leading +mat is
-::    kernel business, and only ames reads it.
+::    A dat is a +mat-encoded pki domain followed by that domain's own
+::    data.  The leading +mat is the whole of the kernel's contract with
+::    a dat -- ames reads it to learn which agent to ask, and nothing in
+::    arvo reads any further -- so it is spelled out here, and the rest
+::    is one opaque fixture atom whose shape arvo does not describe.
 ::
-++  gw-dat
+++  cc-dat
+  |=  which=?(%ok %fail)
+  ^-  @
+  =/  tail=@  (cc-dat-tail which)
+  (can 0 ~[(mat cc-domain) [(met 0 tail) tail]])
+::  +cc-dat-tail: a fixture comet's domain data, as an opaque atom
+::
+++  cc-dat-tail
   |=  which=?(%ok %fail)
   ^-  @
   ?:  ?=(%ok which)
-    0x39f5.b92d.7973.d9b4.1950.de86.6970.c18e.faa8.cbc1.1bed.791d.e45f.
-    850b.9de6.3a32.4637.4622.d776.77c0
-  0x1c.874d.b2f1.5e5c.b31a.29dd.df28.41c0.9d6e.7b1d.44b5.3d7d.96a5.
-  f90d.ae69.1614.5cd2.4637.4622.d776.77c0
-::  +gw-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
+    0x7.3eb7.25af.2e7b.3683.2a1b.d0cd.2e18.31df.5519.7823.7daf.23bc.
+    8bf0.a173.bcc7.4648
+  0x390.e9b6.5e2b.cb96.6345.3bbb.e508.3813.adcf.63a8.96a7.afb2.d4bf.
+  21b5.cd22.c28b.9a48
+::  +cc-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
 ::
 ::    Excluded from the key tweak, so it may grow without renaming the
-::    comet -- +gw-fig is deliberately taken at life 1 and the life-2
-::    fixture below has the same @p.  In the %gw-btc domain it is a
-::    jammed custody log; arvo neither knows nor cares.
+::    comet -- +cc-fig is deliberately taken at life 1 and the life-2
+::    fixture below has the same @p.  In a real domain it is the
+::    refreshable attestation evidence; arvo neither knows nor cares.
 ::
 ::    The %fail fixture is broken deliberately and minimally: the
-::    groundwire generator gives it a spawn its .dat does not commit
-::    to, so a real %gw-btc verifier fails that check and only that
-::    check.  The Aqua oracle in lib/ph/gw/util.hoon cannot see a
-::    chain and does not repeat that check -- see its comment.
+::    generator gives it evidence its .dat does not commit to, so a
+::    real verifier fails that one check.  The Aqua oracle in
+::    lib/ph/cc/util.hoon has no chain to check anything against and
+::    does not repeat that check -- see its comment.
 ::
 ::    Only lives 1 and 2 exist: the scenarios boot at life 1 and the
 ::    rekey scenario advances to life 2.  Asking for more must crash
 ::    loudly rather than silently produce a pass no fixture describes.
 ::
-++  gw-xtr
+++  cc-xtr
   |=  [which=?(%ok %fail) lyfe=life]
   ^-  @
   ?:  ?=(%ok which)
-    ?+  lyfe  ~|([%no-gw-fixture-for-life which lyfe] !!)
+    ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
         %1
       0x17.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
       ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
@@ -328,7 +340,7 @@
       c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
       8000.ec05
     ==
-  ?+  lyfe  ~|([%no-gw-fixture-for-life which lyfe] !!)
+  ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
       %1
     0x534.96d1.1887.e452.a602.91f8.27be.5875.9949.986d.2dbc.e5f0.d20d.
     e40e.e254.6ba8.37fc.0175.1b63.999e.8167.486f.56df.7782.01cc.d3e0.
@@ -347,7 +359,7 @@
     c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
     8000.ec05
   ==
-::  +gw-sed: the 64-byte cric seed of a fixture comet at .lyfe
+::  +cc-sed: the 64-byte cric seed of a fixture comet at .lyfe
 ::
 ::    Suite C splits the seed into a signing half (bytes 0-31, which
 ::    fixes the @p through the tweak) and a messaging half (bytes
@@ -358,20 +370,20 @@
 ::    a different @p, so the life-2 self-attestation fingerprints to a
 ::    ship that is not the sender and the receiver correctly refuses it.
 ::
-++  gw-sed
+++  cc-sed
   |=  [which=?(%ok %fail) lyfe=life]
   ^-  @
-  =/  base  (shal 64 (gw-seed which))
+  =/  base  (shal 64 (cc-seed which))
   =/  sgn   (end 8 base)
   =/  cry   (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
   (can 3 ~[[32 sgn] [32 cry]])
-::  +gw-crub: activate a suite-%c core from an explicit 64-byte seed
+::  +cc-crub: activate a suite-%c core from an explicit 64-byte seed
 ::
 ::    +pit:nu:cric derives the whole seed by hashing one number, which
 ::    cannot express "same signing key, new messaging key".  This builds
 ::    the same $ring +pit would, with the seed supplied outright.
 ::
-++  gw-crub
+++  cc-crub
   |=  [sed=@ dat=@ xtr=@]
   %-  nol:nu:cric:crypto
   ^-  ring
@@ -384,13 +396,13 @@
       ?:  =(0 xtr)  ~
       [(met 0 xtr)^xtr ~]
   ==
-::  +gw-keys: a fixture comet's full suite-%c core at .lyfe
+::  +cc-keys: a fixture comet's full suite-%c core at .lyfe
 ::
-++  gw-keys
+++  cc-keys
   |=  [which=?(%ok %fail) lyfe=life]
-  %^  gw-crub  (gw-sed which lyfe)
-    (gw-dat which)
-  (gw-xtr which lyfe)
+  %^  cc-crub  (cc-sed which lyfe)
+    (cc-dat which)
+  (cc-xtr which lyfe)
 ::
 ++  get-keys
   |=  [who=@p lyfe=life]
@@ -398,8 +410,8 @@
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%b ~]
-  ?:  =(who gw-comet-ok)    (gw-keys %ok lyfe)
-  ?:  =(who gw-comet-fail)  (gw-keys %fail lyfe)
+  ?:  =(who cc-comet-ok)    (cc-keys %ok lyfe)
+  ?:  =(who cc-comet-fail)  (cc-keys %fail lyfe)
   ?.  =(lyfe 1)
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
@@ -438,9 +450,9 @@
         ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
         ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
         ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-        :: %gw-btc (kelvin 9) confidential identities, derived above
-        gw-comet-ok
-        gw-comet-fail
+        :: confidential (suite-%c) identities, derived above
+        cc-comet-ok
+        cc-comet-fail
     ==
   %+  zip
     ::  comet suites

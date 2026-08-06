@@ -1,11 +1,11 @@
-/+  gw-io=ph-gw-io
+/+  cc-io=ph-cc-io
 |=  arg=vase
 =/  m  (strand:rand ,vase)
 =/  core=?(%ames %mesa)  (fall !<((unit ?(%ames %mesa)) arg) %ames)
 ::
 =/  loud  %.y
-=/  tag  %gw-az-key-cycle
-=/  io  ~(. gw-io loud tag)
+=/  tag  %cc-az-key-cycle
+=/  io  ~(. cc-io loud tag)
 ::
 ::  Keep this legacy Azimuth key-cycle case on vanilla suite-B comets.
 ::  Suite-C async verification is covered by the attestation-* cases.
@@ -24,7 +24,7 @@
 ;<  ~  bind:m  (init-ship-core:io ~bud | core)
 ;<  ~  bind:m  (init-ship-core:io ~marbud | core)
 ::
-;<  ~  bind:m  (start-gw-comet:io comet-1 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-1 core onchain)
 ::
 ;<  ~  bind:m  (send-hi:io comet-1 ~bud)
 ;<  ~  bind:m  (send-hi:io ~marbud comet-1)
