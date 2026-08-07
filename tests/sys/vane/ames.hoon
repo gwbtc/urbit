@@ -358,6 +358,44 @@
     %lyfe  ``noun+!>(lyf)
   ==
 ::
+++  sein-roof
+  ::  a roof whose +sein answers from .sponsors, so a routing test can
+  ::  lay out a real sponsorship chain.  the fixtures' stub roof answers
+  ::  every scry with a `(list turf)`, which +sein reads as ~zod, and
+  ::  +send-blob-via only relays through a hop that sponsors itself.
+  ::  a ship absent from .sponsors sponsors itself.
+  ::
+  |=  sponsors=(map ship ship)
+  ^-  roof
+  |=  [lyc=gang pov=path vis=view bem=beam]
+  ^-  (unit (unit cage))
+  ?.  ?&  =(vis %j)
+          =(%sein q.bem)
+          ?=([@ ~] s.bem)
+      ==
+    ``noun+!>(*(list turf))
+  =/  who=ship  (slav %p i.s.bem)
+  ``noun+!>(`ship`(~(gut by sponsors) who who))
+::
+++  peer-route
+  ::  .her's route as ames holds it, ~ if we do not know .her
+  ::
+  |=  [vane=_nec her=ship]
+  ^-  (unit [direct=? =lane:ames])
+  =/  per  (~(get by peers.ames-state.vane) her)
+  ?.  ?=([~ %known *] per)  ~
+  route.u.per
+::
+++  send-lanes
+  ::  every lane a batch of moves fires a packet at
+  ::
+  |=  moves=(list move:ames)
+  ^-  (list lane:ames)
+  %+  turn  (skim moves is-move-send)
+  |=  =move:ames
+  ^-  lane:ames
+  lane:(move-to-packet move)
+::
 ++  attestation
   ::  a comet self-attestation as it goes on the wire
   ::
@@ -1413,5 +1451,142 @@
     %+  expect-eq
       !>  %.n
     !>  (~(has by peers.ames-state.nec) our-comet2)
+  ==
+::  A committed $fief must give a conventionally sponsored peer a route.
+::
+::    +sy-put-ship has always set route=[%& ship] when =(ship (sein
+::    ship)), so a galaxy -- and a comet whose point names itself
+::    sponsor -- has always resolved through the runtime, which looks a
+::    fief up the same way it looks up a galaxy's domain.  A comet under
+::    a star or under another comet kept route=~: +send-blob-via traced
+::    "no route to" and relayed every packet through the sponsor, while
+::    the address its holder committed to went unused.
+::
+++  test-fief-routes-a-sponsored-peer  ^-  tang
+  =/  fef=fief  [%if .192.168.7.7 31.337]
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-route') %b ~)
+  =/  =sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=`fef
+    ==
+  =.  rof.nec  (sein-roof (my [our-comet ~bud]~))
+  =^  moves   nec  (take nec /sybl ~[/ames] sign)
+  =^  moves2  nec
+    (call nec ~[/g/talk] %plea our-comet [%g /talk [%get %post]])
+  =/  lanes    (send-lanes moves2)
+  =/  bud-rot  (need (peer-route nec ~bud))
+  ;:  weld
+    ::  the fief is a route now, and indirect on purpose: publishing an
+    ::  address is not evidence of being at it today
+    ::
+    %+  expect-eq
+      !>  `[direct=%.n lane=`lane:ames`[%& our-comet]]
+    !>  (peer-route nec our-comet)
+    ::  a plea reaches the comet at its own address
+    ::
+    %+  expect-eq  !>(%.y)
+    !>  (lien lanes |=(=lane:ames =(lane [%& our-comet])))
+    ::  and still goes through the sponsor as well, so a fief that has
+    ::  gone stale on chain cannot black-hole the peer
+    ::
+    %+  expect-eq  !>(%.y)
+    !>  (lien lanes |=(=lane:ames =(lane lane.bud-rot)))
+  ==
+::  Without a fief, nothing changes: sponsor relay is the normal path
+::  for every comet and must not regress.
+::
+++  test-no-fief-still-relays-via-sponsor  ^-  tang
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-route-none') %b ~)
+  =/  =sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet2
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =.  rof.nec  (sein-roof (my [our-comet2 ~bud]~))
+  =^  moves   nec  (take nec /sybl ~[/ames] sign)
+  =^  moves2  nec
+    (call nec ~[/g/talk] %plea our-comet2 [%g /talk [%get %post]])
+  =/  lanes    (send-lanes moves2)
+  =/  bud-rot  (need (peer-route nec ~bud))
+  ;:  weld
+    (expect-eq !>(~) !>((peer-route nec our-comet2)))
+    ::  the packet goes to the sponsor, and only there
+    ::
+    %+  expect-eq  !>(%.y)
+    !>  (lien lanes |=(=lane:ames =(lane lane.bud-rot)))
+    %+  expect-eq  !>(%.n)
+    !>  (lien lanes |=(=lane:ames =(lane [%& our-comet2])))
+  ==
+::  A ship that sponsors itself keeps the direct route it already had,
+::  fief or no fief.  This is the case that always worked, and the case
+::  that made the gap hard to see live.
+::
+++  test-fief-leaves-a-self-sponsor-direct  ^-  tang
+  =/  fef=fief  [%turf ~[~['org' 'urbit']] 13.337]
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-self') %b ~)
+  =/  with=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  ~marzod
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~marzod
+        fief=`fef
+    ==
+  =/  sans=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  ~marzod
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~marzod
+        fief=~
+    ==
+  ::  an empty map: every ship sponsors itself
+  ::
+  =.  rof.nec  (sein-roof ~)
+  =/  want  `[direct=%.y lane=`lane:ames`[%& ~marzod]]
+  ;:  weld
+    %+  expect-eq  !>(want)
+    !>  (peer-route +:(take nec /sybl ~[/ames] with) ~marzod)
+    %+  expect-eq  !>(want)
+    !>  (peer-route +:(take nec /sybl ~[/ames] sans) ~marzod)
+  ==
+::  A fief that arrives on its own -- the incremental [%diff @ %fief *]
+::  a public scanner publishes -- must route a peer we already know.
+::  +sy-put-ship only sees the whole points.
+::
+++  test-fief-diff-routes-a-known-peer  ^-  tang
+  =/  fef=fief  [%if .10.0.0.9 12.345]
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'fief-diff') %b ~)
+  =/  =sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =.  rof.nec  (sein-roof (my [our-comet ~bud]~))
+  =^  moves   nec  (take nec /sybl ~[/ames] sign)
+  =/  before  (peer-route nec our-comet)
+  =^  moves2  nec
+    %^  take  nec  /public-keys
+    [~[/ames] %jael %public-keys %diff our-comet %fief ~ `fef]
+  =/  ms=(list move:ames)  moves2
+  ;:  weld
+    (expect-eq !>(~) !>(before))
+    %+  expect-eq
+      !>  `[direct=%.n lane=`lane:ames`[%& our-comet]]
+    !>  (peer-route nec our-comet)
+    ::  and the runtime still learns the address itself
+    ::
+    %+  expect-eq  !>(%.y)
+    !>  (lien ms |=(=move:ames ?=([* %give %fief *] move)))
   ==
 --

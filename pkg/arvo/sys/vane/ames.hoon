@@ -4291,6 +4291,32 @@
       :~  4^p.lane
           2^q.lane
       ==
+    ::  +fief-route: advisory route to the address a peer has published
+    ::
+    ::    A $fief is a transport address its holder committed to in a
+    ::    namespace jael trusts.  We hand it to the runtime as a
+    ::    [%& ship] lane and let the runtime resolve it, exactly as it
+    ::    resolves a galaxy's: it already keeps the published address
+    ::    (ames pushes every fief with %give %fief) and already knows
+    ::    how to turn a domain name into an address, which arvo does
+    ::    not.  A concrete lane would also go stale the moment the
+    ::    holder republished; [%& ship] follows the fief for free.
+    ::
+    ::    Indirect on purpose.  Publishing an address is not evidence
+    ::    of being at it now -- the commitment may be months old, and
+    ::    the runtime silently drops a [%& ship] it cannot resolve --
+    ::    so .direct is %.n and +send-blob-via keeps relaying through
+    ::    the sponsor as well.  Hearing from the peer replaces this
+    ::    with the lane we heard, direct.
+    ::
+    ::    A route learned from a packet always wins; we only fill a hole.
+    ::
+    ++  fief-route
+      |=  [her=ship fef=(unit fief) route=(unit [direct=? =lane])]
+      ^-  (unit [direct=? =lane])
+      ?^  route  route
+      ?~  fef    ~
+      `[direct=%.n lane=[%& her]]
     ::
     ++  update-peer-route
       |=  [peer=ship =peer-state]
@@ -11539,9 +11565,20 @@
           ++  on-publ-fief
             |=  [=ship to=(unit fief)]
             ^+  sy-core
-            ?~  unix-duct.ames-state
-              sy-core
             ?~  to
+              sy-core
+            ::  the fief a whole point carries is routed by +sy-put-ship;
+            ::  one that arrives on its own has to be routed here, or a
+            ::  peer we already know stays reachable only through its
+            ::  sponsor.  see +fief-route.
+            ::
+            =.  peers.ames-state
+              =/  per  (~(get by peers.ames-state) ship)
+              ?.  ?=([~ %known *] per)
+                peers.ames-state
+              %+  ~(put by peers.ames-state)  ship
+              known/+.u.per(route (fief-route ship to route.u.per))
+            ?~  unix-duct.ames-state
               sy-core
             (sy-emit [unix-duct.ames-state %give %fief (my [ship to]~)])
           ::  +on-publ-rekey: handle new key for peer
@@ -12539,6 +12576,7 @@
               (~(put by chums.ames-state) ship known/+.peer)
             [%mesa known/+.peer]^sy-core
           ::
+          =.  route.peer  (fief-route ship fief.point route.peer)
           =?  route.peer  =(ship (^^sein:title rof /ames our now ship))
             `[direct=%.y lane=[%& ship]]
           =.  peers.ames-state
