@@ -11326,12 +11326,14 @@
         ::    comet self-attested to us.
         ::
         ::    %full: the domain agent verified the comet's ownership
-        ::    chain and jael now holds its point.  funnel it into
-        ::    +sy-publ exactly like a %public-keys %full gift: the
-        ::    alien is promoted and its pending messages drain.
+        ::    chain and jael now holds its point.  lift any snub the
+        ::    identity earned from an earlier %fail, then funnel it
+        ::    into +sy-publ exactly like a %public-keys %full gift:
+        ::    the alien is promoted and its pending messages drain.
         ::    %fail: the attestation failed on-chain verification.
         ::    snub the claimed identity and drop its pending requests;
-        ::    a fraudulent attestation is not retried.
+        ::    a fraudulent attestation is not retried.  the snub does
+        ::    not expire; only a later %full lifts it.
         ::    %lost: no live agent is registered for the pki domain.
         ::    stubbed out as a no-op for now.
         ::    %stale: the ship's verified attestation went out of date
@@ -11348,8 +11350,24 @@
           ^+  sy-core
           ?-    -.writ-result
               %full
+            =*  her  ship.writ-result
+            ::  a verdict admits the ship it vindicates: lift any snub
+            ::  .her earned from an earlier %fail.  this is the exact
+            ::  inverse of that branch's additive snub and runs through
+            ::  the same +sy-snub, so it respects the list's mode -- a
+            ::  %deny list needs .her deleted, an %allow list needs her
+            ::  added -- and leaves the rest of the list alone.  in
+            ::  %deny mode, where a snub is set membership, a verdict
+            ::  for a ship we never snubbed is a no-op.
+            ::
+            ::  a snub does not expire.  expiry would need a per-ship
+            ::  timer, and durable state an attacker can make us
+            ::  allocate is a resource-exhaustion vector; so a verdict
+            ::  actually arriving is the only thing that clears one.
+            ::
+            =.  sy-core  (sy-snub %deny %del ~[her])
             %+  sy-publ  /sybl
-            [%full (my [ship.writ-result point.writ-result]~)]
+            [%full (my [her point.writ-result]~)]
           ::
               %fail
             =*  her  ship.writ-result
@@ -11358,13 +11376,10 @@
                     ships.bug.ames-state
                     |.("attestation writ failed; snubbing")
                 ==
-            ::  additive snub: don't clobber the rest of the blocklist
+            ::  additive snub: don't clobber the rest of the blocklist.
+            ::  the mirror of the %full branch's un-snub, same machinery
             ::
-            =.  ships.snub.ames-state
-              ?-  form.snub.ames-state
-                %deny   (~(put in ships.snub.ames-state) her)
-                %allow  (~(del in ships.snub.ames-state) her)
-              ==
+            =.  sy-core  (sy-snub %deny %add ~[her])
             ::  drop pending requests from this identity; only alien
             ::  state is dropped, an already-known peer is untouched
             ::
@@ -11964,7 +11979,8 @@
         ::    admitted (%allow) and %del undoes that, whichever mode
         ::    the list is actually in.  jael's pki-domain suspension
         ::    (%gost/%ghul/%bane) uses the editing forms so it never
-        ::    clobbers a manually curated list.
+        ::    clobbers a manually curated list, and so do the %fail and
+        ::    %full arms of +sy-sybl, which are one another's inverse.
         ::
         ++  sy-snub
           |=  [form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]

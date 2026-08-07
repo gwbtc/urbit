@@ -1169,6 +1169,109 @@
     (expect-eq !>([%deny (silt ~[~rus])]) !>(after-add))
     (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
   ==
+::  a positive verdict lifts a snub (+sy-sybl %full).
+::
+::    %fail snubs additively and %stale never snubs, but %full used to
+::    leave .ships.snub alone entirely, so a snub was terminal by
+::    construction rather than by policy: a snub drops the peer's
+::    incoming packets, and its attestation packet is what earns the
+::    verdict that would clear it.  A ship that does reach a positive
+::    verdict must be admitted.  The un-snub is the exact inverse of
+::    the %fail snub, through the same +sy-snub, and it never expires
+::    on its own -- no timer, no sweep.
+::
+++  test-sybl-full-unsnubs  ^-  tang
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'unsnub-peer') %b ~)
+  =/  verdict=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  ::  a manually curated deny list that also holds our-comet
+  ::
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev our-comet]])
+  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  ;:  weld
+    ::  our-comet is admitted; the manual entry is not disturbed
+    ::
+    (expect-eq !>([%deny (silt ~[~dev])]) !>(snub.ames-state.nec))
+    ::  and the verified point was applied: the ship is now %known
+    ::
+    %+  expect-eq  !>(&)
+    !>  ?|  ?=([~ %known *] (~(get by peers.ames-state.nec) our-comet))
+            ?=([~ %known *] (~(get by chums.ames-state.nec) our-comet))
+        ==
+  ==
+::
+++  test-sybl-fail-then-full-round-trips  ^-  tang
+  ::  the live sequence: a comet is snubbed by a bad verdict, then an
+  ::  operator re-pokes the writ and it comes back good.
+  ::
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'roundtrip-peer') %b ~)
+  =/  verdict=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet2
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =^  m1  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet2])
+  =/  after-fail  snub.ames-state.nec
+  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  ;:  weld
+    (expect-eq !>([%deny (silt ~[our-comet2])]) !>(after-fail))
+    (expect-eq !>([%deny `(set @p)`~]) !>(snub.ames-state.nec))
+  ==
+::
+++  test-sybl-full-admits-on-an-allow-list  ^-  tang
+  ::  on an %allow list a snub is absence, so the verdict must ADD.
+  ::
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'allow-peer') %b ~)
+  =/  verdict=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =^  m1  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev]])
+  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  (expect-eq !>([%allow (silt ~[~dev our-comet])]) !>(snub.ames-state.nec))
+::
+++  test-sybl-full-leaves-an-unsnubbed-ship-alone  ^-  tang
+  ::  a verdict for a ship we never snubbed must not edit the list.
+  ::
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'quiet-peer') %b ~)
+  =/  verdict=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  our-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=1 pass]]])
+        sponsor=`~bud
+        fief=~
+    ==
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev ~rus]])
+  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  (expect-eq !>([%deny (silt ~[~dev ~rus])]) !>(snub.ames-state.nec))
+::
+++  test-sybl-fail-still-snubs  ^-  tang
+  ::  the un-snub must not have cost us the snub.  additively, in both
+  ::  modes: a %deny list gains the ship, an %allow list loses it.
+  ::
+  =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev]])
+  =^  m2  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet])
+  =/  denied  snub.ames-state.nec
+  =^  m3  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev our-comet]])
+  =^  m4  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet])
+  ;:  weld
+    (expect-eq !>([%deny (silt ~[~dev our-comet])]) !>(denied))
+    (expect-eq !>([%allow (silt ~[~dev])]) !>(snub.ames-state.nec))
+  ==
 ::  %stale writ-result (decisions-addendum section 3): a %known peer
 ::  whose on-chain attestation goes stale is DEMOTED to a fresh %alien
 ::  (empty agenda), never deleted, and nothing is snubbed.  an already
