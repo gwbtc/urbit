@@ -224,8 +224,18 @@ jobs:
       #
       # Unlike the desks above, these two get no desk.ship: %node and
       # %tcp-sidecar are not published by DESK_DISTER, so pointing them at
-      # it would leave the desks waiting on an OTA that never comes. Same
-      # reasoning as %nostrill below.
+      # it would open a sync that can never complete -- one failed strand
+      # and one "cannot reach the sync source" slog per desk, forever, for
+      # an update that is never coming. Same reasoning as %nostrill below.
+      #
+      # It is NOT that the desks would fail to start. A desk baked into the
+      # pill is zested %live by +on-init in lib/hood/kiln.hoon whether or
+      # not it carries a desk.ship; the sync is a second channel, not a
+      # gate. Measured on a fresh comet from groundwire-daily-2026.8.7:
+      # %groundwire carries a desk.ship pointing at a distribution ship the
+      # comet cannot reach, and all three of its agents were live. An
+      # earlier version of this comment claimed the opposite and cost an
+      # afternoon; the decision it justifies is still right.
 
       - name: Populate %node desk
         run: |
