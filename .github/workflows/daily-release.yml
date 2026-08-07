@@ -17,6 +17,13 @@ env:
   # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
   # Keep this in sync with groundwire-build.yml.
   TCP_SIDECAR_REF: c362083af68ff6e7b30b8236d7e1659d800d3e9d
+  # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
+  # a README, so this is pinned to a full SHA rather than a branch name, same
+  # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
+  # read the diff on develop, then paste the new 40-char SHA here
+  # (`git ls-remote https://github.com/gwbtc/node develop`).
+  # Keep this in sync with groundwire-build.yml.
+  NODE_REF: 3cc303128f7dab111c15eb4f945effb51492909f
   URBIT_MCP_BRANCH: main
   NOSTRILL_BRANCH: bm/zig
   VITRIOL_BRANCH: master
@@ -106,6 +113,32 @@ jobs:
           path: gwbtc-landscape
           token: ${{ secrets.GH_PAT || github.token }}
 
+      # gwbtc/node and gwbtc/tcp-sidecar are both public, so neither takes a
+      # token. That is deliberate, and matches build-sidecar: it keeps the
+      # build reproducible outside this org.
+      #
+      # build-sidecar already checks out gwbtc/tcp-sidecar, but it is a
+      # separate job running a three-OS matrix, each with its own workspace,
+      # so nothing there is reachable from here. Handing the desk over would
+      # mean an upload-artifact/download-artifact round trip for ~25 small
+      # text files; a second checkout of the same pinned SHA is cheaper and
+      # keeps the jobs independent. Both read TCP_SIDECAR_REF, so the desk
+      # baked into the pill and the binary shipped in the tarball are always
+      # the same revision.
+      - name: Checkout gwbtc/node
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/node
+          ref: ${{ env.NODE_REF }}
+          path: gwbtc-node
+
+      - name: Checkout gwbtc/tcp-sidecar (desk)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/tcp-sidecar
+          ref: ${{ env.TCP_SIDECAR_REF }}
+          path: gwbtc-tcp-sidecar
+
       - name: Download pill builder pill
         run: |
           curl -fL -o ./gw-pill-builder.pill \
@@ -179,6 +212,169 @@ jobs:
           touch ./zod/spv-wallet/desk.ship
           echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
+
+      # -- The light-client stack: %node and %tcp-sidecar --
+      #
+      # %node is the Bitcoin light client (agent %bitcoin-client); %tcp-sidecar
+      # is the agent (%tcp) that talks to the tcp-sidecar process built by
+      # build-sidecar. Together they are the only way a ship reaches Bitcoin.
+      # Baking them into the pill is what lets a freshly booted ship sync with
+      # no post-boot desk installs; before this, every operator installed both
+      # by hand.
+      #
+      # Unlike the desks above, these two get no desk.ship: %node and
+      # %tcp-sidecar are not published by DESK_DISTER, so pointing them at
+      # it would leave the desks waiting on an OTA that never comes. Same
+      # reasoning as %nostrill below.
+
+      - name: Populate %node desk
+        run: |
+          ./automation/desk-create.sh node "$CONN_SOCK"
+          ./automation/desk-mount.sh node ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh node ./zod
+          cp -rL gwbtc-node/desk/* ./zod/node/
+
+          # ======================== TEMPORARY ========================
+          # Two patches so gwbtc/node@NODE_REF installs on a kelvin 408
+          # kernel. Both edit only the copy in Clay's mount, never the
+          # checkout, so `gwbtc-node` stays exactly what NODE_REF names.
+          # Delete each one as node fixes it upstream; see the report in
+          # PR #67 for the asks. This is the same in-CI patching that
+          # build-extras does to comet-miner with sed.
+          #
+          # 1. Kelvin. node's desk/sys.kelvin reads [%zuse 409]; this
+          #    kernel is 408, so the desk will not install as published.
+          #    Widen the weft to accept both. gwbtc/tcp-sidecar's desk
+          #    already ships 410/409/408 for exactly this reason, which is
+          #    both the precedent and the upstream ask.
+          #    DELETE ONCE node's sys.kelvin lists 408.
+          echo '[%zuse 409]'  > ./zod/node/sys.kelvin
+          echo '[%zuse 408]' >> ./zod/node/sys.kelvin
+
+          # 2. app/bitcoin-client.hoon passes a bare `[%block-filter]` to
+          #    ~(del in ...) at two call sites. `[a]` is just `a`, so that
+          #    is the atom %block-filter, not the cell [%block-filter ~]
+          #    the set holds. +del:in casts its argument to the set's item
+          #    type, the atom does not nest under the cell, and Clay
+          #    nest-fails -- which crashes the %zeal that makes the desk
+          #    live, i.e. it kills the boot, not just the agent. Verified
+          #    against a fake ~zod on this kernel.
+          #    DELETE ONCE node writes [%block-filter ~] at both sites.
+          #    No -i.bak: a stray .bak in the mount has no mark and would
+          #    fail the commit.
+          BAD=$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)
+          echo "bare [%block-filter] call sites patched: ${BAD}"
+          sed -i 's/\[%block-filter\])/[%block-filter ~])/g' ./zod/node/app/bitcoin-client.hoon
+          # ====================== END TEMPORARY ======================
+
+          ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
+
+      - name: Populate %tcp-sidecar desk
+        run: |
+          # No kelvin patch here: the sidecar desk already publishes a
+          # multi-kelvin sys.kelvin ([%zuse 410]/[409]/[408]).
+          ./automation/desk-create.sh tcp-sidecar "$CONN_SOCK"
+          ./automation/desk-mount.sh tcp-sidecar ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh tcp-sidecar ./zod
+          cp -rL gwbtc-tcp-sidecar/desk/* ./zod/tcp-sidecar/
+          ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
+
+      # The filesystem commits above are the primary path and do land both
+      # files -- but only as long as Clay's mount sync behaves, and the "Key
+      # gotchas" note at the top of this job records that it does not always.
+      # A dropped desk.bill is silent: the pill still boots, the desk is still
+      # there, and the agent simply never starts. So write both files straight
+      # to Clay via %info, then read them back and fail the build if either is
+      # missing. %mut with identical content is a no-op, so this is safe when
+      # the commit already worked.
+      #
+      # The agent lists are parsed out of each repo's own desk.bill rather
+      # than hardcoded here, so adding an agent upstream cannot leave this
+      # workflow silently pinning a stale list.
+      - name: Write %node and %tcp-sidecar desk.bill and kelvin to Clay
+        run: |
+          source ./automation/fyrd.sh
+
+          bill_from() {
+            local duz
+            duz=$(grep -o '%[a-z][a-z0-9-]*' "$1" | tr '\n' ' ' | sed 's/ *$//')
+            if [ -z "$duz" ]; then
+              echo "ERROR: parsed no agents out of $1" >&2
+              return 1
+            fi
+            echo "~[${duz}]"
+          }
+
+          NODE_BILL=$(bill_from gwbtc-node/desk/desk.bill)
+          SIDECAR_BILL=$(bill_from gwbtc-tcp-sidecar/desk/desk.bill)
+          echo "%node desk.bill:        ${NODE_BILL}"
+          echo "%tcp-sidecar desk.bill: ${SIDECAR_BILL}"
+
+          # %node carries the widened weft; %tcp-sidecar keeps its published
+          # 410/409/408.
+          write_desk() {
+            local desk="$1" bill="$2" kelvin="$3"
+            read -r -d '' INFO_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /fix-desk
+                    %arvo  %c
+                    %info  %${desk}  %&
+                    :~  [/desk/bill %mut %bill !>(\`(list dude:gall)\`${bill})]
+                        [/sys/kelvin %mut %kelvin !>(\`waft:clay\`[[%1 ~] (sy ${kelvin})])]
+                    ==
+                ==
+              (pure:m !>('written'))
+              '''
+          ==
+          HOON
+            echo "Writing %${desk} desk.bill and sys.kelvin to Clay..."
+            send_fyrd "$INFO_FYRD" > /dev/null
+          }
+
+          write_desk node        "$NODE_BILL"    '~[[%zuse 409] [%zuse 408]]'
+          write_desk tcp-sidecar "$SIDECAR_BILL" '~[[%zuse 410] [%zuse 409] [%zuse 408]]'
+          sleep 5
+
+      - name: Verify %node and %tcp-sidecar landed in Clay
+        run: |
+          source ./automation/fyrd.sh
+          FAILED=0
+          for desk in node tcp-sidecar; do
+            read -r -d '' SCRY_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  bil  .^((list dude:gall) %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
+              =/  kel  .^(waft:clay %cx /(scot %p our)/${desk}/(scot %da now)/sys/kelvin)
+              (pure:m !>((crip (noah !>([bil ~(tap in (waft-to-wefts:clay kel))])))))
+              '''
+          ==
+          HOON
+            RESULT=$(send_fyrd "$SCRY_FYRD" 2>/dev/null)
+            echo "%${desk}: ${RESULT}"
+            if ! echo "$RESULT" | grep -q 'num=408'; then
+              echo "ERROR: %${desk} sys.kelvin does not accept 408"
+              FAILED=1
+            fi
+            if ! echo "$RESULT" | grep -q '\[~\[%'; then
+              echo "ERROR: %${desk} desk.bill is empty; its agents would never start"
+              FAILED=1
+            fi
+          done
+          [ "$FAILED" -eq 0 ] || exit 1
+          echo "%node and %tcp-sidecar are both installable on this kernel."
 
       - name: Set up Zig 0.15.2
         uses: mlugg/setup-zig@v2
@@ -258,6 +454,8 @@ jobs:
               =/  dez=(list [desk path])
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+                    [%node /(scot %p our)/node/(scot %da now)]
+                    [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                     [%nostrill /(scot %p our)/nostrill/(scot %da now)]
