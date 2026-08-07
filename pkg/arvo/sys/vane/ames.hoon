@@ -14105,6 +14105,32 @@
         ::
             %page
           =*  her  her.name.pact
+          ::  a snub is permanent, and it holds on every transport.
+          ::
+          ::    +pe-hear drops everything from a snubbed sender before it
+          ::    classifies the packet.  this is that gate for the %mesa
+          ::    side, which had none: a snubbed comet could re-attest over
+          ::    %page, reach +al-take-proof, earn a %full from its domain
+          ::    verifier and be readmitted -- the one way back in that the
+          ::    snub is supposed to deny it.  (a %full still lifts the snub
+          ::    in +sy-sybl; after this that is reachable only by an
+          ::    operator re-poking a %writ, which is the intent.)
+          ::
+          ::    keyed on .her.name -- the ship the page is published by,
+          ::    and the ship +al-take-proof would attest.  the %poke branch
+          ::    keys its own gate on .her-pok, the same ship by the other
+          ::    name; neither keys on the relay, since .hop says nothing
+          ::    about who signed the contents.
+          ::
+          ::    this sits above the %known chum below as well, not just the
+          ::    alien attestation path: a ship whose packets we refuse on
+          ::    |ames is a ship whose namespace data we refuse here.
+          ::
+          ?:  .=  =(%deny form.snub.ames-state)
+              (~(has in ships.snub.ames-state) her)
+            %-  %+  %*(ev-tace ev-core her her)  rcv.veb.bug.ames-state
+                |.("snubbed")
+            `ames-state
           =/  chum-state  (find-peer her)
           ?.  ?=([%mesa *] chum-state)
             %-  %+  %*(ev-tace ev-core her her)  odd.veb.bug.ames-state

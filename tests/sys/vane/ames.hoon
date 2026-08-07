@@ -70,6 +70,28 @@
 =.  saf.ames-state.comet2   saf:ex:crypto-core
 =.  ring.ames-state.comet2  sec:ex:crypto-core
 =.  pass.ames-state.comet2  pub:ex:crypto-core
+::  a confidential (suite-%c) comet.
+::
+::    +al-take-proof hands a suite-%c attestation to jael as a %writ
+::    rather than registering it locally, so the %writ is the visible
+::    sign that a %page reached it.  the tweak's .dat is where
+::    +pass-pki-dom reads the committed domain from: a +mat-encoded
+::    @tas, which +pit:nu mats a second time on the way in.
+::
+=/  cc-core  (pit:nu:cric:crypto 512 (shaz 'cc-comet') %c q:(mat %gw-btc))
+=/  cc-comet  `@p`fig:ex:cc-core
+=/  cc  ^$:(%*($ ames ahoy-on %.n, +< cc-comet))
+=.  now.cc        ~1111.1.1
+=.  eny.cc        `@uvJ`0xfeed.face
+=.  life.ames-state.cc  1
+=.  rift.ames-state.cc  0
+=.  rof.cc  |=(* ``[%noun !>(*(list turf))])
+=.  saf.ames-state.cc   saf:ex:cc-core
+=.  ring.ames-state.cc  sec:ex:cc-core
+=.  pass.ames-state.cc  pub:ex:cc-core
+::
+=/  cc-nec-sym
+  (derive-symmetric-key:ames pub.saf.ames-state.nec sek.saf.ames-state.cc)
 ::
 =/  nec-sym
   (derive-symmetric-key:ames pub.saf.ames-state.bud sek.saf.ames-state.nec)
@@ -190,6 +212,27 @@
 =.  peers.ames-state.bud
   %+  ~(put by peers.ames-state.bud)  our-comet
   [%alien *alien-agenda:ames]
+::  .cc knows ~nec, so +co-make-page will serve it a page; ~nec holds
+::  .cc-comet as an alien chum, which is the state +pe-heer's %page
+::  branch routes to +al-take-proof.
+::
+=.  chums.ames-state.cc
+  %+  ~(put by chums.ames-state.cc)  ~nec
+  =|  =fren-state:ames
+  =.  -.fren-state
+    :*  symmetric-key=cc-nec-sym
+        life=2
+        rift=0
+        [public-keys=pub.saf pass=pass]:ames-state.nec
+        sponsor=~nec
+        fief=~
+    ==
+  =.  lane.fren-state  `[hop=0 `lane:pact:ames``@`~nec]
+  [%known fren-state]
+::
+=.  chums.ames-state.nec
+  %+  ~(put by chums.ames-state.nec)  cc-comet
+  [%alien *ovni-state:ames]
 ::
 =.  chums.ames-state.comet
   %+  ~(put by chums.ames-state.comet)  ~bud
@@ -210,12 +253,14 @@
 =>  .(bud +:(call:(bud) ~[//unix] ~ %born ~))
 =>  .(comet +:(call:(comet) ~[//unix] ~ %born ~))
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %born ~))
+=>  .(cc +:(call:(cc) ~[//unix] ~ %born ~))
 ::  |ames as the default network core
 ::
 =>  .(nec +:(call:(nec) ~[//unix] ~ %load %ames))
 =>  .(bud +:(call:(bud) ~[//unix] ~ %load %ames))
 =>  .(comet +:(call:(comet) ~[//unix] ~ %load %ames))
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %load %ames))
+=>  .(cc +:(call:(cc) ~[//unix] ~ %load %ames))
 ::  helper core
 ::
 =>
@@ -284,6 +329,19 @@
   |=  =move:ames
   ^-  ?
   ?=([%pass ^ %g %plea *] card.move)
+::
+++  is-move-writ
+  ::  the attestation +al-take-proof forwards to jael for a suite-%c
+  ::  comet it does not already know.
+  ::
+  |=  =move:ames
+  ^-  ?
+  ?=([%pass [%writ ~] %j %writ *] card.move)
+::
+++  count-writs
+  |=  moves=(list move:ames)
+  ^-  @ud
+  (lent (skim moves is-move-writ))
 ::
 ++  snag-packet
   |=  [index=@ud moves=(list move:ames)]
@@ -470,6 +528,43 @@
   =/  vane-core  (vane(now `@da`(add ~s1 now.vane)))
   ::
   (take:vane-core wire duct ~ sign)
+::
+++  cc-proof-push
+  ::  the %page .cc pushes when ~nec peeks for its self-attestation:
+  ::  a real signed suite-%c proof, built by the vane that signs it
+  ::  rather than assembled by hand, so the receiver's checks in
+  ::  +al-take-proof all have something genuine to verify.
+  ::
+  ^-  [lane:pact:ames blob:ames]
+  =/  proof-path=path
+    /a/x/1//pawn/proof/1/[(scot %p ~nec)]/[(scot %ud 2)]
+  ::  the two scries %mage makes outside the vane.
+  ::
+  ::    +get-sponsor asks jael who sponsors the recipient.  the
+  ::    fixtures' stub roof answers every scry with a (list turf),
+  ::    which it reads as an empty (list ship) and +rear bails on.
+  ::
+  ::    +peek-publ fetches the page's contents back through %ames as
+  ::    an ordinary %ax scry, and signs what comes back.  on a live
+  ::    ship that lands in +peek-pawn; a vane gate in a test has no
+  ::    arvo under it to route through, so answer with the
+  ::    $open-packet +peek-pawn would have built.
+  ::
+  =/  cc-roof=roof
+    =/  =open-packet:ames
+      [pass.ames-state.cc cc-comet 1 ~nec 2]
+    |=  [lyc=gang pov=path vis=view bem=beam]
+    ^-  (unit (unit cage))
+    ?:  &(=(vis %j) =(%saxo q.bem))
+      ``noun+!>(`(list ship)`~[~nec])
+    ?:  ?=([%pawn %proof *] s.bem)
+      ``[%open-packet !>(open-packet)]
+    [~ ~]
+  ::  %mage only answers a duct from %ames itself
+  ::
+  =^  moves  cc
+    (call cc(rof cc-roof) ~[/ames] [%mage [%publ 1] ~nec proof-path])
+  (snag-push 0 moves)
 --
 ::  test core
 ::
@@ -1555,6 +1650,65 @@
       !>  %.n
     !>  (~(has by peers.ames-state.nec) our-comet2)
   ==
+::  A snub holds on |mesa too, and only on the ship it names.
+::
+::    +pe-hear tests .ships.snub the moment it has a $shot, before it
+::    classifies anything, so nothing from a snubbed sender reaches the
+::    |ames receive path.  +pe-heer's %page branch had no such test:
+::    a snubbed comet could re-attest over |mesa, reach +al-take-proof,
+::    earn a %full from its domain verifier and be readmitted -- the
+::    one route back in that a permanent snub is supposed to deny.
+::
+::    The regression the gate risks is the exact opposite, and it is
+::    worse: a %page from an UNSNUBBED alien is the whole comet
+::    onboarding path, so first contact breaks if the gate is keyed on
+::    the wrong ship or placed above the wrong branch.  Both verdicts
+::    are asserted below, in both modes -- the test is mode-sensitive
+::    because the gate is: on a %deny list a snub is membership in
+::    .ships.snub, on an %allow list it is absence from it.
+::
+++  test-heer-page-from-snubbed-comet-is-dropped  ^-  tang
+  =^  m0  nec  (call nec ~[//unix] [%snub %deny %set ~[cc-comet]])
+  =^  moves  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    ::  dropped outright: no writ, and nothing else either
+    ::
+    %+  expect-eq  !>(0)  !>((count-writs moves))
+    %+  expect-eq  !>(0)  !>((lent moves))
+    ::  and it was not promoted behind the gate's back
+    ::
+    %+  expect-eq
+      !>  %.n
+    !>  ?=([~ %known *] (~(get by chums.ames-state.nec) cc-comet))
+  ==
+::
+++  test-heer-page-from-unsnubbed-comet-attests  ^-  tang
+  ::  first contact, unimpeded: the gate must not cost us this.
+  ::
+  =^  moves  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+  %+  expect-eq  !>(1)  !>((count-writs moves))
+::
+++  test-heer-page-snubbed-on-an-allow-list  ^-  tang
+  ::  .cc-comet is absent from an %allow list, which is what a snub
+  ::  looks like in that mode.
+  ::
+  =^  m0  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev]])
+  =^  moves  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    %+  expect-eq  !>(0)  !>((count-writs moves))
+    %+  expect-eq  !>(0)  !>((lent moves))
+  ==
+::
+++  test-heer-page-allowed-on-an-allow-list  ^-  tang
+  ::  ... and present on one is not a snub, so the attestation lands.
+  ::
+  =^  m0  nec  (call nec ~[//unix] [%snub %allow %set ~[cc-comet]])
+  =^  moves  nec
+    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+  %+  expect-eq  !>(1)  !>((count-writs moves))
 ::  A committed $fief must give a conventionally sponsored peer a route.
 ::
 ::    +sy-put-ship has always set route=[%& ship] when =(ship (sein
