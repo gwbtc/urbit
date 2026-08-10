@@ -83,6 +83,22 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
+      # A guard nobody has watched fire is not a guard.  desk-commit.sh now
+      # refuses a desk containing a file extension the desk has no
+      # /mar/<ext>/hoon for, because Clay's answer to one of those is to take
+      # the commit, change nothing, print nothing and leave the desk at its
+      # old revision -- measured on a live ship, a desk with one .md in it
+      # went nowhere while the same desk without it went 2 -> 3.  That is how
+      # a %groundwire desk with no %gw-btc in it nearly shipped
+      # (gwbtc/groundwire 336e6e3), and main has no doc/ directory, which is
+      # the only reason nobody hit it sooner.
+      #
+      # This runs the check against a desk built to fail it and the same desk
+      # with the offending file removed, so every build watches the guard
+      # fire before any real desk is trusted to it.  It costs a second.
+      - name: Self-test the desk mark guard
+        run: ./automation/desk-check-marks.sh --self-test
+
       # -- Checkout all desk source repos --
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
@@ -933,9 +949,65 @@ jobs:
             chmod +x "pkg-${target}/gw-onboard"
             cp "./artifacts/gw-tcp-sidecar-${target}/tcp-sidecar" "pkg-${target}/tcp-sidecar"
             chmod +x "pkg-${target}/tcp-sidecar"
+            # The installer's shared helpers and its per-ship supervisor.
+            # These were 463 of causeway/public/boot.sh's 1,521 lines, carried
+            # as heredocs and written to disk at install time -- not because
+            # anyone wanted them there, but because a curl-piped script has no
+            # file to re-exec.  A reader had to audit a third of the installer
+            # before they could believe the rest of it, on a script that runs
+            # as them and installs a daemon mediating all their Bitcoin
+            # traffic.  Shipping the same bytes here puts them under the
+            # release SHA256SUMS and leaves boot.sh's own audit surface at
+            # "does this fetch and exec the right thing".
+            # boot.sh REQUIRES both; a tarball missing them is one it refuses.
+            cp ./automation/installer/gwlib.sh "pkg-${target}/gwlib.sh"
+            cp ./automation/installer/gwsup.sh "pkg-${target}/gwsup.sh"
+            chmod +x "pkg-${target}/gwlib.sh" "pkg-${target}/gwsup.sh"
             cp requirements.txt "pkg-${target}/"
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
+            # Do not take a cp on trust.  A tarball missing gwlib.sh is one
+            # that every boot.sh refuses, and the first anyone would hear of
+            # it is a failed install; this is the same lesson as the desk
+            # commits above, applied to the thing users actually download.
+            for want in gw-vere gw-base.pill comet_miner gw-onboard \
+                        tcp-sidecar gwlib.sh gwsup.sh requirements.txt; do
+              tar tzf "groundwire-${target}.tar.gz" | grep -qx "./${want}" || {
+                echo "ERROR: groundwire-${target}.tar.gz does not contain ${want}"
+                exit 1
+              }
+            done
+            echo "groundwire-${target}.tar.gz:"
+            tar tzf "groundwire-${target}.tar.gz" | sort
           done
+
+      # Until now nothing in a release carried a checksum: not the pill, not
+      # gw-vere, not comet_miner, not gw-onboard, not the tarballs.  The only
+      # thing authenticating a download was GitHub's TLS -- and the thing
+      # people actually run is `curl -fsSL .../boot.sh | bash`, ~1,000 lines
+      # executing as them and installing a daemon that mediates all their
+      # Bitcoin traffic.  There was nothing to check it against.
+      #
+      # Be honest about what this buys.  SHA256SUMS comes down the same
+      # channel as the tarball, so it is no defence at all against a
+      # compromised GitHub.  What it gives you is a check against a corrupted
+      # or truncated download, one stable digest to pin or to pass around out
+      # of band, and something a third party can mirror and compare.  Signing
+      # it is the next thing to do and is NOT done here.
+      #
+      # The client half already exists: boot.sh fetches SHA256SUMS, matches
+      # the line for its own platform, and deletes the download on a
+      # mismatch.  Publishing the file is the whole of the remaining work.
+      - name: Checksum the release artifacts
+        run: |
+          sha256sum \
+            groundwire-linux-x86_64.tar.gz \
+            groundwire-linux-aarch64.tar.gz \
+            groundwire-macos-aarch64.tar.gz \
+            > SHA256SUMS
+          cat SHA256SUMS
+          # Read it back the way a user would, so a malformed file fails the
+          # build here rather than every install.
+          sha256sum -c SHA256SUMS
 
       - name: Publish release
         if: ${{ github.event_name != 'pull_request' }}
@@ -954,6 +1026,7 @@ jobs:
             groundwire-linux-x86_64.tar.gz \
             groundwire-linux-aarch64.tar.gz \
             groundwire-macos-aarch64.tar.gz \
+            SHA256SUMS \
             --repo gwbtc/urbit \
             --prerelease \
             --title "$TITLE" \
@@ -969,7 +1042,21 @@ jobs:
           - \`comet_miner\` — Comet miner
           - \`gw-onboard\` — Onboarding script
           - \`tcp-sidecar\` — TCP sidecar (gwbtc/tcp-sidecar@${TCP_SIDECAR_REF}); the light client's only Bitcoin transport, statically linked
+          - \`gwlib.sh\`, \`gwsup.sh\` — the installer's shared helpers and its per-ship supervisor, installed and run by \`causeway/public/boot.sh\`
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
+
+          ## Verifying the download
+
+              curl -fsSLO https://github.com/gwbtc/urbit/releases/download/${TAG}/SHA256SUMS
+              sha256sum -c SHA256SUMS
+
+          The digest covers the tarball, and so everything inside it. boot.sh
+          does this for you, and \`--sha256 <hex>\` pins a digest you got
+          somewhere else.
+
+          \`SHA256SUMS\` is NOT signed and is served from the same host as the
+          tarballs, so it is a check against a bad download and a stable thing
+          to pin — not a defence against a compromised GitHub.
 
           Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
           - \`groundwire-linux-x86_64.tar.gz\`
