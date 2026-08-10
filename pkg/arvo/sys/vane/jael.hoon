@@ -326,8 +326,8 @@
     ::
     ::  the sending agent's name is the domain (1:1 by construction;
     ::  tasks from agents arrive on a [%gall %use dap ...] duct).  we
-    ::  watch .pax on that agent for %writ-response / %anew-response
-    ::  facts (attestation verdicts, fresh self-attestations) and
+    ::  watch .pax on that agent for %verdict / %anew-response
+    ::  facts (attestation outcomes, fresh self-attestations) and
     ::  %azimuth-udiffs facts (ongoing chain updates); and we watch
     ::  the agent's liveness through clay %tire (subscribed on first
     ::  registration), reacting to its desk going down as %gost and
@@ -368,7 +368,7 @@
     ::    [%writ dom=@tas =ship =pass]
     ::
     ::  forwarded to the domain's registered agent, which verifies it
-    ::  on-chain and answers with a %writ-response fact (handled in
+    ::  on-chain and answers with a %verdict fact (handled in
     ::  +take).  if the domain is unknown or suspended, %sybl
     ::  subscribers hear a %lost verdict immediately.
     ::
@@ -904,15 +904,15 @@
           %fact
         ?>  ?=([@ *] tea)
         =*  app  i.tea
-        ::  %writ-response: a pki-domain agent answering a %jael-writ
+        ::  %verdict: a pki-domain agent answering a %jael-writ
         ::  poke.  only honored from the domain's registered agent.
         ::  on success, store the verified point (notifying
         ::  %public-keys subscribers) and remember the ship as one of
-        ::  the domain's peers; either way, report the verdict to
-        ::  %sybl subscribers.
+        ::  the domain's peers; either way, report the outcome to
+        ::  %sybl subscribers as a $writ-result.
         ::
-        ?:  ?=(%writ-response p.cage.p.+>.hin)
-          =+  ;;(res=writ-response q.q.cage.p.+>.hin)
+        ?:  ?=(%verdict p.cage.p.+>.hin)
+          =+  ;;(res=verdict q.q.cage.p.+>.hin)
           ?~  reg=(~(get by dos) dom.res)
             +>.$
           ?.  &(liv.u.reg =(dom.res app))

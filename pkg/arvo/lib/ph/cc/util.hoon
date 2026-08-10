@@ -279,7 +279,7 @@
     =/  res=(unit point:jael)  (verify oracle ship.req pass.req)
     ~&  [%test-pki %response ship.req ?=(^ res)]
     =/  fact=card:agent:gall
-      [%give %fact ~[/writs] %writ-response !>([dom.req ship.req res])]
+      [%give %fact ~[/writs] %verdict !>([dom.req ship.req res])]
     :_  this(pending t.pending)
     ?:  ?=(~ t.pending)
       [fact]~

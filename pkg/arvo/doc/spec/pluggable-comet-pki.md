@@ -96,7 +96,7 @@ The registered agent answers asynchronously by publishing facts on its
 registered path:
 
 ```hoon
-+$  writ-response  [dom=@tas =ship res=(unit point)]
++$  verdict        [dom=@tas =ship res=(unit point)]
 +$  stale-notice   [dom=@tas =ship]
 ```
 
@@ -148,7 +148,7 @@ only the diff — which was the original behavior — left a verified route
 stored in Jael, visible in `/pynt`, and never actually routed to.
 
 Jael likewise publishes the fief of a point installed from a
-`%writ-response` to its `%fief` subscribers.
+`%verdict` to its `%fief` subscribers.
 
 ## 6. Staleness
 

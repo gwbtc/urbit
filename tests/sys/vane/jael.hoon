@@ -231,7 +231,7 @@
     !>  moves
     (expect-eq !>(%.y) !>(liv:(~(got by dos.lex.b) %test-dom)))
   ==
-::  A %writ-response carrying a point with a committed FIEF must publish
+::  A %verdict carrying a point with a committed FIEF must publish
 ::  that fief to %fief subscribers, exactly as a %fief udiff does.  A
 ::  domain whose identities are confidential has no udiff stream to
 ::  carry them, so the verdict is the only route by which such a comet's
@@ -239,14 +239,14 @@
 ::  comet's verified fief became a jael point, showed up in /pynt, and
 ::  never became a route.
 ::
-++  test-writ-response-publishes-the-fief
+++  test-verdict-publishes-the-fief
   ^-  tang
   =/  fef=fief  [%if .206.189.188.16 49.818]
   =/  pt  (point-with-fief (mk-c-pass 'wes') fef)
   =/  b  bus
   =.  b  (with-dom b %test-dom %test-dom-desk %.y ~)
   =.  b  (with-fel b dom-duct)
-  =^  moves  b  (take-fact b %test-dom %writ-response !>([%test-dom ~wes `pt]))
+  =^  moves  b  (take-fact b %test-dom %verdict !>([%test-dom ~wes `pt]))
   ;:  weld
     ::  the route is now in jael's own fief registry
     ::
@@ -259,13 +259,13 @@
         =(+.move [%give %fief (my [~wes `fef]~)])
   ==
 ::
-++  test-writ-response-without-a-fief-publishes-nothing
+++  test-verdict-without-a-fief-publishes-nothing
   ^-  tang
   =/  b  bus
   =.  b  (with-dom b %test-dom %test-dom-desk %.y ~)
   =.  b  (with-fel b dom-duct)
   =^  moves  b
-    (take-fact b %test-dom %writ-response !>([%test-dom ~wes `(point-for (mk-c-pass 'wes'))]))
+    (take-fact b %test-dom %verdict !>([%test-dom ~wes `(point-for (mk-c-pass 'wes'))]))
   %-  expect
   !>  ?!
       %+  lien  moves

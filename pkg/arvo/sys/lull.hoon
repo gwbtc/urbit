@@ -4321,11 +4321,11 @@
         [%stale dom=@tas =ship]                       ::  attestation outdated
         [%anew dom=@tas =pass]                        ::  our fresh attestation
     ==
-  ::  $writ-response: %fact payload a registered pki-domain agent gives
+  ::  $verdict: %fact payload a registered pki-domain agent gives
   ::  jael on its watch path to answer a %jael-writ poke.  on success,
   ::  res carries the on-chain-verified $point for .ship.
   ::
-  +$  writ-response  [dom=@tas =ship res=(unit point)]
+  +$  verdict  [dom=@tas =ship res=(unit point)]
   ::  $anew-response: %fact payload the domain agent gives jael to
   ::  answer a %jael-anew poke: our own pass, re-encoded with the
   ::  current off-chain reveal log in its (un-tweaked) xtr data.
@@ -4334,7 +4334,7 @@
   ::  $stale-notice: %fact payload the domain agent gives jael when it
   ::  observes a verified ship's attestation go out of date on-chain
   ::  (e.g. its identity utxo was spent).  unprompted, unlike a
-  ::  $writ-response.
+  ::  $verdict.
   ::
   +$  stale-notice  [dom=@tas =ship]
   ::                                                  ::
