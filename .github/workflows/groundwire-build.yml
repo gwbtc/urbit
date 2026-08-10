@@ -217,6 +217,11 @@ jobs:
           ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh groundwire ./zod
           cp -rL gwbtc-groundwire/dist-groundwire/* ./zod/groundwire/
+          # TEMPORARY, THROWAWAY BRANCH ONLY: reproduce the doc/*.md bug that
+          # 336e6e3 fixed, to watch the guard fail the job instead of shipping
+          # a %groundwire desk with no %gw-btc in it. Never merge this.
+          mkdir -p ./zod/groundwire/doc
+          echo '# notes' > ./zod/groundwire/doc/confidential-comets.md
           ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
 
       # -- The light-client stack: %node and %tcp-sidecar --
@@ -1010,7 +1015,7 @@ jobs:
           sha256sum -c SHA256SUMS
 
       - name: Publish release
-        if: ${{ github.event_name != 'pull_request' }}
+        if: false  # THROWAWAY BRANCH: never publish from here
         run: |
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
           TAG="groundwire-alpha-${DATE_BASE}"
