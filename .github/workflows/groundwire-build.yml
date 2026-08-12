@@ -23,7 +23,11 @@ env:
   # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
   # read the diff on develop, then paste the new 40-char SHA here
   # (`git ls-remote https://github.com/gwbtc/node develop`).
-  NODE_REF: 3cc303128f7dab111c15eb4f945effb51492909f
+  # Pinned to 063720b9 (2026-08-12): %reorg-rollback now carries
+  # `last-common` + `stale-branch`, the list of orphaned blocks, which is
+  # what %gw-btc's reorg repair filters its points against. Bumping below
+  # this SHA will not compile the %groundwire desk.
+  NODE_REF: 063720b920a44109b7129a189f2f2e974dffb728
   # desks
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
@@ -242,6 +246,12 @@ jobs:
           # Delete each one as node fixes it upstream; see the report in
           # PR #67 for the asks. This is the same in-CI patching that
           # build-extras does to comet-miner with sed.
+          #
+          # BOTH re-checked against node@063720b9 on 2026-08-12 and both
+          # are STILL NEEDED: desk/sys.kelvin is still a bare [%zuse 409],
+          # and both bare [%block-filter] call sites are still there
+          # (app/bitcoin-client.hoon:509 and :537). Re-check on every
+          # NODE_REF bump and delete whichever has landed.
           #
           # 1. Kelvin. node's desk/sys.kelvin reads [%zuse 409]; this
           #    kernel is 408, so the desk will not install as published.
