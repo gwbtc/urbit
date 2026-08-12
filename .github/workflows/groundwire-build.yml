@@ -25,8 +25,18 @@ env:
   # (`git ls-remote https://github.com/gwbtc/node develop`).
   # Pinned to 063720b9 (2026-08-12): %reorg-rollback now carries
   # `last-common` + `stale-branch`, the list of orphaned blocks, which is
-  # what %gw-btc's reorg repair filters its points against. Bumping below
-  # this SHA will not compile the %groundwire desk.
+  # what %gw-btc's reorg repair filters its points against.
+  #
+  # This pin and the %groundwire desk must move TOGETHER, and the coupling
+  # is at RUNTIME, not at build time: the two desks compile independently
+  # (%gw-btc reads /sur/light-client from its OWN desk), so nothing here
+  # fails if they disagree. What fails is the first reorg on a live ship.
+  # %gw-btc unpacks the fact with `!<`, the old flat [block-height
+  # block-hash] does not nest under the new mold or vice versa, and the
+  # `?>` bails in +on-agent. Below this SHA, a %groundwire carrying the
+  # reorg repair is broken on reorgs; at or above it, a %groundwire
+  # without the repair is broken on reorgs. Check GROUNDWIRE_BRANCH has
+  # the matching desk before bumping.
   NODE_REF: 063720b920a44109b7129a189f2f2e974dffb728
   # desks
   GROUNDWIRE_BRANCH: main
