@@ -311,6 +311,39 @@ jobs:
           BAD=$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)
           echo "bare [%block-filter] call sites patched: ${BAD}"
           sed -i 's/\[%block-filter\])/[%block-filter ~])/g' ./zod/node/app/bitcoin-client.hoon
+
+          # 3. mar/bitcoin-client/connect-peer.hoon writes its seven ?+
+          #    cases as bare cords ('ipv4'), not terms (%'ipv4'). A ?+
+          #    case is a ?= pattern, so a bare cord is a SYNTAX ERROR and
+          #    the file does not parse on any kernel. Its twin,
+          #    disconnect-peer.hoon, has the identical block written
+          #    correctly with %'...' -- so this is a typo in one of a
+          #    matched pair, not a kelvin disagreement. Nothing in
+          #    %gw-btc uses this mark; it is the explorer's connect
+          #    button. Added by gwbtc/node@0267143, still present at
+          #    develop (d214564).
+          #    DELETE ONCE node prefixes the seven cases with %.
+          CP=./zod/node/mar/bitcoin-client/connect-peer.hoon
+          BARE=$(grep -cE "^ +'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'" "$CP" || true)
+          echo "bare cord ?+ cases patched in connect-peer: ${BARE}"
+          sed -i -E "s/^( +)'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'/\\1%'\\2'/" "$CP"
+
+          # 4. mar/bitcoin-client/best-block.hoon was not updated when
+          #    063720b9 changed the mold it prints. Its %reorg-rollback
+          #    branch still reads block-height.bes / block-hash.bes, and
+          #    on that branch those legs are now under .last-common --
+          #    so the file fails to compile with -find.block-height.bes,
+          #    in the very commit that introduced the change. Rewrite the
+          #    two reads to go through .last-common; .stale-branch is
+          #    left out of the JSON rather than invented here, since the
+          #    upstream shape for it is node's to choose.
+          #    DELETE ONCE node fixes its own mark.
+          BB=./zod/node/mar/bitcoin-client/best-block.hoon
+          echo "best-block mar %reorg-rollback reads repointed at .last-common"
+          sed -i '/%reorg-rollback/,$ {
+            s/block-height\.bes/block-height.last-common.bes/
+            s/block-hash\.bes/block-hash.last-common.bes/
+          }' "$BB"
           # ====================== END TEMPORARY ======================
 
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
