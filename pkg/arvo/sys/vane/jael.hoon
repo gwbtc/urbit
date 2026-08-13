@@ -1822,7 +1822,25 @@
     =/  cek  +<:(com:nu:cric:crypto pass.u.key)
     ?.  ?=([%c *] cek)
       ``[%noun !>(~)]
-    =/  mat  (mole |.((rub 0 dat.tw.pub.cek)))
+    ::  bound the +mat before +rub reads it; the +mole does NOT contain
+    ::  a jetted +rub's %fail on a hostile length-of-length.  See the
+    ::  long note on +pass-pki-dom:ames -- keep the two in sync.
+    ::
+    ::  Reached with a stored pass rather than a packet, so this arm is
+    ::  not itself pre-auth; it is the same defect because the pass got
+    ::  stored by the path that IS.
+    ::
+    =/  dat=@  dat.tw.pub.cek
+    =/  short=?
+      =/  c=@ud  0
+      |-  ^-  ?
+      ?:  (gth c 20)  |
+      ?:  =(0 (cut 0 [c 1] dat))
+        $(c +(c))
+      &
+    ?.  short
+      ``[%noun !>(~)]
+    =/  mat  (mole |.((rub 0 dat)))
     ?~  mat
       ``[%noun !>(~)]
     ``[%noun !>((some `@tas`q.u.mat))]

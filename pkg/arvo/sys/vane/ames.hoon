@@ -589,7 +589,41 @@
       =/  cek  +<:(com:nu:cric:crypto a)
       ?.  ?=([%c *] cek)
         ~
-      =/  mat  (mole |.((rub 0 dat.tw.pub.cek)))
+      ::  BOUND THE MAT BEFORE +rub READS IT.  The +mole below does not
+      ::  contain this: +rub is JETTED, and its jet does not bail %exit
+      ::  on a hostile length.  u3qe_rub takes the leading zero run c,
+      ::  computes e = 2^(c-1) + ..., and hands e to u3qc_cut, whose
+      ::  u3r_safe_word refuses c >= 33 with u3m_bail(c3__fail).  %fail
+      ::  is case 3 in u3m_soft_run -- "failure; rebail w/trace" -- so it
+      ::  is RE-RAISED out of the virtualization frame exactly like a
+      ::  %meme, and the event dies.  Verified on the runtime:
+      ::  (mole |.((rub 0 (bex 40)))) gives `bail: fail / bail: 3`.
+      ::
+      ::  One UDP packet reaches it, pre-auth.  An attacker mints its own
+      ::  keypair and builds a suite-%c pass whose .dat has 33 or more
+      ::  trailing zero bits; its +fig is a perfectly valid comet @p, so
+      ::  it signs a matching $open-packet and every ?> in
+      ::  +sift-open-packet passes on the way here.  The hole predates
+      ::  the +mole -- the bare q:(rub ...) this replaced bailed the same
+      ::  way -- but the +mole was added AS the mitigation, and it is not
+      ::  one.
+      ::
+      ::  Same bounded scan +mat-at runs inside +open-jam-shaped, and the
+      ::  same bound: past 20 the length-of-length is not a real +mat.
+      ::  An all-zero .dat runs the loop out and is refused too, which is
+      ::  correct -- +rub would not read a +mat there either.
+      ::
+      =/  dat=@  dat.tw.pub.cek
+      =/  short=?
+        =/  c=@ud  0
+        |-  ^-  ?
+        ?:  (gth c 20)  |
+        ?:  =(0 (cut 0 [c 1] dat))
+          $(c +(c))
+        &
+      ?.  short
+        ~
+      =/  mat  (mole |.((rub 0 dat)))
       ?~  mat
         ~
       ``@tas`q.u.mat
