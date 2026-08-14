@@ -251,17 +251,45 @@ jobs:
           cp -rL gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
-      - name: Build gw-btc desk
+      # TRANSITIONAL, DELETE WITH THE MAKEFILE SHIM.
+      #
+      # This workflow runs against TWO different groundwire refs: the dispatch
+      # input, and -- on a pull_request, which is how #67's own CI runs -- the
+      # env default, `main`.  `main` has not been renamed yet and has no
+      # `gw-btc` target, so pinning the new name here turns #67's CI red until
+      # gwbtc/groundwire#129 merges.  Measured, not guessed: run 31827413435
+      # failed at exactly this step.
+      #
+      # The groundwire Makefile covers the mirror image (an OLD workflow
+      # against a NEW desk) by answering to both names.  This covers the other
+      # direction.  Between them there is no red window in either order.
+      #
+      # The desk name follows the dist we actually found, rather than being
+      # forced: a pre-rename tree carries %urb-watcher, and installing that
+      # under a %gw-btc name would be a lie told by the build.
+      - name: Build the gw-btc desk (tolerating a pre-rename ref)
         run: |
-          cd gwbtc-groundwire && make gw-btc && cd ..
+          cd gwbtc-groundwire
+          if make -n gw-btc >/dev/null 2>&1; then
+            make gw-btc
+            echo "GW_DESK=gw-btc"                >> "$GITHUB_ENV"
+            echo "GW_DIST=gwbtc-groundwire/dist-gw-btc" >> "$GITHUB_ENV"
+          else
+            echo "note: this groundwire ref predates the %gw-btc rename"
+            make groundwire
+            echo "GW_DESK=groundwire"                       >> "$GITHUB_ENV"
+            echo "GW_DIST=gwbtc-groundwire/dist-groundwire" >> "$GITHUB_ENV"
+          fi
 
-      - name: Populate %gw-btc desk
+      - name: Populate the gw-btc desk
         run: |
-          ./automation/desk-create.sh gw-btc "$CONN_SOCK"
-          ./automation/desk-mount.sh gw-btc ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh gw-btc ./zod
-          cp -rL gwbtc-groundwire/dist-gw-btc/* ./zod/gw-btc/
-          ./automation/desk-commit.sh gw-btc ./zod "$CONN_SOCK"
+          test -d "$GW_DIST" || { echo "::error::$GW_DIST missing after build"; exit 1; }
+          echo "installing $GW_DIST as %$GW_DESK"
+          ./automation/desk-create.sh "$GW_DESK" "$CONN_SOCK"
+          ./automation/desk-mount.sh "$GW_DESK" ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh "$GW_DESK" ./zod
+          cp -rL "$GW_DIST"/* "./zod/$GW_DESK/"
+          ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
 
       # -- The light-client stack: %node and %tcp-sidecar --
       #
