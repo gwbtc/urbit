@@ -534,7 +534,7 @@ jobs:
               ;<  now=@da  bind:m  get-time
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
-                :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
+                :~  [%GWDESK /(scot %p our)/GWDESK/(scot %da now)]
                     [%node /(scot %p our)/node/(scot %da now)]
                     [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
@@ -553,10 +553,32 @@ jobs:
               '''
           ==
           HOON
+          # The desk list above is the desks baked INTO the pill, and it must
+          # name the desk we actually installed.  GWDESK is substituted rather
+          # than interpolated so the heredoc stays quoted -- Hoon and shell
+          # fight over too many characters otherwise.
+          BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
+          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol"
+
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
-          if echo "$RESULT" | grep -Fxq "brass: cache entries: 0"; then
-            echo "ERROR: Failed to build a brass pill."
+
+          # REQUIRE the success we want; do not merely look for one known
+          # failure.  This used to grep for "brass: cache entries: 0" and
+          # treat everything else as success -- so when the thread came back
+          # `[0 %avow 1 %thread-fail %cancelled 0]` (a desk path in the list
+          # above naming a desk that did not exist), the step printed "Pill
+          # build completed" and exited 0.  The next step then waited 45
+          # MINUTES for a pill that was never going to be written, and the
+          # run's only visible error was "Pill never appeared", which names
+          # the symptom and hides the cause.
+          #
+          # A success is `%avow 0` carrying 'Built pill!'.  Anything else,
+          # including any future failure nobody has seen yet, stops here.
+          if ! echo "$RESULT" | grep -Fq "'Built pill!'"; then
+            echo "::error::the pill-build thread did not report success"
+            echo "expected: [0 %avow 0 %noun 'Built pill!']"
+            echo "got:      $RESULT"
             exit 1
           fi
           echo "Pill build completed."

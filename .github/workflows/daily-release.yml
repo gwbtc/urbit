@@ -1140,7 +1140,7 @@ jobs:
 
           This daily release includes preloaded desks for onboarding:
           - \`gw-base\`
-          - \`groundwire\`
+          - \`gw-btc\`
           - \`spv-wallet\`
           - \`mcp\`
           - \`vitriol\`
