@@ -217,20 +217,20 @@ jobs:
           echo "$DESK_DISTER" > ./zod/gw-base/desk.ship
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
-      - name: Build groundwire and spv-wallet desks
+      - name: Build gw-btc and spv-wallet desks
         run: |
-          cd gwbtc-groundwire && make groundwire spv && cd ..
+          cd gwbtc-groundwire && make gw-btc spv && cd ..
 
-      - name: Populate %groundwire desk
+      - name: Populate %gw-btc desk
         run: |
-          ./automation/desk-create.sh groundwire "$CONN_SOCK"
-          ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh groundwire ./zod
+          ./automation/desk-create.sh gw-btc "$CONN_SOCK"
+          ./automation/desk-mount.sh gw-btc ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh gw-btc ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-groundwire/ ./zod/groundwire/
-          touch ./zod/groundwire/desk.ship
-          echo "$DESK_DISTER" > ./zod/groundwire/desk.ship
-          ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
+            gwbtc-groundwire/dist-gw-btc/ ./zod/gw-btc/
+          touch ./zod/gw-btc/desk.ship
+          echo "$DESK_DISTER" > ./zod/gw-btc/desk.ship
+          ./automation/desk-commit.sh gw-btc ./zod "$CONN_SOCK"
 
       - name: Populate %spv-wallet desk
         run: |
@@ -531,7 +531,7 @@ jobs:
               ;<  now=@da  bind:m  get-time
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
-                :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
+                :~  [%gw-btc /(scot %p our)/gw-btc/(scot %da now)]
                     [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%node /(scot %p our)/node/(scot %da now)]
                     [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
