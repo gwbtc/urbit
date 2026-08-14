@@ -1094,11 +1094,6 @@ jobs:
 
       - name: Publish release
         if: ${{ github.event_name != 'pull_request' }}
-        # Through env:, not interpolated into the script body -- a dispatch
-        # input pasted straight into `run:` is a shell-injection seam even
-        # when only collaborators can pull the trigger.
-        env:
-          TAG_PREFIX: ${{ inputs.tag_prefix }}
         run: |
           PREFIX="${TAG_PREFIX:-groundwire-alpha}"
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
@@ -1166,3 +1161,7 @@ jobs:
           - \`groundwire-macos-aarch64.tar.gz\`"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          # Through env:, not interpolated into the script body -- a dispatch
+          # input pasted straight into `run:` is a shell-injection seam even
+          # when only collaborators can pull the trigger.
+          TAG_PREFIX: ${{ inputs.tag_prefix }}
