@@ -991,6 +991,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Causeway is Python source, not a per-platform binary, so it is copied
+      # in here rather than built in the matrix.  Same ref as the desk in the
+      # pill: a release whose Causeway and whose %gw-btc disagree about the
+      # wire format is worse than one that ships neither.
+      - name: Checkout gwbtc/groundwire (for Causeway + boot.sh)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/groundwire
+          ref: ${{ inputs.groundwire_ref || env.GROUNDWIRE_BRANCH }}
+          path: gwbtc-groundwire
+          token: ${{ secrets.GH_PAT || github.token }}
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -1097,13 +1109,32 @@ jobs:
             cp ./automation/installer/gwsup.sh "pkg-${target}/gwsup.sh"
             chmod +x "pkg-${target}/gwlib.sh" "pkg-${target}/gwsup.sh"
             cp requirements.txt "pkg-${target}/"
+
+            # Causeway: the tool that actually mints a confidential comet.
+            # Until now no release contained it, so the only way to get one
+            # was to clone the repo -- which meant the protocol we ship in the
+            # pill had no shipped way to create an identity for it.
+            # `causeway` is a launcher that builds a private venv from
+            # causeway-src/ on first run; nothing lands outside this tree.
+            cp -r gwbtc-groundwire/causeway/desktop "pkg-${target}/causeway-src"
+            rm -rf "pkg-${target}/causeway-src/__pycache__" \
+                   "pkg-${target}/causeway-src/causeway.egg-info" \
+                   "pkg-${target}/causeway-src/tests"
+            cp gwbtc-groundwire/causeway/public/causeway "pkg-${target}/causeway"
+            # boot.sh ships here too, so a release can boot itself without
+            # depending on the website being up to date.
+            cp gwbtc-groundwire/causeway/public/boot.sh "pkg-${target}/boot.sh"
+            chmod +x "pkg-${target}/causeway" "pkg-${target}/boot.sh"
+
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
             # Do not take a cp on trust.  A tarball missing gwlib.sh is one
             # that every boot.sh refuses, and the first anyone would hear of
             # it is a failed install; this is the same lesson as the desk
             # commits above, applied to the thing users actually download.
             for want in gw-vere gw-base.pill comet_miner gw-onboard \
-                        tcp-sidecar gwlib.sh gwsup.sh requirements.txt; do
+                        tcp-sidecar gwlib.sh gwsup.sh requirements.txt \
+                        causeway boot.sh causeway-src/causeway.py \
+                        causeway-src/causeway_tui.py causeway-src/pyproject.toml; do
               tar tzf "groundwire-${target}.tar.gz" | grep -qx "./${want}" || {
                 echo "ERROR: groundwire-${target}.tar.gz does not contain ${want}"
                 exit 1
