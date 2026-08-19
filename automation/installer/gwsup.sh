@@ -60,7 +60,14 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   mkdir "$LOCK" 2>/dev/null || { echo "gwsup.sh: lost the lock race; refusing"; exit 0; }
 fi
 echo $$ > "$LOCK/pid"
-trap 'rm -rf "$LOCK"' EXIT INT TERM
+# A trap REPLACES default signal handling: with INT/TERM in the same
+# trap as EXIT and no exit in the action, SIGTERM meant "delete the lock
+# and keep supervising" -- boot.sh --stop killed the lockfile's pid,
+# declared success, and the supervisor relaunched the ship seconds
+# later.  EXIT keeps the cleanup; INT/TERM must actually die.
+trap 'rm -rf "$LOCK"' EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 sleep 1
 [ "$(cat "$LOCK/pid" 2>/dev/null)" = "$$" ] || { echo "gwsup.sh: lost the lock race; refusing"; exit 0; }
 
