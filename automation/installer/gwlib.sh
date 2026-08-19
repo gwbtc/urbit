@@ -313,7 +313,10 @@ gwl_pool_fill() {
 gwl_pool_left() {
   local pool="$GW_DIR/var/peerpool.txt" used="$GW_DIR/var/used-$GW_NAME.txt"
   touch "$pool" "$used"
-  grep -vxF -f "$used" "$pool" 2>/dev/null | grep -c . || echo 0
+  # grep -c prints its 0 BEFORE exiting 1, so `|| echo 0` emitted a second
+  # zero -- and "0\n0" fed to [ -lt ] errors, which bash treats as FALSE,
+  # which skipped the DNS harvest entirely: one extra zero, no peers at all.
+  grep -vxF -f "$used" "$pool" 2>/dev/null | grep -c . || true
 }
 
 # An IP handed to the same ship twice is wasted: %bitcoin-client's blacklist
