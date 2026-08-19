@@ -120,6 +120,14 @@ gwl_poke() {
     | gwl_eval "${4:-60}"
 }
 
+# The web login code (+code), as jael answers it.  A comet code is four
+# syllable pairs (sontec-hospun-ridwep-matnep); the grep is the shape, so
+# eval noise around the cord cannot leak into the answer.
+gwl_code() {
+  printf "(pure:m !>((crip (slag 1 (scow %%p .^(@p %%j /(scot %%p our)/code/(scot %%da now)/(scot %%p our)))))))\n" \
+    | gwl_eval "${1:-90}" | grep -oE "[a-z]{6}(-[a-z]{6}){3}" | head -1 || true
+}
+
 gwl_our() {
   # A comet @p has a DOUBLE hyphen in the middle: four syllable pairs, '--',
   # four more. A '-'-only pattern matches the first half and stops, and the
