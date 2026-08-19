@@ -250,6 +250,10 @@ gwl_start_vere_restart() {
   rm -f "$GW_PIER/.vere.lock"
   local args="-t --loom $GW_LOOM"
   [ -n "${GW_AMES_PORT:-}" ] && args="$args -p $GW_AMES_PORT"
+  # Without this, every restart -- boot.sh's and the supervisor's -- silently
+  # moved the web UI: vere's default is port 80 (which macOS grants to
+  # unprivileged binds), while everything printed to the user says 8080.
+  [ -n "${GW_HTTP_PORT:-}" ] && args="$args --http-port $GW_HTTP_PORT"
   if gwl_have setsid; then
     # shellcheck disable=SC2086
     setsid nohup "$GW_VERE" $args "$GW_PIER" >> "$GW_LOG" 2>&1 </dev/null &
