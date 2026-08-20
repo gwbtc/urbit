@@ -445,6 +445,15 @@
       ~/  %sift-open-packet
       |=  [[rof=roof our=ship now=@da] =shot our=ship our-life=@]
       ^-  open-packet
+      ::  never +cue peer-controlled bytes unguarded; see
+      ::  +open-jam-shaped.  callers are expected to have routed on
+      ::  +is-open-packet, but this arm is reachable from more than one
+      ::  place and must not depend on its callers for memory safety.
+      ::  crash %exit, which +mole/+mule catch, rather than let +cue
+      ::  crash %meme, which they do not.
+      ::
+      ?.  (open-jam-shaped content.shot)
+        ~|(%open-packet-malformed !!)
       ::  deserialize and type-check packet contents
       ::
       =+  ;;  [signature=@ signed=@]  (cue content.shot)
@@ -471,6 +480,102 @@
       ::
       ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
       open-packet
+    ::  +open-jam-shaped: is .a a bounded (jam [signature=@ signed=@])?
+    ::
+    ::    Structural pre-check that never allocates and never calls +cue.
+    ::    It exists because +cue is NOT SAFE on peer-controlled bytes: a
+    ::    backreference whose index does not fit in a direct atom (>= 2^63)
+    ::    makes +cue bail %meme, and %meme is not catchable -- +mole/+mule
+    ::    run under +mink, and the runtime re-raises anything that is not
+    ::    %exit back out of the virtualization frame (u3m_soft_run's
+    ::    "case 3: rebail w/trace").  The event dies, the packet is never
+    ::    acked, and an honest sender retransmits the same bytes forever.
+    ::
+    ::    That is not hypothetical.  A $shut-packet's SIV ciphertext is
+    ::    pseudorandom, and ~1 packet in 500 cues into such a bomb: root
+    ::    tag %11 (1/4) times >= 7 leading zeros in the +mat index
+    ::    (~1/128).  On mainnet two healthy, mutually-attested comets hit
+    ::    one and could not exchange another packet for six hours -- with
+    ::    no diagnostic beyond a bare `bail: meme`.  AES-SIV is
+    ::    deterministic, so the retransmission is byte-identical and the
+    ::    livelock is permanent.
+    ::
+    ::    A self-attestation's .content is always
+    ::    (jam [signature=@ signed=@]): a cell tag, then two bare atoms,
+    ::    consuming the atom exactly.  An atom that passes this decodes
+    ::    into exactly two length-bounded atoms and can meet no
+    ::    backreference at all.
+    ::
+    ++  open-jam-shaped
+      |=  a=@
+      ^-  ?
+      =/  m  (met 0 a)
+      |^  ?.  =(0b1 (cut 0 [0 2] a))     ::  root is a cell
+            |
+          ?.  =(0 (cut 0 [2 1] a))       ::  head is a bare atom
+            |
+          ?~  hed=(mat-at 3)             ::  .signature, <= 1kB
+            |
+          ?.  (lte len.u.hed 8.192)
+            |
+          =/  pos  (add 3 wid.u.hed)
+          ?.  =(0 (cut 0 [pos 1] a))     ::  tail is a bare atom
+            |
+          ?~  tal=(mat-at +(pos))        ::  .signed, <= 16kB
+            |
+          ?.  (lte len.u.tal 131.072)
+            |
+          =(m (add +(pos) wid.u.tal))    ::  consumes .a exactly
+      ::
+      ++  mat-at
+        ::  width and value-length of the +mat at .pos; never allocates
+        ::
+        |=  pos=@ud
+        ^-  (unit [wid=@ud len=@ud])
+        =/  c=@ud  0
+        |-  ^-  (unit [wid=@ud len=@ud])
+        ?:  (gth c 20)  ~                ::  bound the length-of-length
+        ?:  (gte (add pos c) m)  ~
+        ?:  =(0 (cut 0 [(add pos c) 1] a))
+          $(c +(c))
+        ?:  =(0 c)  `[1 0]
+        =/  d  (add pos +(c))
+        =/  e  (add (bex (dec c)) (cut 0 [d (dec c)] a))
+        `[(add (add c c) e) e]
+      --
+    ::  +is-open-packet: does .shot carry a comet self-attestation?
+    ::
+    ::    A $shot from a comet is either a plaintext self-attestation or
+    ::    an encrypted $shut-packet, and nothing in the header tells
+    ::    them apart.  Peer state is not a usable discriminator: a
+    ::    confidential (suite-%c) comet re-attests at a higher life
+    ::    while we already know it, and any comet keeps re-attesting
+    ::    during the window in which its domain verifier is still
+    ::    deciding -- so attestations do arrive from peers we have
+    ::    already promoted to %known.  Handing one of those to
+    ::    +sift-shut-packet is fatal rather than merely wrong: SIV
+    ::    authentication failure is a %evil bail, not a ~.
+    ::
+    ::    Structure only, no crypto -- +sift-open-packet still does the
+    ::    real checking.  A $shut-packet's ciphertext cueing into this
+    ::    exact shape, with a sender that matches the header, is not a
+    ::    case worth defending against.
+    ::
+    ++  is-open-packet
+      |=  =shot
+      ^-  ?
+      ::  never hand unvalidated bytes to +cue; see +open-jam-shaped.
+      ::  a %meme bail escapes the +mole below and kills the event.
+      ::
+      ?.  (open-jam-shaped content.shot)
+        |
+      =/  res=(unit ?)
+        %-  mole
+        |.
+        =+  ;;([signature=@ signed=@] (cue content.shot))
+        =+  ;;(=open-packet (cue signed))
+        =(sndr.shot sndr.open-packet)
+      ?~(res | u.res)
     ::  +pass-pki-dom: extract the PKI domain a pass commits to
     ::
     ::    ~ for a vanilla (suite-%b) comet.  all and only suite-%c
@@ -484,7 +589,44 @@
       =/  cek  +<:(com:nu:cric:crypto a)
       ?.  ?=([%c *] cek)
         ~
-      ``@tas`q:(rub 0 dat.tw.pub.cek)
+      ::  BOUND THE MAT BEFORE +rub READS IT.  The +mole below does not
+      ::  contain this: +rub is JETTED, and its jet does not bail %exit
+      ::  on a hostile length.  u3qe_rub takes the leading zero run c,
+      ::  computes e = 2^(c-1) + ..., and hands e to u3qc_cut, whose
+      ::  u3r_safe_word refuses c >= 33 with u3m_bail(c3__fail).  %fail
+      ::  is case 3 in u3m_soft_run -- "failure; rebail w/trace" -- so it
+      ::  is RE-RAISED out of the virtualization frame exactly like a
+      ::  %meme, and the event dies.  Verified on the runtime:
+      ::  (mole |.((rub 0 (bex 40)))) gives `bail: fail / bail: 3`.
+      ::
+      ::  One UDP packet reaches it, pre-auth.  An attacker mints its own
+      ::  keypair and builds a suite-%c pass whose .dat has 33 or more
+      ::  trailing zero bits; its +fig is a perfectly valid comet @p, so
+      ::  it signs a matching $open-packet and every ?> in
+      ::  +sift-open-packet passes on the way here.  The hole predates
+      ::  the +mole -- the bare q:(rub ...) this replaced bailed the same
+      ::  way -- but the +mole was added AS the mitigation, and it is not
+      ::  one.
+      ::
+      ::  Same bounded scan +mat-at runs inside +open-jam-shaped, and the
+      ::  same bound: past 20 the length-of-length is not a real +mat.
+      ::  An all-zero .dat runs the loop out and is refused too, which is
+      ::  correct -- +rub would not read a +mat there either.
+      ::
+      =/  dat=@  dat.tw.pub.cek
+      =/  short=?
+        =/  c=@ud  0
+        |-  ^-  ?
+        ?:  (gth c 20)  |
+        ?:  =(0 (cut 0 [c 1] dat))
+          $(c +(c))
+        &
+      ?.  short
+        ~
+      =/  mat  (mole |.((rub 0 dat)))
+      ?~  mat
+        ~
+      ``@tas`q.u.mat
     ::  +etch-shut-packet: encrypt and packetize a $shut-packet
     ::
     ++  etch-shut-packet
@@ -3273,7 +3415,7 @@
             wrapped-task
           ^-  task-12-til-16
           ?+  -.task  task
-            %snub  [%snub %deny ships.task]
+            %snub  [%snub %deny %set ships.task]
           ==
         ==
       ::
@@ -4183,6 +4325,32 @@
       :~  4^p.lane
           2^q.lane
       ==
+    ::  +fief-route: advisory route to the address a peer has published
+    ::
+    ::    A $fief is a transport address its holder committed to in a
+    ::    namespace jael trusts.  We hand it to the runtime as a
+    ::    [%& ship] lane and let the runtime resolve it, exactly as it
+    ::    resolves a galaxy's: it already keeps the published address
+    ::    (ames pushes every fief with %give %fief) and already knows
+    ::    how to turn a domain name into an address, which arvo does
+    ::    not.  A concrete lane would also go stale the moment the
+    ::    holder republished; [%& ship] follows the fief for free.
+    ::
+    ::    Indirect on purpose.  Publishing an address is not evidence
+    ::    of being at it now -- the commitment may be months old, and
+    ::    the runtime silently drops a [%& ship] it cannot resolve --
+    ::    so .direct is %.n and +send-blob-via keeps relaying through
+    ::    the sponsor as well.  Hearing from the peer replaces this
+    ::    with the lane we heard, direct.
+    ::
+    ::    A route learned from a packet always wins; we only fill a hole.
+    ::
+    ++  fief-route
+      |=  [her=ship fef=(unit fief) route=(unit [direct=? =lane])]
+      ^-  (unit [direct=? =lane])
+      ?^  route  route
+      ?~  fef    ~
+      `[direct=%.n lane=[%& her]]
     ::
     ++  update-peer-route
       |=  [peer=ship =peer-state]
@@ -4942,11 +5110,52 @@
           ::
           ?:  =(%keys content.shot)
             on-hear-keys
-          ?:  ?&  ?=(%pawn (clan:title sndr.shot))
-                  !?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
-              ==
+          ::
+          ?.  ?=(%pawn (clan:title sndr.shot))
+            on-hear-shut
+          ::  a comet's packet is either a plaintext self-attestation or
+          ::  an encrypted $shut-packet, and nothing in the header tells
+          ::  them apart.  classify it by shape, never by peer state --
+          ::  state is wrong in BOTH directions.
+          ::
+          ::    A comet we already know still attests: it re-attests
+          ::    while its domain verifier is still deciding, and a
+          ::    suite-%c comet re-attests at every new life.  So %known
+          ::    is no reason to skip +on-hear-open; +on-hear-open
+          ::    expects these and ignores the stale ones, whereas
+          ::    +on-hear-shut dies on a %evil bail out of the decrypter.
+          ::
+          ::    A comet we do not know is, symmetrically, no reason to
+          ::    assume attestation.  .sndr is unauthenticated and the
+          ::    comet space is 2^128, so "a comet we have never seen" is
+          ::    a free label anyone can wear.  Trusting it here fed
+          ::    arbitrary attacker bytes straight to the bare +cue in
+          ::    +sift-open-packet: one un-catchable %meme bail per
+          ::    packet, pre-auth, with no per-sender state to rate-limit
+          ::    against.  See +open-jam-shaped.
+          ::
+          ?:  (is-open-packet shot)
             on-hear-open
-          on-hear-shut
+          ::  not an attestation.  only a comet we have already promoted
+          ::  can be sending us a $shut-packet: otherwise we hold no
+          ::  symmetric key to decrypt it with, and +on-hear-shut would
+          ::  again die on a %evil bail.  so this packet has nowhere
+          ::  legitimate to go -- drop it.
+          ::
+          ?:  ?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
+            on-hear-shut
+          on-hear-drop
+        ::  +on-hear-drop: discard a packet we have no way to interpret
+        ::
+        ::    A gate rather than a bare .event-core because the dispatch
+        ::    in +on-hear-packet selects an arm and only then applies
+        ::    .+< to it; a drop has to be selectable the same way.
+        ::
+        ++  on-hear-drop
+          |=  [=lane =shot dud=(unit goof)]
+          ^+  event-core
+          %-  (ev-trace rcv.veb sndr.shot |.("dropped unroutable packet"))
+          event-core
         ::  +on-hear-forward: maybe forward a packet to someone else
         ::
         ::    Note that this performs all forwarding requests without
@@ -5013,6 +5222,14 @@
                   (gte life.u.ship-state sndr-life.open-packet)
               ==
             event-core
+          =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
+          =/  dom  (pass-pki-dom pass.open-packet)
+          ::  A suite-C pass whose tweak does not start with a valid
+          ::  +mat-encoded domain is not an attestation.  Drop it before
+          ::  creating alien peer state or asking Jael to verify it.
+          ::
+          ?:  &(?=([%c *] cek) ?=(~ dom))
+            event-core
           ::  add comet as an %alien if we haven't already
           ::
           =?  peers.ames-state  ?=(~ ship-state)
@@ -5025,7 +5242,6 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
           ?:  ?&  ?=([%c *] cek)
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
@@ -5037,11 +5253,11 @@
             ::  verdict comes back on the /sybl wire (+sy-sybl) and,
             ::  on success, the point itself on /public-keys.
             ::
-            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            ?>  ?=(^ dom)
             %-  emil
             :~  [duct %pass /public-keys %j %public-keys sndr.shot ~ ~]
                 :*  duct  %pass  /writ  %j
-                    %writ  dom  sndr.shot  pass.open-packet
+                    %writ  u.dom  sndr.shot  pass.open-packet
                 ==
             ==
           ?^  lyf
@@ -9238,7 +9454,7 @@
                 %born  sy-abet:sy-born:sy-core
                 %cong  sy-abet:sy-cong:sy-core
                 %prod  sy-abet:(sy-prod:sy-core ships.task)
-                %snub  sy-abet:(sy-snub:sy-core [form ships]:task)
+                %snub  sy-abet:(sy-snub:sy-core [form act ships]:task)
                 ::  ask our pki-domain agent (via jael) to re-encode
                 ::  our pass with the current off-chain reveal log;
                 ::  the fresh pass returns on /sybl (+sy-sybl %anew).
@@ -11144,22 +11360,48 @@
         ::    comet self-attested to us.
         ::
         ::    %full: the domain agent verified the comet's ownership
-        ::    chain and jael now holds its point.  funnel it into
-        ::    +sy-publ exactly like a %public-keys %full gift: the
-        ::    alien is promoted and its pending messages drain.
+        ::    chain and jael now holds its point.  lift any snub the
+        ::    identity earned from an earlier %fail, then funnel it
+        ::    into +sy-publ exactly like a %public-keys %full gift:
+        ::    the alien is promoted and its pending messages drain.
         ::    %fail: the attestation failed on-chain verification.
         ::    snub the claimed identity and drop its pending requests;
-        ::    a fraudulent attestation is not retried.
+        ::    a fraudulent attestation is not retried.  the snub does
+        ::    not expire; only a later %full lifts it.
         ::    %lost: no live agent is registered for the pki domain.
         ::    stubbed out as a no-op for now.
+        ::    %stale: the ship's verified attestation went out of date
+        ::    on-chain and jael dropped its point.  demote a %known
+        ::    peer to a fresh %alien: messaging state is wiped (as on
+        ::    breach) and outbound requests made while unverified
+        ::    queue in the alien agenda, draining through the normal
+        ::    promotion machinery when a fresh attestation verifies.
+        ::    snub nothing: staleness is not fraud, and the ship's
+        ::    replacement packet must be able to arrive.
         ::
         ++  sy-sybl
           |=  =writ-result:jael
           ^+  sy-core
           ?-    -.writ-result
               %full
+            =*  her  ship.writ-result
+            ::  a verdict admits the ship it vindicates: lift any snub
+            ::  .her earned from an earlier %fail.  this is the exact
+            ::  inverse of that branch's additive snub and runs through
+            ::  the same +sy-snub, so it respects the list's mode -- a
+            ::  %deny list needs .her deleted, an %allow list needs her
+            ::  added -- and leaves the rest of the list alone.  in
+            ::  %deny mode, where a snub is set membership, a verdict
+            ::  for a ship we never snubbed is a no-op.
+            ::
+            ::  a snub does not expire.  expiry would need a per-ship
+            ::  timer, and durable state an attacker can make us
+            ::  allocate is a resource-exhaustion vector; so a verdict
+            ::  actually arriving is the only thing that clears one.
+            ::
+            =.  sy-core  (sy-snub %deny %del ~[her])
             %+  sy-publ  /sybl
-            [%full (my [ship.writ-result point.writ-result]~)]
+            [%full (my [her point.writ-result]~)]
           ::
               %fail
             =*  her  ship.writ-result
@@ -11168,13 +11410,10 @@
                     ships.bug.ames-state
                     |.("attestation writ failed; snubbing")
                 ==
-            ::  additive snub: don't clobber the rest of the blocklist
+            ::  additive snub: don't clobber the rest of the blocklist.
+            ::  the mirror of the %full branch's un-snub, same machinery
             ::
-            =.  ships.snub.ames-state
-              ?-  form.snub.ames-state
-                %deny   (~(put in ships.snub.ames-state) her)
-                %allow  (~(del in ships.snub.ames-state) her)
-              ==
+            =.  sy-core  (sy-snub %deny %add ~[her])
             ::  drop pending requests from this identity; only alien
             ::  state is dropped, an already-known peer is untouched
             ::
@@ -11192,6 +11431,37 @@
                     ships.bug.ames-state
                     |.("writ for unknown pki domain {<dom.writ-result>}")
                 ==
+            sy-core
+          ::
+              %stale
+            =*  her  ship.writ-result
+            %-  %-  trace
+                :*  %mesa  odd.veb.bug.ames-state  her
+                    ships.bug.ames-state
+                    |.("attestation stale; demoting peer to alien")
+                ==
+            =/  peer  (find-peer her)
+            ?~  +.peer
+              sy-core
+            ?:  ?=([?(%ames %mesa) ~ %alien *] peer)
+              sy-core
+            ::  cancel pump timers, as +on-publ-breach does
+            ::
+            =?  sy-core    ?=(%ames -.peer)
+              %+  roll  ~(tap by snd.u.peer)
+              |=  [[=snd=bone =message-pump-state] core=_sy-core]
+              ^+  core
+              ?~  next-wake=next-wake.packet-pump-state.message-pump-state
+                core
+              =/  wire  (make-pump-timer-wire her snd-bone)
+              =/  duct  ~[/ames]
+              (sy-emit:core duct %pass wire %b %rest u.next-wake)
+            ::  demote to a fresh %alien with an empty agenda
+            ::
+            =?  chums.ames-state  ?=(%mesa -.peer)
+              (~(put by chums.ames-state) her alien/*ovni-state)
+            =?  peers.ames-state  ?=(%ames -.peer)
+              (~(put by peers.ames-state) her alien/*alien-agenda)
             sy-core
           ::
           ::  our own freshly re-encoded pass, with an updated
@@ -11344,9 +11614,20 @@
           ++  on-publ-fief
             |=  [=ship to=(unit fief)]
             ^+  sy-core
-            ?~  unix-duct.ames-state
-              sy-core
             ?~  to
+              sy-core
+            ::  the fief a whole point carries is routed by +sy-put-ship;
+            ::  one that arrives on its own has to be routed here, or a
+            ::  peer we already know stays reachable only through its
+            ::  sponsor.  see +fief-route.
+            ::
+            =.  peers.ames-state
+              =/  per  (~(get by peers.ames-state) ship)
+              ?.  ?=([~ %known *] per)
+                peers.ames-state
+              %+  ~(put by peers.ames-state)  ship
+              known/+.u.per(route (fief-route ship to route.u.per))
+            ?~  unix-duct.ames-state
               sy-core
             (sy-emit [unix-duct.ames-state %give %fief (my [ship to]~)])
           ::  +on-publ-rekey: handle new key for peer
@@ -11466,6 +11747,32 @@
                 ::
                 =?  rift.ames-state  =(our ship)
                   rift.point
+                ::  push a committed route to the runtime, exactly as
+                ::  +on-publ-fief does for a [%diff @ %fief *].
+                ::
+                ::    A whole point arrives here, fief and all, from three
+                ::    places: jael's %public-keys %full, +on-publ-rekey's
+                ::    not-yet-known fallback, and -- the one that matters --
+                ::    a confidential-comet %writ verdict (+sy-sybl %full ->
+                ::    +sy-publ /sybl).  Only the incremental %fief diff used
+                ::    to reach the runtime, so a comet whose route we learn
+                ::    from a VERDICT got a jael point with a fief in it that
+                ::    ames then never routed to: /pynt showed the route and
+                ::    ames still answered "no route to".  Confidential
+                ::    identities are deliberately excluded from %gw-btc's
+                ::    udiffs, so the verdict is the only carrier they have,
+                ::    and this was the whole of it going missing.
+                ::
+                ::    Idempotent: the runtime compares the resolved lane and
+                ::    ignores an unchanged one, so re-pushing an already
+                ::    known fief costs nothing.
+                ::
+                =?    sy-core
+                    ?&  ?=(^ unix-duct.ames-state)
+                        ?=(^ fief.point)
+                    ==
+                  %-  sy-emit
+                  [unix-duct.ames-state %give %fief (my [ship fief.point]~)]
                 ::
                 ::  XX not needed?
                 :: =?  sy-core  =(our ship)
@@ -11485,100 +11792,6 @@
                   (sy-meet-alien-chum ship point +.u.old-peer-state +.new-state)
                 ::
                 $(points t.points)
-            ::
-            ++  meet-alien-ship
-              |=  [=ship =point todos=alien-agenda]
-              ^+  sy-core
-              ::  init event-core:ames
-              ::
-              =/  ames-core  (ev:ames now^eny^rof hen ames-state)
-              ::  if we're a comet, send self-attestation packet first
-              ::
-              =?  ames-core  =(%pawn (clan:title our))
-                =/  =blob  (attestation-packet:ames-core ship life.point)
-                %-  send-blob:ames-core
-                [for=| ship blob (~(get by peers.ames-state) ship)]
-              ::  save current duct
-              ::
-              ::  XX armitage: ? nothing is ever done with original-duct
-              =/  original-duct  hen
-              ::  apply outgoing messages, reversing for FIFO order
-              ::
-              =.  ames-core
-                %+  reel  messages.todos
-                |=  [[=duct =plea] core=_ames-core]
-                ?:  =(plea [%$ /flow %cork ~])
-                  (on-cork:core(duct duct) ship)
-                (on-plea:core(duct duct) ship plea)
-              ::  apply outgoing packet blobs
-              ::
-              =.  ames-core
-                %+  roll  ~(tap in packets.todos)
-                |=  [b=blob c=_ames-core]
-                (send-blob:c for=| ship b (~(get by peers.ames-state) ship))
-              ::  apply remote scry requests
-              ::
-              =^  scry-moves  ames-state
-                =+  peer-core=(abed:pe:ames-core ship)
-                =<  abet  ^+  ames-core
-                =.  ames-core
-                  =<  abet  ^+  peer-core
-                  %-  ~(rep by keens.todos)
-                  |=  [[[=path =ints] ducts=(set duct)] cor=_peer-core]
-                  ::  XX some of these ints can be %tune(s) but they are
-                  ::  treated as %sage(s)
-                  (~(rep in ducts) |=([=duct c=_cor] (on-keen:c path duct)))
-                ::
-                %-  ~(rep by chums.todos)
-                |=  [[[=path =ints] ducts=(set duct)] cor=_ames-core]
-                ::  XX some of these ints can be %tune(s) but they are
-                ::  treated as %sage(s)
-                (~(rep in ducts) |=([=duct c=_cor] (on-chum:c ship^path)))
-              ::
-              (sy-emil scry-moves)
-            ::
-            ++  meet-alien-chum
-              |=  [=ship =point:jael todos=ovni-state =chum-state]
-              ^+  sy-core
-              ?.  ?=([%known *] chum-state)
-                ::  +insert-peer should have made this peer %known
-                ::
-                sy-core
-              ::  init ev-core with provided chum-state
-              ::
-              =+  per=ship^+.chum-state
-              =+  ev-core=(ev-abed:ev ~[//meet-chum] per)
-              ::
-              =.  ev-core
-                ::  apply outgoing messages
-                ::
-                %+  reel  pokes.todos  ::  reversing for FIFO order
-                |=  [[=duct mess=mesa-message] c=_ev-core]
-                ?+    -.mess  !!  :: XX log alien peer %boon?
-                    %plea
-                  (ev-req-plea:c(hen duct) +.mess)
-                ==
-              ::
-              =.  ev-core
-                ::  apply (public) remote scry requests
-                ::
-                %-  ~(rep by peeks.todos)
-                |=  [[[=path =ints] ducts=(set duct)] core=_ev-core]
-                %-  ~(rep in ducts)
-                |=  [=duct c=_core]
-                (ev-req-peek:c(hen duct) publ/life.+.per path)
-              ::
-              =.  ev-core
-                ::  apply (two-party) remote scry requests
-                ::
-                %-  ~(rep by chums.todos)
-                |=  [[[=path =ints] ducts=(set duct)] core=_ev-core]
-                %-  ~(rep in ducts)
-                |=  [=duct c=_core]
-                (ev-req-peek:c(hen duct) space=chum-to-our:c path)
-              =^  ev-moves  ames-state  ev-abet:ev-core
-              (sy-emil ev-moves)
-            ::
             --
           ::  on-publ-rift: XX
           ::
@@ -11660,7 +11873,39 @@
             known/peer-state(symmetric-key symmetric-key)
           =.  peers.ames-state  peers
           =.  life.ames-state   life
-          sy-core(moves (weld keen-moves moves))
+          =.  sy-core  sy-core(moves (weld keen-moves moves))
+          ::  a comet has no chain for its peers to read, so the only
+          ::  thing that can tell them it rekeyed is a fresh
+          ::  self-attestation.  send one to everyone we know: until
+          ::  they hear it they still believe our old life, and every
+          ::  packet we send is dropped on a sndr-tick mismatch with no
+          ::  diagnostic and no retry -- the flow simply stalls.  a
+          ::  suite-%c comet's attestation goes back through its PKI
+          ::  domain's verifier (+on-hear-open), which is what promotes
+          ::  the peer's point to the new life.
+          ::
+          ?.  =(%pawn (clan:title our))
+            sy-core
+          =/  ames-core  (ev:ames now^eny^rof hen ames-state)
+          =^  attest-moves  ames-state
+            =<  abet
+            ^+  ames-core
+            =.  ames-core
+              %+  roll  ~(tap by peers.ames-state)
+              |=  [[=ship =ship-state] core=_ames-core]
+              ^+  core
+              ?.  ?=(%known -.ship-state)
+                core
+              =/  =blob  (attestation-packet:core ship life.+.ship-state)
+              (send-blob:core for=| ship blob `ship-state)
+            %+  roll  ~(tap by chums.ames-state)
+            |=  [[=ship =chum-state] core=_ames-core]
+            ^+  core
+            ?.  ?=(%known -.chum-state)
+              core
+            =/  =blob  (attestation-packet:core ship life.+.chum-state)
+            (send-blob:core for=| ship blob ~)
+          (sy-emil attest-moves)
         ::
         ++  sy-prod
           |=  ships=(list @p)
@@ -11762,10 +12007,34 @@
           --
         ::  +sy-snub: handle request to change ship blacklist
         ::
+        ::    %set replaces the whole list with .ships in mode .form.
+        ::    %add and %del edit the current list without changing its
+        ::    mode: %add asks that .ships be blocked (%deny) or
+        ::    admitted (%allow) and %del undoes that, whichever mode
+        ::    the list is actually in.  jael's pki-domain suspension
+        ::    (%gost/%ghul/%bane) uses the editing forms so it never
+        ::    clobbers a manually curated list, and so do the %fail and
+        ::    %full arms of +sy-sybl, which are one another's inverse.
+        ::
         ++  sy-snub
-          |=  [form=?(%allow %deny) ships=(list ship)]
+          |=  [form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
           ^+  sy-core
-          =.  snub.ames-state  [form (^sy ships)]
+          =/  new  (^sy ships)
+          =.  snub.ames-state
+            ?-    act
+                %set  [form new]
+                %add
+              :-  form.snub.ames-state
+              ?:  =(form form.snub.ames-state)
+                (~(uni in ships.snub.ames-state) new)
+              (~(dif in ships.snub.ames-state) new)
+            ::
+                %del
+              :-  form.snub.ames-state
+              ?:  =(form form.snub.ames-state)
+                (~(dif in ships.snub.ames-state) new)
+              (~(uni in ships.snub.ames-state) new)
+            ==
           sy-core
         ::
         ++  sy-stun
@@ -12357,6 +12626,7 @@
               (~(put by chums.ames-state) ship known/+.peer)
             [%mesa known/+.peer]^sy-core
           ::
+          =.  route.peer  (fief-route ship fief.point route.peer)
           =?  route.peer  =(ship (^^sein:title rof /ames our now ship))
             `[direct=%.y lane=[%& ship]]
           =.  peers.ames-state
@@ -12676,6 +12946,13 @@
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
               (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
+          =/  cek  +<.cic
+          =/  dom  (pass-pki-dom pass.open-packet)
+          ::  Reject malformed suite-C tweaks before consulting Jael or
+          ::  emitting either the key subscription or the verifier writ.
+          ::
+          ?:  &(?=([%c *] cek) ?=(~ dom))
+            al-core
           ::  what does jael already know about this comet?
           ::
           =/  lyf=(unit @ud)
@@ -12683,7 +12960,6 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          =/  cek  +<.cic
           ?:  ?&  ?=([%c *] cek)
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
@@ -12693,10 +12969,10 @@
             ::  jael to verify the attestation on-chain.  nothing is
             ::  registered locally until the verdict comes back.
             ::
-            =/  dom  `@tas`q:(rub 0 dat.tw.pub.cek)
+            ?>  ?=(^ dom)
             %-  al-emil
             :~  [[//keys]~ %pass /public-keys %j %public-keys her.name ~ ~]
-                [[//writ]~ %pass /writ %j %writ dom her.name pass.open-packet]
+                [[//writ]~ %pass /writ %j %writ u.dom her.name pass.open-packet]
             ==
           ?^  lyf
             ::  jael verified this comet, or we met it before and it's
@@ -13863,6 +14139,32 @@
         ::
             %page
           =*  her  her.name.pact
+          ::  a snub is permanent, and it holds on every transport.
+          ::
+          ::    +pe-hear drops everything from a snubbed sender before it
+          ::    classifies the packet.  this is that gate for the %mesa
+          ::    side, which had none: a snubbed comet could re-attest over
+          ::    %page, reach +al-take-proof, earn a %full from its domain
+          ::    verifier and be readmitted -- the one way back in that the
+          ::    snub is supposed to deny it.  (a %full still lifts the snub
+          ::    in +sy-sybl; after this that is reachable only by an
+          ::    operator re-poking a %writ, which is the intent.)
+          ::
+          ::    keyed on .her.name -- the ship the page is published by,
+          ::    and the ship +al-take-proof would attest.  the %poke branch
+          ::    keys its own gate on .her-pok, the same ship by the other
+          ::    name; neither keys on the relay, since .hop says nothing
+          ::    about who signed the contents.
+          ::
+          ::    this sits above the %known chum below as well, not just the
+          ::    alien attestation path: a ship whose packets we refuse on
+          ::    |ames is a ship whose namespace data we refuse here.
+          ::
+          ?:  .=  =(%deny form.snub.ames-state)
+              (~(has in ships.snub.ames-state) her)
+            %-  %+  %*(ev-tace ev-core her her)  rcv.veb.bug.ames-state
+                |.("snubbed")
+            `ames-state
           =/  chum-state  (find-peer her)
           ?.  ?=([%mesa *] chum-state)
             %-  %+  %*(ev-tace ev-core her her)  odd.veb.bug.ames-state

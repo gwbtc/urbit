@@ -875,7 +875,8 @@
   ::    %init: vane boot
   ::    %prod: re-send a packet per flow, to all peers if .ships is ~
   ::    %sift: limit verbosity to .ships
-  ::    %snub: set packet blocklist to .ships
+  ::    %snub: edit packet blocklist (%set replaces it with .ships;
+  ::           %add/%del block or unblock .ships without replacing it)
   ::    %spew: set verbosity toggles
   ::    %cong: adjust congestion control parameters
   ::    %stir: recover from timer desync and assorted debug commands
@@ -902,7 +903,7 @@
         $>(%init vane-task)
         [%prod ships=(list ship)]
         [%sift ships=(list ship)]
-        [%snub form=?(%allow %deny) ships=(list ship)]
+        [%snub form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
         [%anew ~]                                 ::  refresh our attestation
         [%spew veb=(list verb)]
         [%cong msg=@ud mem=@ud]
@@ -4307,24 +4308,35 @@
   ::  $writ-result: outcome of one %writ attestation, given to %sybl
   ::  subscribers as a %sybl gift.  %full carries the verified $point now stored in jael;
   ::  %fail means the domain agent rejected the attestation; %lost means
-  ::  no agent is registered for the domain.
+  ::  no agent is registered for the domain.  %stale means the domain
+  ::  agent observed the ship's verified attestation go out of date
+  ::  on-chain: jael has dropped the point and ames demotes the peer.
+  ::  staleness is not fraud and must never snub -- the ship's next
+  ::  packet re-enters verification.
   ::
   +$  writ-result                                     ::  attestation outcome
     $%  [%full dom=@tas =ship =point]                 ::  verified; point held
         [%fail dom=@tas =ship]                        ::  failed validation
         [%lost dom=@tas =ship]                        ::  unknown pki domain
+        [%stale dom=@tas =ship]                       ::  attestation outdated
         [%anew dom=@tas =pass]                        ::  our fresh attestation
     ==
-  ::  $writ-response: %fact payload a registered pki-domain agent gives
+  ::  $verdict: %fact payload a registered pki-domain agent gives
   ::  jael on its watch path to answer a %jael-writ poke.  on success,
   ::  res carries the on-chain-verified $point for .ship.
   ::
-  +$  writ-response  [dom=@tas =ship res=(unit point)]
+  +$  verdict  [dom=@tas =ship res=(unit point)]
   ::  $anew-response: %fact payload the domain agent gives jael to
   ::  answer a %jael-anew poke: our own pass, re-encoded with the
   ::  current off-chain reveal log in its (un-tweaked) xtr data.
   ::
   +$  anew-response  [dom=@tas =pass]
+  ::  $stale-notice: %fact payload the domain agent gives jael when it
+  ::  observes a verified ship's attestation go out of date on-chain
+  ::  (e.g. its identity utxo was spent).  unprompted, unlike a
+  ::  $verdict.
+  ::
+  +$  stale-notice  [dom=@tas =ship]
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack

@@ -217,12 +217,201 @@
     ==
   --
 ::
+::  Confidential-comet fixtures for the Aqua simulation.
+::
+::    Base arvo implements GENERIC pluggable comet PKI: a suite-%c pass
+::    carries a +mat-tagged domain plus opaque domain data, jael routes
+::    it to whichever agent claimed the domain, ames holds the peer
+::    until a verdict.  Nothing in this kernel knows -- or may learn --
+::    what a domain's data MEANS.
+::
+::    So the arms below are CHECKED-IN DATA, not a computation.  The
+::    opaque halves of .dat and .xtr are byte-for-byte output of a real
+::    confidential-comet PKI implementation, which lives in its own desk
+::    and not here.  Arvo treats them as the atoms they are: it hands
+::    them to +cc-crub and never looks inside.
+::
+::    TO REGENERATE, on a ship with such a desk installed, run that
+::    desk's fixture generator against +cc-domain below and paste the
+::    printed literals back here.  The generator is the only place the
+::    fixture inputs are written down; this file records only what the
+::    kernel itself can check.  (For the Groundwire desk that generator
+::    is +groundwire!aqua-fixtures, in gen/aqua-fixtures.hoon.)
+::
+::  +cc-domain: the pki domain the fixture comets commit to
+::
+::    Base arvo has no domain of its own, so the fixtures name one that
+::    exists only for the simulation.  The fake verifier the scenarios
+::    install is a Gall agent of exactly this name, because jael routes
+::    a %writ to the agent named by the pass's leading +mat -- see
+::    +pki-agent:ph-cc-util, which must stay in step with this.
+::
+++  cc-domain  %test-pki
+::  +cc-comet-ok, +cc-comet-fail: the two fixture comets
+::
+::    Both names are DERIVED from the fixture data by the kernel's own
+::    generic cric, never chosen.  A confidential comet's @p is
+::    (shaf %cfig) of its tweaked signing key and the tweak hashes
+::    .dat, so any change to a fixture renames it.  Everything that
+::    lists these comets (+comets below, +comets/+turfs in
+::    lib/ph/cc/util.hoon and ted/aqua/ames.hoon) refers to these arms
+::    rather than repeating a literal, because those lists are +zip'ped
+::    with a strict equal-length check and a stale name crashes long
+::    before any attestation logic runs.
+::
+::    Current values, for grepping:
+::      ok    ~tirdyn-hocpes-ribtyl-fitfyr--winrus-dabdyl-nardev-dapryc
+::      fail  ~hodwyn-topmul-sogfun-hatfeb--riblug-nomnep-fidben-macfun
+::
+++  cc-comet-ok    ^~(`@p`(cc-fig %ok))
+++  cc-comet-fail  ^~(`@p`(cc-fig %fail))
+::  +cc-fig: a fixture comet's derived name
+::
+++  cc-fig
+  |=  which=?(%ok %fail)
+  ^-  @p
+  `@p`fig:ex:(cc-keys which 1)
+::  +cc-seed: a fixture comet's master seed (its entry in +comets)
+::
+++  cc-seed
+  |=  which=?(%ok %fail)
+  ^-  @
+  ?:(?=(%ok which) 1 2)
+::  +cc-dat: the immutable tweak data
+::
+::    A dat is a +mat-encoded pki domain followed by that domain's own
+::    data.  The leading +mat is the whole of the kernel's contract with
+::    a dat -- ames reads it to learn which agent to ask, and nothing in
+::    arvo reads any further -- so it is spelled out here, and the rest
+::    is one opaque fixture atom whose shape arvo does not describe.
+::
+++  cc-dat
+  |=  which=?(%ok %fail)
+  ^-  @
+  =/  tail=@  (cc-dat-tail which)
+  (can 0 ~[(mat cc-domain) [(met 0 tail) tail]])
+::  +cc-dat-tail: a fixture comet's domain data, as an opaque atom
+::
+++  cc-dat-tail
+  |=  which=?(%ok %fail)
+  ^-  @
+  ?:  ?=(%ok which)
+    0x7.3eb7.25af.2e7b.3683.2a1b.d0cd.2e18.31df.5519.7823.7daf.23bc.
+    8bf0.a173.bcc7.4648
+  0x390.e9b6.5e2b.cb96.6345.3bbb.e508.3813.adcf.63a8.96a7.afb2.d4bf.
+  21b5.cd22.c28b.9a48
+::  +cc-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
+::
+::    Excluded from the key tweak, so it may grow without renaming the
+::    comet -- +cc-fig is deliberately taken at life 1 and the life-2
+::    fixture below has the same @p.  In a real domain it is the
+::    refreshable attestation evidence; arvo neither knows nor cares.
+::
+::    The %fail fixture is broken deliberately and minimally: the
+::    generator gives it evidence its .dat does not commit to, so a
+::    real verifier fails that one check.  The Aqua oracle in
+::    lib/ph/cc/util.hoon has no chain to check anything against and
+::    does not repeat that check -- see its comment.
+::
+::    Only lives 1 and 2 exist: the scenarios boot at life 1 and the
+::    rekey scenario advances to life 2.  Asking for more must crash
+::    loudly rather than silently produce a pass no fixture describes.
+::
+++  cc-xtr
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  @
+  ?:  ?=(%ok which)
+    ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
+        %1
+      0x17.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
+      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
+      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
+      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+      8000.ec05
+    ::
+        %2
+      0x1.5402.8720.3a94.943e.bb94.44be.8d19.5cdc.ecc3.0cb4.17c9.7010.
+      95a7.f00c.ffbd.42f7.8027.de01.0019.90b4.f8d9.bdf1.1480.c444.000b.
+      602f.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
+      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
+      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
+      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+      8000.ec05
+    ==
+  ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
+      %1
+    0x534.96d1.1887.e452.a602.91f8.27be.5875.9949.986d.2dbc.e5f0.d20d.
+    e40e.e254.6ba8.37fc.0175.1b63.999e.8167.486f.56df.7782.01cc.d3e0.
+    6662.a9a7.7c37.b9fd.2013.7356.a892.442a.b599.c5d2.4133.8b36.61da.
+    f5a4.c727.ec9c.c4ff.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+    c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+    8000.ec05
+  ::
+      %2
+    0x2.a865.0ea3.cef6.b16b.3b9d.2332.228a.0a24.2751.3361.3c1d.17e9.
+    59f7.03ea.2e5b.b960.26f9.df60.0664.2d3e.366f.7c45.2031.1100.02d8.
+    0b34.96d1.1887.e452.a602.91f8.27be.5875.9949.986d.2dbc.e5f0.d20d.
+    e40e.e254.6ba8.37fc.0175.1b63.999e.8167.486f.56df.7782.01cc.d3e0.
+    6662.a9a7.7c37.b9fd.2013.7356.a892.442a.b599.c5d2.4133.8b36.61da.
+    f5a4.c727.ec9c.c4ff.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
+    c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
+    8000.ec05
+  ==
+::  +cc-sed: the 64-byte cric seed of a fixture comet at .lyfe
+::
+::    Suite C splits the seed into a signing half (bytes 0-31, which
+::    fixes the @p through the tweak) and a messaging half (bytes
+::    32-63).  Rekeying a confidential comet rotates ONLY the messaging
+::    half: life rides in the on-chain snapshot, never in the seed.
+::    Deriving both halves from a life-dependent seed -- as this fixture
+::    used to -- gives every life a different signing key and therefore
+::    a different @p, so the life-2 self-attestation fingerprints to a
+::    ship that is not the sender and the receiver correctly refuses it.
+::
+++  cc-sed
+  |=  [which=?(%ok %fail) lyfe=life]
+  ^-  @
+  =/  base  (shal 64 (cc-seed which))
+  =/  sgn   (end 8 base)
+  =/  cry   (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
+  (can 3 ~[[32 sgn] [32 cry]])
+::  +cc-crub: activate a suite-%c core from an explicit 64-byte seed
+::
+::    +pit:nu:cric derives the whole seed by hashing one number, which
+::    cannot express "same signing key, new messaging key".  This builds
+::    the same $ring +pit would, with the seed supplied outright.
+::
+++  cc-crub
+  |=  [sed=@ dat=@ xtr=@]
+  %-  nol:nu:cric:crypto
+  ^-  ring
+  =<  p
+  %-  fax:plot
+  :-  0
+  :*  [s+~ 3 [1 'C'] ~]
+      [s+~ 3 [64 sed] ~]
+      (mat dat)
+      ?:  =(0 xtr)  ~
+      [(met 0 xtr)^xtr ~]
+  ==
+::  +cc-keys: a fixture comet's full suite-%c core at .lyfe
+::
+++  cc-keys
+  |=  [which=?(%ok %fail) lyfe=life]
+  %^  cc-crub  (cc-sed which lyfe)
+    (cc-dat which)
+  (cc-xtr which lyfe)
+::
 ++  get-keys
   |=  [who=@p lyfe=life]
   ?~  cum=(~(get by comets) who)
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
     [%b ~]
+  ?:  =(who cc-comet-ok)    (cc-keys %ok lyfe)
+  ?:  =(who cc-comet-fail)  (cc-keys %fail lyfe)
   ?.  =(lyfe 1)
     %^  pit:nu:cric:crypto  32
       (can 5 [1 (scot %p who)] [1 (scot %ud lyfe)] ~)
@@ -261,11 +450,14 @@
         ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
         ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
         ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
+        :: confidential (suite-%c) identities, derived above
+        cc-comet-ok
+        cc-comet-fail
     ==
   %+  zip
     ::  comet suites
     ^-  (list ?(%b %c))
-    ~[%c %c %c %b %b %b %c %c %c %b %b %b]
+    ~[%c %c %c %b %b %b %c %c %c %b %b %b %c %c]
   ::  comet seeds
   ^-  (list @uw)
   :~  0w2.5sfF0.~inVv.dQ7zb.ykQSG.aX5nF.uGQsm.keVzY.6Pu1S.
@@ -292,6 +484,8 @@
       2~det.i-jOI.OVI8v.9ldMk.16MGj.AZxso.qsTpQ.inrUz.aE1sa
       0w~w9s8.YLtr3.bSQ8H.SIK5g.Dnh9M.aIcT2.mqIqG.geVWH.
       lJUzq.OTuUl.oM9ww.7MwQh.pQ7Q9.NB38f.FzzKE.S7is8.~0Gg-
+      `@uw`1
+      `@uw`2
   ==
 ::  +zip: combine two lists into a list of cells of their elements
 ::

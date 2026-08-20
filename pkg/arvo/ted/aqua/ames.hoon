@@ -6,7 +6,7 @@
 ::  to drop them.
 ::
 /-  aquarium, spider
-/+  aqua-vane-thread
+/+  aqua-vane-thread, az=aqua-azimuth
 /=  ames-raw  /sys/vane/ames
 =,  aquarium
 |%
@@ -356,20 +356,22 @@
       ::
       =+  ;;(out=(soft [~ signature=@ signed=@]) (mole |.((cue content))))
       =+  ;;(open=(soft [~ open-packet:ames-raw]) (mole |.((cue signed:(need (need out))))))
-      ?|  ?&  ?=(~ open)
-              ::  if this is not an attestation packet, check that the receiver
-              ::  has the peer as known
-              ::
-              !?=([~ %.y] is-known)
-          ==
-          ?&  ?=(^ open)
-              ::  if this is an attestation packet, check if the rcvr has the comet
-              ::  as %known -- this is a workaround to prevent a bail:evil that will
-              ::  end up blocking the queue of the %aqua host, when it tries to decrypt
-              ::  an open-packet
-              ::
-              ?=([~ %.y] is-known)
-  ==  ==  ==
+      ::  if this is not an attestation packet, check that the receiver
+      ::  has the peer as known
+      ::
+      ?=(~ open)
+      !?=([~ %.y] is-known)
+      ::
+      ::  Attestations are always delivered, even to a receiver that
+      ::  already knows the comet.  They used to be dropped in that
+      ::  case, to dodge a bail:evil that blocked the %aqua host's
+      ::  queue: +on-hear-packet:ames routed a comet's packet to the
+      ::  decrypter as soon as the comet was %known, so a plaintext
+      ::  attestation arriving after promotion was fed to AES-SIV.
+      ::  Ames now recognises an attestation by its shape
+      ::  (+is-open-packet:ames), and dropping them here would hide the
+      ::  only thing that tells a peer a confidential comet rekeyed.
+  ==
 ::  +get-known: get known peers before send
 ::
 ++  get-known
@@ -435,7 +437,10 @@
     %.n
   =/  index=(unit @)  (find ~[ship] comets)
   ?~  index  %.n
-  |((lte u.index 2) &((gte u.index 6) (lte u.index 8)))
+  ?|  (lte u.index 2)
+      &((gte u.index 6) (lte u.index 8))
+      (gte u.index 12)
+  ==
 ::  +mesa-lane-to-ship: decode a ship from a mesa lane
 ::
 ::    Special-case some comets, since their addresses doesn't fit into a lane.
@@ -460,7 +465,7 @@
     ::
         %if
       ?.  =(0xdead.beef p.u.got)  ~
-      ?.  (lth q.u.got 12)  ~
+      ?.  (lth q.u.got (lent comets))  ~
       (some (snag q.u.got comets))
     ==
   ?-  -.lane
@@ -468,7 +473,7 @@
   ::
       %if
     ?:  ?&  =(0xdead.beef p.lane)
-            (lth q.lane 12)
+            (lth q.lane (lent comets))
         ==
       (some (snag q.lane comets))
     (some `@p``@`(cat 5 p.lane q.lane))
@@ -510,13 +515,13 @@
     ::
         %if
       ?.  =(0xdead.beef p.u.got)  ~
-      ?.  (lth q.u.got 12)  ~
+      ?.  (lth q.u.got (lent comets))  ~
       (some (snag q.u.got comets))
     ==
   ::
       %|
     ?:  ?&  =(0xdead.beef (end 5 p.lane))
-            (lth (rsh 5 p.lane) 12)
+            (lth (rsh 5 p.lane) (lent comets))
         ==
       (some (snag (rsh 5 p.lane) comets))
     (some `@p``@`p.lane)
@@ -564,6 +569,10 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
+      :: confidential (suite-%c) identities.  derived from the
+      :: fixture dat, never written out: see +cc-comet-ok:aqua-azimuth.
+      cc-comet-ok:az
+      cc-comet-fail:az
   ==
 :: +turfs: map from domain to comet
 ::
@@ -577,6 +586,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
+      /test-pki/ok    /test-pki/fail
   ==
 ::
 ::  +zip: combine two equally long lists into one list of cells

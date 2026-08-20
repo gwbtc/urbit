@@ -284,7 +284,7 @@
 ::
 ++  poke-ames-snub
   |=  snub=[form=?(%allow %deny) ships=(list ship)]
-  abet:(emit %pass /helm/snub %arvo %a %snub snub)
+  abet:(emit %pass /helm/snub %arvo %a %snub form.snub %set ships.snub)
 ::
 ++  poke-atom
   |=  ato=@

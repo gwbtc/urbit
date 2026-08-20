@@ -6,17 +6,86 @@ on:
   pull_request:
     branches:
       - gw/next/kelvin/408
+  # Dispatch inputs exist so a release candidate can be cut from UNMERGED
+  # branches.  Without them the only way to get the real artifact -- the one
+  # boot.sh downloads, checksums and unpacks -- was to merge first, which made
+  # the merge a prerequisite for the testing that is supposed to gate it.
+  #
+  # A dispatch runs the workflow file FROM THE REF YOU PICK, so `gh workflow
+  # run groundwire-build.yml --ref hd/cc-kernel` already uses this copy.  The
+  # inputs below then point the two source checkouts wherever you need.
+  #
+  #   gh workflow run groundwire-build.yml --repo gwbtc/urbit \
+  #     --ref hd/cc-kernel \
+  #     -f urbit_ref=hd/cc-kernel \
+  #     -f groundwire_ref=hd/cc-landing \
+  #     -f tag_prefix=groundwire-rc
+  #
+  # Every default reproduces the previous behaviour exactly, so scheduled and
+  # push runs are unchanged.
   workflow_dispatch:
+    inputs:
+      urbit_ref:
+        description: 'gwbtc/urbit ref for the kernel + vere'
+        required: false
+        default: ''
+      groundwire_ref:
+        description: 'gwbtc/groundwire ref for the desk (default: main)'
+        required: false
+        default: ''
+      vere_ref:
+        description: 'gwbtc/vere ref for the runtime (default: gw/next/kelvin/408)'
+        required: false
+        default: ''
+      tag_prefix:
+        description: 'release tag prefix (default: groundwire-alpha)'
+        required: false
+        default: ''
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
   VERE_BRANCH: gw/next/kelvin/408
   URCRYPT_BRANCH: gw/cmp-pub
   COMET_MINER_BRANCH: tinnus-feed
+  # gwbtc/tcp-sidecar is public, so it needs no token and outsiders can
+  # reproduce the build. It is pinned by full SHA rather than by branch so a
+  # given release is reproducible. To bump: read the diff on main, then paste
+  # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
+  TCP_SIDECAR_REF: c362083af68ff6e7b30b8236d7e1659d800d3e9d
+  # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
+  # a README, so this is pinned to a full SHA rather than a branch name, same
+  # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
+  # read the diff on develop, then paste the new 40-char SHA here
+  # (`git ls-remote https://github.com/gwbtc/node develop`).
+  # Pinned to 063720b9 (2026-08-12): %reorg-rollback now carries
+  # `last-common` + `stale-branch`, the list of orphaned blocks, which is
+  # what %gw-btc's reorg repair filters its points against.
+  #
+  # This pin and the %groundwire desk must move TOGETHER, and the coupling
+  # is at RUNTIME, not at build time: the two desks compile independently
+  # (%gw-btc reads /sur/light-client from its OWN desk), so nothing here
+  # fails if they disagree. What fails is the first reorg on a live ship.
+  # %gw-btc unpacks the fact with `!<`, the old flat [block-height
+  # block-hash] does not nest under the new mold or vice versa, and the
+  # `?>` bails in +on-agent. Below this SHA, a %groundwire carrying the
+  # reorg repair is broken on reorgs; at or above it, a %groundwire
+  # without the repair is broken on reorgs. Check GROUNDWIRE_BRANCH has
+  # the matching desk before bumping.
+  NODE_REF: 063720b920a44109b7129a189f2f2e974dffb728
   # desks
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
+  NOSTRILL_BRANCH: bm/zig
+  LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
+  DRIVE_BRANCH: main
+  # The distribution ship every baked desk's desk.ship points at: a
+  # booted ship opens a Clay OTA sync to it per desk (get-publisher in
+  # sur/hood.hoon; the sync is a second channel, not a gate).  This is
+  # our OWN sponsor, which we install all of these desks onto, so it
+  # can actually serve every one of them -- unlike production's dister,
+  # which did not publish node/tcp-sidecar/nostrill.
+  DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
 
 jobs:
   # =============================================================
@@ -30,7 +99,8 @@ jobs:
   # Flow:
   #   1. Boot fake ~zod with custom vere + kelvin 408 arvo (-A flag)
   #   2. For each desk: create from %base, mount, clear, populate, commit
-  #   3. Write each desk's agent list to Clay via %info (filesystem commits are unreliable)
+  #   3. Re-write the light-client desks' desk.bill/kelvin to Clay via %info
+  #      and verify them (filesystem commits are unreliable)
   #   4. Build brass pill via fyrd, wait for it to appear on filesystem
   #
   # Key gotchas:
@@ -71,12 +141,28 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y netcat-openbsd
 
+      # A guard nobody has watched fire is not a guard.  desk-commit.sh now
+      # refuses a desk containing a file extension the desk has no
+      # /mar/<ext>/hoon for, because Clay's answer to one of those is to take
+      # the commit, change nothing, print nothing and leave the desk at its
+      # old revision -- measured on a live ship, a desk with one .md in it
+      # went nowhere while the same desk without it went 2 -> 3.  That is how
+      # a %groundwire desk with no %gw-btc in it nearly shipped
+      # (gwbtc/groundwire 336e6e3), and main has no doc/ directory, which is
+      # the only reason nobody hit it sooner.
+      #
+      # This runs the check against a desk built to fail it and the same desk
+      # with the offending file removed, so every build watches the guard
+      # fire before any real desk is trusted to it.  It costs a second.
+      - name: Self-test the desk mark guard
+        run: ./automation/desk-check-marks.sh --self-test
+
       # -- Checkout all desk source repos --
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || env.URBIT_BRANCH }}
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || inputs.urbit_ref || env.URBIT_BRANCH }}
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT || github.token }}
 
@@ -84,7 +170,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
-          ref: ${{ env.GROUNDWIRE_BRANCH }}
+          ref: ${{ inputs.groundwire_ref || env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
           token: ${{ secrets.GH_PAT || github.token }}
 
@@ -103,6 +189,56 @@ jobs:
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
           token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout Nostrill (gwbtc/ursockets)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.NOSTRILL_BRANCH }}
+          path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout tloncorp/landscape
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/landscape
+          ref: ${{ env.LANDSCAPE_BRANCH }}
+          path: gwbtc-landscape
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout gwbtc/drive
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/drive
+          ref: ${{ env.DRIVE_BRANCH }}
+          path: gwbtc-drive
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      # gwbtc/node and gwbtc/tcp-sidecar are both public, so neither takes a
+      # token. That is deliberate, and matches build-sidecar: it keeps the
+      # build reproducible outside this org.
+      #
+      # build-sidecar already checks out gwbtc/tcp-sidecar, but it is a
+      # separate job running a three-OS matrix, each with its own workspace,
+      # so nothing there is reachable from here. Handing the desk over would
+      # mean an upload-artifact/download-artifact round trip for ~25 small
+      # text files; a second checkout of the same pinned SHA is cheaper and
+      # keeps the jobs independent. Both read TCP_SIDECAR_REF, so the desk
+      # baked into the pill and the binary shipped in the tarball are always
+      # the same revision.
+      - name: Checkout gwbtc/node
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/node
+          ref: ${{ env.NODE_REF }}
+          path: gwbtc-node
+
+      - name: Checkout gwbtc/tcp-sidecar (desk)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/tcp-sidecar
+          ref: ${{ env.TCP_SIDECAR_REF }}
+          path: gwbtc-tcp-sidecar
 
       # -- Boot fake ~zod --
 
@@ -153,17 +289,273 @@ jobs:
           cp -rL gwbtc-urbit/pkg/arvo/* ./zod/gw-base/
           ./automation/desk-commit.sh gw-base ./zod "$CONN_SOCK"
 
-      - name: Build groundwire desk
+      # TRANSITIONAL, DELETE WITH THE MAKEFILE SHIM.
+      #
+      # This workflow runs against TWO different groundwire refs: the dispatch
+      # input, and -- on a pull_request, which is how #67's own CI runs -- the
+      # env default, `main`.  `main` has not been renamed yet and has no
+      # `gw-btc` target, so pinning the new name here turns #67's CI red until
+      # gwbtc/groundwire#129 merges.  Measured, not guessed: run 31827413435
+      # failed at exactly this step.
+      #
+      # The groundwire Makefile covers the mirror image (an OLD workflow
+      # against a NEW desk) by answering to both names.  This covers the other
+      # direction.  Between them there is no red window in either order.
+      #
+      # The desk name follows the dist we actually found, rather than being
+      # forced: a pre-rename tree carries %urb-watcher, and installing that
+      # under a %gw-btc name would be a lie told by the build.
+      - name: Build the gw-btc desk (tolerating a pre-rename ref)
         run: |
-          cd gwbtc-groundwire && make groundwire && cd ..
+          cd gwbtc-groundwire
+          if make -n gw-btc >/dev/null 2>&1; then
+            make gw-btc
+            echo "GW_DESK=gw-btc"                >> "$GITHUB_ENV"
+            echo "GW_DIST=gwbtc-groundwire/dist-gw-btc" >> "$GITHUB_ENV"
+          else
+            echo "note: this groundwire ref predates the %gw-btc rename"
+            make groundwire
+            echo "GW_DESK=groundwire"                       >> "$GITHUB_ENV"
+            echo "GW_DIST=gwbtc-groundwire/dist-groundwire" >> "$GITHUB_ENV"
+          fi
+          # spv-wallet's dist is a BUILD artifact (not committed); its make
+          # target copies from the gw-btc source built just above.  The daily
+          # lane runs `make gw-btc spv` together; the RC lane must too, or the
+          # %spv-wallet rsync below has no dist-spv to copy.
+          make spv
 
-      - name: Populate %groundwire desk
+      - name: Populate the gw-btc desk
         run: |
-          ./automation/desk-create.sh groundwire "$CONN_SOCK"
-          ./automation/desk-mount.sh groundwire ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh groundwire ./zod
-          cp -rL gwbtc-groundwire/dist-groundwire/* ./zod/groundwire/
-          ./automation/desk-commit.sh groundwire ./zod "$CONN_SOCK"
+          test -d "$GW_DIST" || { echo "::error::$GW_DIST missing after build"; exit 1; }
+          echo "installing $GW_DIST as %$GW_DESK"
+          ./automation/desk-create.sh "$GW_DESK" "$CONN_SOCK"
+          ./automation/desk-mount.sh "$GW_DESK" ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh "$GW_DESK" ./zod
+          cp -rL "$GW_DIST"/* "./zod/$GW_DESK/"
+          # OTA source: sync %gw-btc from our sponsor (see DESK_DISTER).
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/$GW_DESK/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/$GW_DESK/mar/ship.hoon"
+          echo "$DESK_DISTER" > "./zod/$GW_DESK/desk.ship"
+          ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
+
+      - name: Populate %spv-wallet desk
+        run: |
+          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
+          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh spv-wallet ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/spv-wallet/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/spv-wallet/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
+          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
+
+      # -- The light-client stack: %node and %tcp-sidecar --
+      #
+      # %node is the Bitcoin light client (agent %bitcoin-client); %tcp-sidecar
+      # is the agent (%tcp) that talks to the tcp-sidecar process built by
+      # build-sidecar. Together they are the only way a ship reaches Bitcoin.
+      # Baking them into the pill is what lets a freshly booted ship sync with
+      # no post-boot desk installs; before this, every operator installed both
+      # by hand.
+
+      - name: Populate %node desk
+        run: |
+          ./automation/desk-create.sh node "$CONN_SOCK"
+          ./automation/desk-mount.sh node ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh node ./zod
+          cp -rL gwbtc-node/desk/* ./zod/node/
+
+          # ======================== TEMPORARY ========================
+          # Two patches so gwbtc/node@NODE_REF installs on a kelvin 408
+          # kernel. Both edit only the copy in Clay's mount, never the
+          # checkout, so `gwbtc-node` stays exactly what NODE_REF names.
+          # Delete each one as node fixes it upstream; see the report in
+          # PR #67 for the asks. This is the same in-CI patching that
+          # build-extras does to comet-miner with sed.
+          #
+          # BOTH re-checked against node@063720b9 on 2026-08-12 and both
+          # are STILL NEEDED: desk/sys.kelvin is still a bare [%zuse 409],
+          # and both bare [%block-filter] call sites are still there
+          # (app/bitcoin-client.hoon:509 and :537). Re-check on every
+          # NODE_REF bump and delete whichever has landed.
+          #
+          # 1. Kelvin. node's desk/sys.kelvin reads [%zuse 409]; this
+          #    kernel is 408, so the desk will not install as published.
+          #    Widen the weft to accept both. gwbtc/tcp-sidecar's desk
+          #    already ships 410/409/408 for exactly this reason, which is
+          #    both the precedent and the upstream ask.
+          #    DELETE ONCE node's sys.kelvin lists 408.
+          echo '[%zuse 409]'  > ./zod/node/sys.kelvin
+          echo '[%zuse 408]' >> ./zod/node/sys.kelvin
+
+          # 2. app/bitcoin-client.hoon passes a bare `[%block-filter]` to
+          #    ~(del in ...) at two call sites. `[a]` is just `a`, so that
+          #    is the atom %block-filter, not the cell [%block-filter ~]
+          #    the set holds. +del:in casts its argument to the set's item
+          #    type, the atom does not nest under the cell, and Clay
+          #    nest-fails -- which crashes the %zeal that makes the desk
+          #    live, i.e. it kills the boot, not just the agent. Verified
+          #    against a fake ~zod on this kernel.
+          #    DELETE ONCE node writes [%block-filter ~] at both sites.
+          #    No -i.bak: a stray .bak in the mount has no mark and would
+          #    fail the commit.
+          BAD=$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)
+          echo "bare [%block-filter] call sites patched: ${BAD}"
+          sed -i 's/\[%block-filter\])/[%block-filter ~])/g' ./zod/node/app/bitcoin-client.hoon
+
+          # 3. mar/bitcoin-client/connect-peer.hoon writes its seven ?+
+          #    cases as bare cords ('ipv4'), not terms (%'ipv4'). A ?+
+          #    case is a ?= pattern, so a bare cord is a SYNTAX ERROR and
+          #    the file does not parse on any kernel. Its twin,
+          #    disconnect-peer.hoon, has the identical block written
+          #    correctly with %'...' -- so this is a typo in one of a
+          #    matched pair, not a kelvin disagreement. Nothing in
+          #    %gw-btc uses this mark; it is the explorer's connect
+          #    button. Added by gwbtc/node@0267143, still present at
+          #    develop (d214564).
+          #    DELETE ONCE node prefixes the seven cases with %.
+          CP=./zod/node/mar/bitcoin-client/connect-peer.hoon
+          BARE=$(grep -cE "^ +'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'" "$CP" || true)
+          echo "bare cord ?+ cases patched in connect-peer: ${BARE}"
+          sed -i -E "s/^( +)'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'/\\1%'\\2'/" "$CP"
+
+          # 4. mar/bitcoin-client/best-block.hoon was not updated when
+          #    063720b9 changed the mold it prints. Its %reorg-rollback
+          #    branch still reads block-height.bes / block-hash.bes, and
+          #    on that branch those legs are now under .last-common --
+          #    so the file fails to compile with -find.block-height.bes,
+          #    in the very commit that introduced the change. Rewrite the
+          #    two reads to go through .last-common; .stale-branch is
+          #    left out of the JSON rather than invented here, since the
+          #    upstream shape for it is node's to choose.
+          #    DELETE ONCE node fixes its own mark.
+          BB=./zod/node/mar/bitcoin-client/best-block.hoon
+          echo "best-block mar %reorg-rollback reads repointed at .last-common"
+          sed -i '/%reorg-rollback/,$ {
+            s/block-height\.bes/block-height.last-common.bes/
+            s/block-hash\.bes/block-hash.last-common.bes/
+          }' "$BB"
+          # ====================== END TEMPORARY ======================
+
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/node/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/node/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/node/desk.ship
+          ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
+
+      - name: Populate %tcp-sidecar desk
+        run: |
+          # No kelvin patch here: the sidecar desk already publishes a
+          # multi-kelvin sys.kelvin ([%zuse 410]/[409]/[408]).
+          ./automation/desk-create.sh tcp-sidecar "$CONN_SOCK"
+          ./automation/desk-mount.sh tcp-sidecar ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh tcp-sidecar ./zod
+          cp -rL gwbtc-tcp-sidecar/desk/* ./zod/tcp-sidecar/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/tcp-sidecar/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/tcp-sidecar/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/tcp-sidecar/desk.ship
+          ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
+
+      # The filesystem commits above are the primary path and do land both
+      # files -- but only as long as Clay's mount sync behaves, and the "Key
+      # gotchas" note at the top of this job records that it does not always.
+      # A dropped desk.bill is silent: the pill still boots, the desk is still
+      # there, and the agent simply never starts. So write both files straight
+      # to Clay via %info, then read them back and fail the build if either is
+      # missing. %mut with identical content is a no-op, so this is safe when
+      # the commit already worked.
+      #
+      # The agent lists are parsed out of each repo's own desk.bill rather
+      # than hardcoded here, so adding an agent upstream cannot leave this
+      # workflow silently pinning a stale list.
+      - name: Write %node and %tcp-sidecar desk.bill and kelvin to Clay
+        run: |
+          source ./automation/fyrd.sh
+
+          bill_from() {
+            local duz
+            duz=$(grep -o '%[a-z][a-z0-9-]*' "$1" | tr '\n' ' ' | sed 's/ *$//')
+            if [ -z "$duz" ]; then
+              echo "ERROR: parsed no agents out of $1" >&2
+              return 1
+            fi
+            echo "~[${duz}]"
+          }
+
+          NODE_BILL=$(bill_from gwbtc-node/desk/desk.bill)
+          SIDECAR_BILL=$(bill_from gwbtc-tcp-sidecar/desk/desk.bill)
+          echo "%node desk.bill:        ${NODE_BILL}"
+          echo "%tcp-sidecar desk.bill: ${SIDECAR_BILL}"
+
+          # %node carries the widened weft; %tcp-sidecar keeps its published
+          # 410/409/408.
+          write_desk() {
+            local desk="$1" bill="$2" kelvin="$3"
+            read -r -d '' INFO_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  ~  bind:m
+                %:  send-raw-card
+                    %pass  /fix-desk
+                    %arvo  %c
+                    %info  %${desk}  %&
+                    :~  [/desk/bill %mut %bill !>(\`(list dude:gall)\`${bill})]
+                        [/sys/kelvin %mut %kelvin !>(\`waft:clay\`[[%1 ~] (sy ${kelvin})])]
+                    ==
+                ==
+              (pure:m !>('written'))
+              '''
+          ==
+          HOON
+            echo "Writing %${desk} desk.bill and sys.kelvin to Clay..."
+            send_fyrd "$INFO_FYRD" > /dev/null
+          }
+
+          write_desk node        "$NODE_BILL"    '~[[%zuse 409] [%zuse 408]]'
+          write_desk tcp-sidecar "$SIDECAR_BILL" '~[[%zuse 410] [%zuse 409] [%zuse 408]]'
+          sleep 5
+
+      - name: Verify %node and %tcp-sidecar landed in Clay
+        run: |
+          source ./automation/fyrd.sh
+          FAILED=0
+          for desk in node tcp-sidecar; do
+            read -r -d '' SCRY_FYRD << HOON || true
+          :*  0
+              %fyrd  %base  %khan-eval  %noun  %ted-eval
+              :_  :~  /sur/spider/hoon  /lib/strandio/hoon  ==
+              '''
+              =/  m  (strand ,vase)
+              ^-  form:m
+              ;<  our=@p   bind:m  get-our
+              ;<  now=@da  bind:m  get-time
+              =/  bil  .^((list dude:gall) %cx /(scot %p our)/${desk}/(scot %da now)/desk/bill)
+              =/  kel  .^(waft:clay %cx /(scot %p our)/${desk}/(scot %da now)/sys/kelvin)
+              (pure:m !>((crip (noah !>([bil ~(tap in (waft-to-wefts:clay kel))])))))
+              '''
+          ==
+          HOON
+            RESULT=$(send_fyrd "$SCRY_FYRD" 2>/dev/null)
+            echo "%${desk}: ${RESULT}"
+            if ! echo "$RESULT" | grep -q 'num=408'; then
+              echo "ERROR: %${desk} sys.kelvin does not accept 408"
+              FAILED=1
+            fi
+            if ! echo "$RESULT" | grep -q '\[~\[%'; then
+              echo "ERROR: %${desk} desk.bill is empty; its agents would never start"
+              FAILED=1
+            fi
+          done
+          [ "$FAILED" -eq 0 ] || exit 1
+          echo "%node and %tcp-sidecar are both installable on this kernel."
 
       - name: Set up Zig 0.15.2
         uses: mlugg/setup-zig@v2
@@ -181,6 +573,10 @@ jobs:
           zig build
           cp -rL zig-out/* "${ROOT}/zod/mcp/"
           popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/mcp/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/mcp/mar/ship.hoon"
+          echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Populate %vitriol desk
@@ -192,7 +588,69 @@ jobs:
           pushd "${ROOT}/gwbtc-vitriol"
           zig build -Ddesk="${ROOT}/zod/vitriol/"
           popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/vitriol/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/vitriol/mar/ship.hoon"
+          echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
+
+      - name: Populate %nostrill desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" nostrill "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" nostrill "${ROOT}/zod"
+          pushd "${ROOT}/gwbtc-ursockets"
+          zig build -Ddesk="${ROOT}/zod/nostrill/"
+          popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/nostrill/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/nostrill/mar/ship.hoon"
+          echo "$DESK_DISTER" > "${ROOT}/zod/nostrill/desk.ship"
+          "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+
+      - name: Populate %landscape desk
+        run: |
+          ./automation/desk-create.sh landscape "$CONN_SOCK"
+          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh landscape ./zod
+          cp -r gwbtc-landscape/desk/* ./zod/landscape/
+          cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
+          cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/landscape/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/landscape/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/landscape/desk.ship
+          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+
+      - name: Set up Bun (for %drive frontend)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Populate %drive desk
+        run: |
+          # %drive is a Landscape docket app: build its client bundle into
+          # desk/app/drive/, then commit like any desk.  Its sys.kelvin is
+          # [%zuse 410]; widen it to also accept 408 (this pill's kelvin),
+          # exactly as %tcp-sidecar does, or it installs suspended.
+          # drive's frontend (package.json + build) lives in client/, per its
+          # Makefile (`cd client && bun install && bun run build`); the build
+          # writes the JS/CSS bundle into desk/app/drive/.
+          pushd gwbtc-drive/client
+          bun install --frozen-lockfile || bun install
+          bun run build
+          popd
+          ./automation/desk-create.sh drive "$CONN_SOCK"
+          ./automation/desk-mount.sh drive ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh drive ./zod
+          cp -rL gwbtc-drive/desk/* ./zod/drive/
+          printf '[%%zuse 410]\n[%%zuse 409]\n[%%zuse 408]\n' > ./zod/drive/sys.kelvin
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/drive/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/drive/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/drive/desk.ship
+          ./automation/desk-commit.sh drive ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -211,9 +669,15 @@ jobs:
               ;<  now=@da  bind:m  get-time
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
-                :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
+                :~  [%GWDESK /(scot %p our)/GWDESK/(scot %da now)]
+                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
+                    [%node /(scot %p our)/node/(scot %da now)]
+                    [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
+                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
+                    [%landscape /(scot %p our)/landscape/(scot %da now)]
+                    [%drive /(scot %p our)/drive/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
@@ -228,10 +692,32 @@ jobs:
               '''
           ==
           HOON
+          # The desk list above is the desks baked INTO the pill, and it must
+          # name the desk we actually installed.  GWDESK is substituted rather
+          # than interpolated so the heredoc stays quoted -- Hoon and shell
+          # fight over too many characters otherwise.
+          BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
+          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol"
+
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
-          if echo "$RESULT" | grep -Fxq "brass: cache entries: 0"; then
-            echo "ERROR: Failed to build a brass pill."
+
+          # REQUIRE the success we want; do not merely look for one known
+          # failure.  This used to grep for "brass: cache entries: 0" and
+          # treat everything else as success -- so when the thread came back
+          # `[0 %avow 1 %thread-fail %cancelled 0]` (a desk path in the list
+          # above naming a desk that did not exist), the step printed "Pill
+          # build completed" and exited 0.  The next step then waited 45
+          # MINUTES for a pill that was never going to be written, and the
+          # run's only visible error was "Pill never appeared", which names
+          # the symptom and hides the cause.
+          #
+          # A success is `%avow 0` carrying 'Built pill!'.  Anything else,
+          # including any future failure nobody has seen yet, stops here.
+          if ! echo "$RESULT" | grep -Fq "'Built pill!'"; then
+            echo "::error::the pill-build thread did not report success"
+            echo "expected: [0 %avow 0 %noun 'Built pill!']"
+            echo "got:      $RESULT"
             exit 1
           fi
           echo "Pill build completed."
@@ -308,7 +794,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: gwbtc/vere
-          ref: ${{ env.VERE_BRANCH }}
+          ref: ${{ inputs.vere_ref || env.VERE_BRANCH }}
           path: gwbtc-vere
           token: ${{ secrets.GH_PAT || github.token }}
 
@@ -431,7 +917,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
-          ref: ${{ env.GROUNDWIRE_BRANCH }}
+          ref: ${{ inputs.groundwire_ref || env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire-onboard
           token: ${{ secrets.GH_PAT || github.token }}
 
@@ -475,17 +961,186 @@ jobs:
           name: gw-onboard-${{ matrix.target }}
           path: dist/gw-onboard
 
+  # =============================================================
+  # Build tcp-sidecar for each platform
+  #
+  # Why this job exists:
+  #   The sidecar is the light client's only transport. A ship cannot reach
+  #   Bitcoin, and therefore cannot sync, without it. Before this job every
+  #   operator compiled it by hand.
+  #
+  # Source: gwbtc/tcp-sidecar (public), pinned by SHA in TCP_SIDECAR_REF.
+  # No token is needed; that is deliberate, so the build is reproducible
+  # outside this org.
+  #
+  # OpenSSL is built from source rather than taken from the runner, for two
+  # reasons that both bite in production:
+  #   1. Linux artifacts are static musl, matching how gw-vere ships
+  #      (build-vere passes -Dtarget=*-linux-musl to zig). No distro ships a
+  #      static musl libssl, so there is nothing to link against otherwise.
+  #   2. --openssldir=/etc/ssl makes SSL_CTX_set_default_verify_paths()
+  #      (sidecar/main.c:618, used with SSL_VERIFY_PEER) resolve to the host's
+  #      real CA roots: /etc/ssl/certs on Linux, /etc/ssl/cert.pem on macOS.
+  #      Homebrew's libssl bakes in /opt/homebrew/etc/openssl@3 and would fail
+  #      every TLS verification on a machine without Homebrew. SSL_CERT_FILE /
+  #      SSL_CERT_DIR still override at runtime.
+  #
+  # musl has no <execinfo.h>, which sidecar/main.c:12 includes for its crash
+  # handler. A shim is placed ahead of the system include path instead of
+  # patching the source (build-extras does the equivalent for comet-miner with
+  # sed). The "--- CRASH: signal N ---" marker that ops/gwsup.sh greps for is
+  # written with write(2) before backtrace_symbols_fd, so crash *detection* is
+  # unaffected on Linux; only the symbol dump is lost. macOS keeps both.
+  #
+  # The binary is emitted as `tcp-sidecar`, not `gw-tcp-sidecar`: ops/gwsup.sh
+  # and ops/stopship.sh find it with `pgrep -f 'bin/tcp-sidecar'`, which a
+  # prefixed name would not match.
+  # =============================================================
+  build-sidecar:
+    name: "Build sidecar: ${{ matrix.target }}"
+    strategy:
+      matrix:
+        include:
+          - target: linux-x86_64
+            runner: ubuntu-22.04
+            zig_target: x86_64-linux-musl
+            ossl_target: linux-x86_64
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+            zig_target: aarch64-linux-musl
+            ossl_target: linux-aarch64
+          - target: macos-aarch64
+            runner: macos-14
+            zig_target: aarch64-macos
+            ossl_target: darwin64-arm64-cc
+    runs-on: ${{ matrix.runner }}
+    env:
+      OPENSSL_VERSION: 3.5.4
+      OPENSSL_SHA256: 967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
+    steps:
+      - name: Set up Zig 0.14.1
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+          cache-key: tcp-sidecar-${{ matrix.zig_target }}
+
+      - name: Checkout gwbtc/tcp-sidecar
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/tcp-sidecar
+          ref: ${{ env.TCP_SIDECAR_REF }}
+          path: gwbtc-tcp-sidecar
+
+      - name: Build static OpenSSL
+        run: |
+          set -eu
+          curl -fL --retry 3 --retry-delay 10 -o openssl.tar.gz \
+            "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${OPENSSL_SHA256}  openssl.tar.gz" | sha256sum -c -
+          else
+            echo "${OPENSSL_SHA256}  openssl.tar.gz" | shasum -a 256 -c -
+          fi
+          mkdir -p openssl-src
+          tar xzf openssl.tar.gz -C openssl-src --strip-components=1
+          cd openssl-src
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            export CC="zig cc -target ${{ matrix.zig_target }}"
+            export AR="zig ar"
+            export RANLIB="zig ranlib"
+          fi
+          ./Configure ${{ matrix.ossl_target }} \
+            no-shared no-tests no-docs no-apps no-legacy \
+            --openssldir=/etc/ssl --libdir=lib \
+            --prefix="${GITHUB_WORKSPACE}/openssl-out"
+          make -j"$(getconf _NPROCESSORS_ONLN)"
+          make install_sw
+
+      - name: Build tcp-sidecar
+        run: |
+          set -eu
+          OSSL="${GITHUB_WORKSPACE}/openssl-out"
+          cd gwbtc-tcp-sidecar/sidecar
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            mkdir -p compat
+            cat > compat/execinfo.h <<'SHIM'
+          /* Shim: musl has no glibc backtrace(). Placed ahead of the system
+             include path for -target *-linux-musl builds only. The crash
+             marker in main.c is written with write(2) before this is called,
+             so ops/gwsup.sh still detects the crash; only symbols are lost. */
+          #ifndef GW_COMPAT_EXECINFO_H
+          #define GW_COMPAT_EXECINFO_H
+          static inline int backtrace(void **buffer, int size) {
+            (void)buffer; (void)size; return 0;
+          }
+          static inline char **backtrace_symbols(void *const *buffer, int size) {
+            (void)buffer; (void)size; return (char **)0;
+          }
+          static inline void backtrace_symbols_fd(void *const *buffer, int size, int fd) {
+            (void)buffer; (void)size; (void)fd;
+          }
+          #endif
+          SHIM
+            make CC="zig cc -target ${{ matrix.zig_target }}" \
+                 CFLAGS="-Wall -Wextra -O2 -I. -Icompat -I${OSSL}/include" \
+                 LDFLAGS="-static -L${OSSL}/lib -lssl -lcrypto"
+          else
+            make CFLAGS="-Wall -Wextra -O2 -I. -I${OSSL}/include" \
+                 LDFLAGS="${OSSL}/lib/libssl.a ${OSSL}/lib/libcrypto.a"
+          fi
+          cp tcp-sidecar "${GITHUB_WORKSPACE}/tcp-sidecar"
+          cd "${GITHUB_WORKSPACE}"
+          chmod +x ./tcp-sidecar
+
+      - name: Inspect and smoke-test tcp-sidecar
+        run: |
+          set -eu
+          file ./tcp-sidecar || true
+          # No release tarball carries checksums today (neither do gw-vere,
+          # comet_miner or gw-base.pill), so record it in the job log at least.
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum ./tcp-sidecar
+          else
+            shasum -a 256 ./tcp-sidecar
+          fi
+          # Both Linux targets are native-arch runners and macos-14 is arm64,
+          # so every matrix entry can run its own artifact. With no argument
+          # the sidecar prints usage and exits 1.
+          OUT="$(./tcp-sidecar 2>&1 || true)"
+          echo "$OUT"
+          case "$OUT" in
+            *"usage:"*) echo "smoke test OK" ;;
+            *) echo "ERROR: tcp-sidecar did not print its usage line"; exit 1 ;;
+          esac
+
+      - name: Upload tcp-sidecar
+        uses: actions/upload-artifact@v4
+        with:
+          name: gw-tcp-sidecar-${{ matrix.target }}
+          path: ./tcp-sidecar
 
   # =============================================================
   # Validate the pill boots, then publish release
   # =============================================================
   validate-and-release:
     name: Validate and release
-    needs: [build-pill, build-vere, build-extras]
+    needs: [build-pill, build-vere, build-extras, build-sidecar]
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Causeway is Python source, not a per-platform binary, so it is copied
+      # in here rather than built in the matrix.  Same ref as the desk in the
+      # pill: a release whose Causeway and whose %gw-btc disagree about the
+      # wire format is worse than one that ships neither.
+      - name: Checkout gwbtc/groundwire (for Causeway + boot.sh)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/groundwire
+          ref: ${{ inputs.groundwire_ref || env.GROUNDWIRE_BRANCH }}
+          path: gwbtc-groundwire
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -576,29 +1231,121 @@ jobs:
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
             cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
             chmod +x "pkg-${target}/gw-onboard"
+            cp "./artifacts/gw-tcp-sidecar-${target}/tcp-sidecar" "pkg-${target}/tcp-sidecar"
+            chmod +x "pkg-${target}/tcp-sidecar"
+            # The installer's shared helpers and its per-ship supervisor.
+            # These were 463 of causeway/public/boot.sh's 1,521 lines, carried
+            # as heredocs and written to disk at install time -- not because
+            # anyone wanted them there, but because a curl-piped script has no
+            # file to re-exec.  A reader had to audit a third of the installer
+            # before they could believe the rest of it, on a script that runs
+            # as them and installs a daemon mediating all their Bitcoin
+            # traffic.  Shipping the same bytes here puts them under the
+            # release SHA256SUMS and leaves boot.sh's own audit surface at
+            # "does this fetch and exec the right thing".
+            # boot.sh REQUIRES both; a tarball missing them is one it refuses.
+            cp ./automation/installer/gwlib.sh "pkg-${target}/gwlib.sh"
+            cp ./automation/installer/gwsup.sh "pkg-${target}/gwsup.sh"
+            chmod +x "pkg-${target}/gwlib.sh" "pkg-${target}/gwsup.sh"
             cp requirements.txt "pkg-${target}/"
+
+            # Causeway: the tool that actually mints a confidential comet.
+            # Until now no release contained it, so the only way to get one
+            # was to clone the repo -- which meant the protocol we ship in the
+            # pill had no shipped way to create an identity for it.
+            # `causeway` is a launcher that builds a private venv from
+            # causeway-src/ on first run; nothing lands outside this tree.
+            cp -r gwbtc-groundwire/causeway/desktop "pkg-${target}/causeway-src"
+            rm -rf "pkg-${target}/causeway-src/__pycache__" \
+                   "pkg-${target}/causeway-src/causeway.egg-info" \
+                   "pkg-${target}/causeway-src/tests"
+            cp gwbtc-groundwire/causeway/public/causeway "pkg-${target}/causeway"
+            # boot.sh ships here too, so a release can boot itself without
+            # depending on the website being up to date.
+            cp gwbtc-groundwire/causeway/public/boot.sh "pkg-${target}/boot.sh"
+            chmod +x "pkg-${target}/causeway" "pkg-${target}/boot.sh"
+
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
+            # Do not take a cp on trust.  A tarball missing gwlib.sh is one
+            # that every boot.sh refuses, and the first anyone would hear of
+            # it is a failed install; this is the same lesson as the desk
+            # commits above, applied to the thing users actually download.
+            for want in gw-vere gw-base.pill comet_miner gw-onboard \
+                        tcp-sidecar gwlib.sh gwsup.sh requirements.txt \
+                        causeway boot.sh causeway-src/causeway.py \
+                        causeway-src/causeway_tui.py causeway-src/pyproject.toml; do
+              tar tzf "groundwire-${target}.tar.gz" | grep -qx "./${want}" || {
+                echo "ERROR: groundwire-${target}.tar.gz does not contain ${want}"
+                exit 1
+              }
+            done
+            echo "groundwire-${target}.tar.gz:"
+            tar tzf "groundwire-${target}.tar.gz" | sort
           done
+
+      # Until now nothing in a release carried a checksum: not the pill, not
+      # gw-vere, not comet_miner, not gw-onboard, not the tarballs.  The only
+      # thing authenticating a download was GitHub's TLS -- and the thing
+      # people actually run is `curl -fsSL .../boot.sh | bash`, ~1,000 lines
+      # executing as them and installing a daemon that mediates all their
+      # Bitcoin traffic.  There was nothing to check it against.
+      #
+      # Be honest about what this buys.  SHA256SUMS comes down the same
+      # channel as the tarball, so it is no defence at all against a
+      # compromised GitHub.  What it gives you is a check against a corrupted
+      # or truncated download, one stable digest to pin or to pass around out
+      # of band, and something a third party can mirror and compare.  Signing
+      # it is the next thing to do and is NOT done here.
+      #
+      # The client half already exists: boot.sh fetches SHA256SUMS, matches
+      # the line for its own platform, and deletes the download on a
+      # mismatch.  Publishing the file is the whole of the remaining work.
+      - name: Checksum the release artifacts
+        run: |
+          sha256sum \
+            groundwire-linux-x86_64.tar.gz \
+            groundwire-linux-aarch64.tar.gz \
+            groundwire-macos-aarch64.tar.gz \
+            > SHA256SUMS
+          cat SHA256SUMS
+          # Read it back the way a user would, so a malformed file fails the
+          # build here rather than every install.
+          sha256sum -c SHA256SUMS
 
       - name: Publish release
         if: ${{ github.event_name != 'pull_request' }}
         run: |
+          PREFIX="${TAG_PREFIX:-groundwire-alpha}"
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
-          TAG="groundwire-alpha-${DATE_BASE}"
-          TITLE="groundwire-alpha ${DATE_BASE}"
+          TAG="${PREFIX}-${DATE_BASE}"
+          TITLE="${PREFIX} ${DATE_BASE}"
           SUFFIX=2
           while gh release view "$TAG" --repo gwbtc/urbit &>/dev/null; do
-            TAG="groundwire-alpha-${DATE_BASE}_${SUFFIX}"
-            TITLE="groundwire-alpha ${DATE_BASE}_${SUFFIX}"
+            TAG="${PREFIX}-${DATE_BASE}_${SUFFIX}"
+            TITLE="${PREFIX} ${DATE_BASE}_${SUFFIX}"
             SUFFIX=$((SUFFIX + 1))
           done
 
+          # --latest=false, ALWAYS, and it is load-bearing.
+          #
+          # Every release this org publishes is a --prerelease, and when there
+          # is no full release GitHub serves the newest prerelease at
+          # /releases/latest.  Verified: that URL resolves to the newest
+          # groundwire-daily tag.  boot.sh and install.sh both resolve "latest"
+          # through it when no --version is given.
+          #
+          # So without this flag, a developer build from this lane -- or a
+          # release candidate cut from an unmerged branch -- silently becomes
+          # what every new user installs by default.  This lane is the
+          # bleeding-edge channel; daily-release.yml owns the user channel.
           gh release create "$TAG" \
             groundwire-linux-x86_64.tar.gz \
             groundwire-linux-aarch64.tar.gz \
             groundwire-macos-aarch64.tar.gz \
+            SHA256SUMS \
             --repo gwbtc/urbit \
             --prerelease \
+            --latest=false \
             --title "$TITLE" \
             --notes "Automated bleeding-edge developer build from \`${GITHUB_REF_NAME}\` (${GITHUB_SHA})
 
@@ -611,7 +1358,22 @@ jobs:
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
           - \`gw-onboard\` — Onboarding script
+          - \`tcp-sidecar\` — TCP sidecar (gwbtc/tcp-sidecar@${TCP_SIDECAR_REF}); the light client's only Bitcoin transport, statically linked
+          - \`gwlib.sh\`, \`gwsup.sh\` — the installer's shared helpers and its per-ship supervisor, installed and run by \`causeway/public/boot.sh\`
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
+
+          ## Verifying the download
+
+              curl -fsSLO https://github.com/gwbtc/urbit/releases/download/${TAG}/SHA256SUMS
+              sha256sum -c SHA256SUMS
+
+          The digest covers the tarball, and so everything inside it. boot.sh
+          does this for you, and \`--sha256 <hex>\` pins a digest you got
+          somewhere else.
+
+          \`SHA256SUMS\` is NOT signed and is served from the same host as the
+          tarballs, so it is a check against a bad download and a stable thing
+          to pin — not a defence against a compromised GitHub.
 
           Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
           - \`groundwire-linux-x86_64.tar.gz\`
@@ -619,3 +1381,7 @@ jobs:
           - \`groundwire-macos-aarch64.tar.gz\`"
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          # Through env:, not interpolated into the script body -- a dispatch
+          # input pasted straight into `run:` is a shell-injection seam even
+          # when only collaborators can pull the trigger.
+          TAG_PREFIX: ${{ inputs.tag_prefix }}
