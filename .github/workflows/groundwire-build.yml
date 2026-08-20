@@ -72,6 +72,16 @@ env:
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
+  NOSTRILL_BRANCH: bm/zig
+  LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
+  DRIVE_BRANCH: main
+  # The distribution ship every baked desk's desk.ship points at: a
+  # booted ship opens a Clay OTA sync to it per desk (get-publisher in
+  # sur/hood.hoon; the sync is a second channel, not a gate).  This is
+  # our OWN sponsor, which we install all of these desks onto, so it
+  # can actually serve every one of them -- unlike production's dister,
+  # which did not publish node/tcp-sidecar/nostrill.
+  DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
 
 jobs:
   # =============================================================
@@ -174,6 +184,30 @@ jobs:
           repository: gwbtc/vitriol
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout Nostrill (gwbtc/ursockets)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/ursockets
+          ref: ${{ env.NOSTRILL_BRANCH }}
+          path: gwbtc-ursockets
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout tloncorp/landscape
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/landscape
+          ref: ${{ env.LANDSCAPE_BRANCH }}
+          path: gwbtc-landscape
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout gwbtc/drive
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/drive
+          ref: ${{ env.DRIVE_BRANCH }}
+          path: gwbtc-drive
           token: ${{ secrets.GH_PAT || github.token }}
 
       # gwbtc/node and gwbtc/tcp-sidecar are both public, so neither takes a
@@ -289,7 +323,19 @@ jobs:
           ./automation/desk-mount.sh "$GW_DESK" ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh "$GW_DESK" ./zod
           cp -rL "$GW_DIST"/* "./zod/$GW_DESK/"
+          # OTA source: sync %gw-btc from our sponsor (see DESK_DISTER).
+          echo "$DESK_DISTER" > "./zod/$GW_DESK/desk.ship"
           ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
+
+      - name: Populate %spv-wallet desk
+        run: |
+          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
+          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh spv-wallet ./zod
+          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
+            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
+          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       # -- The light-client stack: %node and %tcp-sidecar --
       #
@@ -379,6 +425,7 @@ jobs:
           }' "$BB"
           # ====================== END TEMPORARY ======================
 
+          echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
       - name: Populate %tcp-sidecar desk
@@ -389,6 +436,7 @@ jobs:
           ./automation/desk-mount.sh tcp-sidecar ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh tcp-sidecar ./zod
           cp -rL gwbtc-tcp-sidecar/desk/* ./zod/tcp-sidecar/
+          echo "$DESK_DISTER" > ./zod/tcp-sidecar/desk.ship
           ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
 
       # The filesystem commits above are the primary path and do land both
@@ -504,6 +552,7 @@ jobs:
           zig build
           cp -rL zig-out/* "${ROOT}/zod/mcp/"
           popd
+          echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Populate %vitriol desk
@@ -515,7 +564,54 @@ jobs:
           pushd "${ROOT}/gwbtc-vitriol"
           zig build -Ddesk="${ROOT}/zod/vitriol/"
           popd
+          echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
+
+      - name: Populate %nostrill desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          "${ROOT}/automation/desk-create.sh" nostrill "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" nostrill "${ROOT}/zod"
+          pushd "${ROOT}/gwbtc-ursockets"
+          zig build -Ddesk="${ROOT}/zod/nostrill/"
+          popd
+          echo "$DESK_DISTER" > "${ROOT}/zod/nostrill/desk.ship"
+          "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+
+      - name: Populate %landscape desk
+        run: |
+          ./automation/desk-create.sh landscape "$CONN_SOCK"
+          ./automation/desk-mount.sh landscape ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh landscape ./zod
+          cp -r gwbtc-landscape/desk/* ./zod/landscape/
+          cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
+          cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
+          echo "$DESK_DISTER" > ./zod/landscape/desk.ship
+          ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+
+      - name: Set up Bun (for %drive frontend)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Populate %drive desk
+        run: |
+          # %drive is a Landscape docket app: build its client bundle into
+          # desk/app/drive/, then commit like any desk.  Its sys.kelvin is
+          # [%zuse 410]; widen it to also accept 408 (this pill's kelvin),
+          # exactly as %tcp-sidecar does, or it installs suspended.
+          pushd gwbtc-drive
+          bun install --frozen-lockfile || bun install
+          ( cd client && bun run build )
+          popd
+          ./automation/desk-create.sh drive "$CONN_SOCK"
+          ./automation/desk-mount.sh drive ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh drive ./zod
+          cp -rL gwbtc-drive/desk/* ./zod/drive/
+          printf '[%%zuse 410]\n[%%zuse 409]\n[%%zuse 408]\n' > ./zod/drive/sys.kelvin
+          echo "$DESK_DISTER" > ./zod/drive/desk.ship
+          ./automation/desk-commit.sh drive ./zod "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -535,10 +631,14 @@ jobs:
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%GWDESK /(scot %p our)/GWDESK/(scot %da now)]
+                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%node /(scot %p our)/node/(scot %da now)]
                     [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
+                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
+                    [%landscape /(scot %p our)/landscape/(scot %da now)]
+                    [%drive /(scot %p our)/drive/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
