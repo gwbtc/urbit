@@ -630,9 +630,12 @@ jobs:
           # desk/app/drive/, then commit like any desk.  Its sys.kelvin is
           # [%zuse 410]; widen it to also accept 408 (this pill's kelvin),
           # exactly as %tcp-sidecar does, or it installs suspended.
-          pushd gwbtc-drive
+          # drive's frontend (package.json + build) lives in client/, per its
+          # Makefile (`cd client && bun install && bun run build`); the build
+          # writes the JS/CSS bundle into desk/app/drive/.
+          pushd gwbtc-drive/client
           bun install --frozen-lockfile || bun install
-          ( cd client && bun run build )
+          bun run build
           popd
           ./automation/desk-create.sh drive "$CONN_SOCK"
           ./automation/desk-mount.sh drive ./zod "$CONN_SOCK"
