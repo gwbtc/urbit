@@ -314,6 +314,11 @@ jobs:
             echo "GW_DESK=groundwire"                       >> "$GITHUB_ENV"
             echo "GW_DIST=gwbtc-groundwire/dist-groundwire" >> "$GITHUB_ENV"
           fi
+          # spv-wallet's dist is a BUILD artifact (not committed); its make
+          # target copies from the gw-btc source built just above.  The daily
+          # lane runs `make gw-btc spv` together; the RC lane must too, or the
+          # %spv-wallet rsync below has no dist-spv to copy.
+          make spv
 
       - name: Populate the gw-btc desk
         run: |
