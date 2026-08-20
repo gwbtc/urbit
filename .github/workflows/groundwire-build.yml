@@ -329,6 +329,9 @@ jobs:
           ./automation/desk-populate.sh "$GW_DESK" ./zod
           cp -rL "$GW_DIST"/* "./zod/$GW_DESK/"
           # OTA source: sync %gw-btc from our sponsor (see DESK_DISTER).
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/$GW_DESK/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/$GW_DESK/mar/ship.hoon"
           echo "$DESK_DISTER" > "./zod/$GW_DESK/desk.ship"
           ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
 
@@ -339,6 +342,9 @@ jobs:
           ./automation/desk-populate.sh spv-wallet ./zod
           rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
             gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/spv-wallet/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/spv-wallet/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
           ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
@@ -430,6 +436,9 @@ jobs:
           }' "$BB"
           # ====================== END TEMPORARY ======================
 
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/node/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/node/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
@@ -441,6 +450,9 @@ jobs:
           ./automation/desk-mount.sh tcp-sidecar ./zod "$CONN_SOCK"
           ./automation/desk-populate.sh tcp-sidecar ./zod
           cp -rL gwbtc-tcp-sidecar/desk/* ./zod/tcp-sidecar/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/tcp-sidecar/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/tcp-sidecar/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/tcp-sidecar/desk.ship
           ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
 
@@ -557,6 +569,9 @@ jobs:
           zig build
           cp -rL zig-out/* "${ROOT}/zod/mcp/"
           popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/mcp/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/mcp/mar/ship.hoon"
           echo "$DESK_DISTER" > "${ROOT}/zod/mcp/desk.ship"
           "${ROOT}/automation/desk-commit.sh" mcp "${ROOT}/zod" "$CONN_SOCK"
 
@@ -569,6 +584,9 @@ jobs:
           pushd "${ROOT}/gwbtc-vitriol"
           zig build -Ddesk="${ROOT}/zod/vitriol/"
           popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/vitriol/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/vitriol/mar/ship.hoon"
           echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
@@ -581,6 +599,9 @@ jobs:
           pushd "${ROOT}/gwbtc-ursockets"
           zig build -Ddesk="${ROOT}/zod/nostrill/"
           popd
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/nostrill/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/nostrill/mar/ship.hoon"
           echo "$DESK_DISTER" > "${ROOT}/zod/nostrill/desk.ship"
           "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
 
@@ -592,6 +613,9 @@ jobs:
           cp -r gwbtc-landscape/desk/* ./zod/landscape/
           cp -r gwbtc-landscape/desk-dev/* ./zod/landscape/
           cp -r gwbtc-urbit/pkg/base-dev/* ./zod/landscape/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/landscape/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/landscape/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/landscape/desk.ship
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
 
@@ -615,6 +639,9 @@ jobs:
           ./automation/desk-populate.sh drive ./zod
           cp -rL gwbtc-drive/desk/* ./zod/drive/
           printf '[%%zuse 410]\n[%%zuse 409]\n[%%zuse 408]\n' > ./zod/drive/sys.kelvin
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/drive/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/drive/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/drive/desk.ship
           ./automation/desk-commit.sh drive ./zod "$CONN_SOCK"
 
