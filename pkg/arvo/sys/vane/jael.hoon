@@ -918,10 +918,28 @@
           ?.  &(liv.u.reg =(dom.res app))
             +>.$
           ?~  res.res
+            ::  a negative verdict on a ship this domain once vouched
+            ::  for is the domain withdrawing its vouch: forget the
+            ::  point, take the ship out of .hep (so %ghul cannot
+            ::  un-snub it later), and breach it for the vanes that
+            ::  hold state on it, exactly as %bane does per ship.  the
+            ::  %fail still snubs it in ames.  for a ship never
+            ::  vouched for there is nothing to withdraw: snub only.
+            ::
+            ?.  (~(has in hep.u.reg) ship.res)
+              %-  curd  =<  abet
+              %+  exec:~(. su hen now pki etn)
+                syl.zim.pki
+              [%give %sybl %fail dom.res ship.res]
+            =.  dos
+              %+  ~(put by dos)  dom.res
+              u.reg(hep (~(del in hep.u.reg) ship.res))
+            =.  pos.zim.pki  (~(del by pos.zim.pki) ship.res)
+            =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
             %-  curd  =<  abet
-            %+  exec:~(. su hen now pki etn)
-              syl.zim.pki
-            [%give %sybl %fail dom.res ship.res]
+            =/  sus  ~(. su hen now pki etn)
+            =.  sus  (exec:sus syl.zim.pki [%give %sybl %fail dom.res ship.res])
+            (exec:sus dus %give %public-keys %breach ship.res)
           =.  dos
             %+  ~(put by dos)  dom.res
             u.reg(hep (~(put in hep.u.reg) ship.res))
@@ -949,30 +967,28 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %anew dom.res pass.res]
-        ::  %stale-notice: the domain agent observed a verified ship's
-        ::  attestation go out of date on-chain (its identity utxo was
-        ::  spent).  forget the point so the ship's next packet is
-        ::  re-verified from scratch, and tell %sybl subscribers
-        ::  (ames) to demote the peer to an alien.  never a snub:
-        ::  staleness is not fraud, and the replacement packet must
-        ::  be able to arrive.
+        ::  %snob-notice: the domain agent can no longer vouch for a
+        ::  verified ship's attestation (its identity utxo was spent,
+        ::  or the evidence was orphaned) and wants a fresh one.  the
+        ::  point is KEPT: the ship is still who it was, its flows
+        ::  stay up, and a later verdict that raises its rift goes
+        ::  through +feel's ordinary breach rule.  tell %sybl
+        ::  subscribers (ames) to soft-block the peer and solicit.
+        ::  never a snub: this is not fraud, and the replacement packet
+        ::  must be able to arrive.
         ::
-        ?:  ?=(%stale-notice p.cage.p.+>.hin)
-          =+  ;;(res=stale-notice q.q.cage.p.+>.hin)
+        ?:  ?=(%snob-notice p.cage.p.+>.hin)
+          =+  ;;(res=snob-notice q.q.cage.p.+>.hin)
           ?~  reg=(~(get by dos) dom.res)
             +>.$
           ?.  &(liv.u.reg =(dom.res app))
             +>.$
           ?.  (~(has in hep.u.reg) ship.res)
             +>.$
-          =.  dos
-            %+  ~(put by dos)  dom.res
-            u.reg(hep (~(del in hep.u.reg) ship.res))
-          =.  pos.zim.pki  (~(del by pos.zim.pki) ship.res)
           %-  curd  =<  abet
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
-          [%give %sybl %stale dom.res ship.res]
+          [%give %sybl %snob dom.res ship.res]
         ::  anything else is chain updates (udiffs).  only a live
         ::  registered pki domain or an explicitly configured legacy
         ::  source (%listen with an agent source) may inject them;
@@ -1688,7 +1704,7 @@
       ?=  $?  %lyfe  %life  %rift  %ryft
               %deed  %sein  %saxo  %turf
               %fief  %pont  %pynt  %sponsors
-              %lamp  %dome
+              %lamp  %dome  %dose
           ==
           syd
       ==
@@ -1803,6 +1819,20 @@
     ?:  fak.own.pki.lex  [~ ~]
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ``[%noun !>(pos)]
+  ::
+      %dose                                             ::  pki domain served?
+    ::  (unit ?): ~ if no agent has registered .dom, else whether the
+    ::  registration is live.  the same test %writ applies before it
+    ::  forwards an attestation; ames reads it before it decides whether
+    ::  a suite-%c comet has a verifier here at all (+sift-open-packet).
+    ::
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  dom  (slaw %tas i.tyl)
+    ?~  dom  [~ ~]
+    =/  reg  (~(get by dos.lex) u.dom)
+    ``[%noun !>(`(unit ?)`?~(reg ~ `liv.u.reg))]
   ::
       %dome                                             ::  pki domain of ship
     ?.  ?=([@ ~] tyl)  [~ ~]

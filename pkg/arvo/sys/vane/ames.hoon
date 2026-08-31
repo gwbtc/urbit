@@ -473,12 +473,40 @@
       ::
       ?>  ?=(?(%king %pawn) (clan:title (^^sein:title rof /ames our now sndr.shot)))
       =/  cic  (com:nu:cric:crypto pass.open-packet)
-      ::  comet public-key must hash to its @p address
-      ::
-      ?>  =(sndr.shot fig:ex:cic)
-      ::  verify signature
+      ::  the packet must be signed by the key its pass carries.
+      ::  for suite %c that is the CURRENT life key (sgn is cry):
+      ::  this proves the author holds it and nothing more.
       ::
       ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
+      ::  who vouches for the name?
+      ::
+      ::    a suite-%c pass commits a pki domain.  if an agent here
+      ::    serves that domain, the name is ITS to check: it
+      ::    recomputes the tweak from the genesis key and reads its
+      ::    chain to decide whether .cry is this identity's current
+      ::    key.  the kernel checks nothing further and forwards
+      ::    (+on-hear-open).
+      ::
+      ::    with no such agent the comet is an ordinary comet to
+      ::    us, and an ordinary comet's verification key IS its
+      ::    name: the signer must be the genesis key (ugn is cry,
+      ::    so the tweaked-and-hashed signer is the @p), at life 1.
+      ::    a rotated comet fails here, and we cannot do better --
+      ::    that a later key belongs to the same identity is
+      ::    exactly what only the domain can establish.
+      ::
+      =/  served=?
+        =/  dom  (pass-pki-dom pass.open-packet)
+        ?~  dom  |
+        (pki-dom-live rof our now u.dom)
+      ?:  served
+        open-packet
+      ?>  =(sndr.shot fig:ex:cic)
+      =/  cek  +<.cic
+      ?.  ?=([%c *] cek)
+        open-packet
+      ?>  =(ugn.tw.pub.cek cry.pub.cek)
+      ?>  =(1 sndr-life.open-packet)
       open-packet
     ::  +open-jam-shaped: is .a a bounded (jam [signature=@ signed=@])?
     ::
@@ -627,6 +655,31 @@
       ?~  mat
         ~
       ``@tas`q.u.mat
+    ::  +pki-dom-live: does a live agent here serve pki domain .dom?
+    ::
+    ::    jael's %dose: ~ if nothing registered the domain, else its
+    ::    liveness.  the same test jael applies to a %writ, asked up
+    ::    front so the kernel knows whether a suite-%c name is the
+    ::    domain's to vouch for or ours to check as an ordinary comet.
+    ::
+    ++  pki-dom-live
+      |=  [rof=roof our=ship now=@da dom=@tas]
+      ^-  ?
+      =/  res
+        (rof [~ ~] /ames %j `beam`[[our %dose %da now] /(scot %tas dom)])
+      ?.  ?=([~ ~ *] res)  |
+      =/  liv  ;;((unit ?) q.q.u.u.res)
+      ?~(liv | u.liv)
+    ::  +snobbed: is .her on the soft blocklist?
+    ::
+    ::    the same test +on-hear-packet applies to .snub, on the list
+    ::    that lets attestations (and requests for ours) through.
+    ::
+    ++  snobbed
+      |=  [snob=[form=?(%allow %deny) ships=(set ship)] her=ship]
+      ^-  ?
+      .=  =(%deny form.snob)
+      (~(has in ships.snob) her)
     ::  +etch-shut-packet: encrypt and packetize a $shut-packet
     ::
     ++  etch-shut-packet
@@ -741,13 +794,17 @@
     ::    This data structure gets signed and jammed to form the .contents
     ::    field of a $packet.
     ::
-    ::    the shape is shared by vanilla and confidential (groundwire)
-    ::    comets.  suite-%c passes are used exclusively by groundwire
-    ::    comets: the head of the key's tweak data is the +mat-encoded
-    ::    PKI domain tag (extracted with +rub; see +pass-pki-dom),
-    ::    followed by the domain-specific attestation data.  since a
-    ::    comet's name is the hash of its pass, the name itself commits
-    ::    to the domain, preventing cross-chain double-boot; and the
+    ::    the shape is shared by vanilla and pluggable-pki (suite-%c)
+    ::    comets.  a suite-%c pass carries a genesis key .ugn, whose
+    ::    tweak by .dat -- the +mat-encoded PKI domain tag (see
+    ::    +pass-pki-dom) followed by domain data -- hashes to the name,
+    ::    so the name itself commits to the domain and cross-chain
+    ::    double-boot is impossible.  the pass's .cry is the comet's
+    ::    CURRENT key and is what signs this packet (sgn is cry for
+    ::    suite %c); at life 1 it is the genesis key, later it is not.
+    ::    whether a later .cry is really this identity's is the pki
+    ::    domain's to establish; a kernel with no agent for the domain
+    ::    can only accept the life-1 case, as for any comet.  the
     ::    packet shape is unchanged, so vanilla comets are untouched.
     ::
     +$  open-packet
@@ -2288,6 +2345,29 @@
           core=?(%ames %mesa)
       ==
     ::
+    ::  $axle-32: ames state before the %snob soft blocklist
+    ::
+    +$  axle-32
+      $+  axle-32
+      $:  peers=(map ship ship-state)
+          =unix=duct
+          =life
+          =rift
+          =bug
+          snub=[form=?(%allow %deny) ships=(set ship)]
+          cong=[msg=_5 mem=_100.000]
+          $=  dead
+          $:  flow=[%flow (unit dead-timer)]
+              chum=[%chum (unit dead-timer)]
+              cork=[%cork (unit dead-timer)]
+              rots=[%rots (unit dead-timer)]
+          ==
+          =server=chain
+          [saf=keypairs =ring =pass]
+          chums=(map ship chum-state)
+          core=_`?(%ames %mesa)`%ames
+      ==
+    ::
     +$  ship-state-24
       $+  ship-state
       $%  [%alien alien-agenda]
@@ -2840,8 +2920,9 @@
             [%28 axle-28-29]
             [%29 axle-28-29]
             [%30 axle-30]
-            [%31 axle]
-            [%32 axle]
+            [%31 axle-32]
+            [%32 axle-32]
+            [%33 axle]
         ==
     ::
     ::
@@ -2916,7 +2997,7 @@
       ~>  %slog.0^leaf/"ames: metamorphosis on %take"
       [:(weld molt-moves queu-moves take-moves) adult-gate]
     ::
-    ++  stay  [%32 larva/ames-state]
+    ++  stay  [%33 larva/ames-state]
     ++  scry  scry:adult-core
     ++  load
       |=  $=  old
@@ -3087,11 +3168,15 @@
               ==
               $:  %31                            :: enable Directed Messaging
                   ?(%adult %larva)               :: via %prob flow in lib/ahoy
-                  state=axle                     ::   (remove .weir flows)
+                  state=axle-32                  ::   (remove .weir flows)
               ==
               $:  %32                            :: use %ames as default core.
                   ?(%adult %larva)               :: migrate attestation flows
-                  state=axle                     :: clean up corked peeks
+                  state=axle-32                  :: clean up corked peeks
+              ==
+              $:  %33                            :: %snob soft blocklist,
+                  ?(%adult %larva)               :: re-attestation solicitation
+                  state=axle
           ==  ==
       |^  ?-  old
           [%4 %adult *]
@@ -3397,6 +3482,11 @@
         larval-gate
       ::
           [%32 *]
+        =.  cached-state  `[%32 state.old]
+        ~>  %slog.1^leaf/"ames: larva %32 reload"
+        larval-gate
+      ::
+          [%33 *]
         ?-  +<.old
           %larva  larval-gate
           %adult  (load:adult-core state.old)
@@ -3475,7 +3565,7 @@
       |^  ^+  [moz larval-core]
       ?~  cached-state  [~ larval-core]
       =*  old  u.cached-state
-      ?:  ?=(%32 -.old)
+      ?:  ?=(%33 -.old)
         ::  no state migrations left; update state, clear cache, and exit
         ::
         [(flop moz) larval-core(ames-state.adult-gate +.old, cached-state ~)]
@@ -3576,8 +3666,10 @@
         $(cached-state `30+(state-29-to-30 +.old))
       ?:  ?=(%30 -.old)
         $(cached-state `31+(state-30-to-31 +.old))
-      ?>  ?=(%31 -.old)
-      $(cached-state `32+(state-31-to-32 +.old))
+      ?:  ?=(%31 -.old)
+        $(cached-state `32+(state-31-to-32 +.old))
+      ?>  ?=(%32 -.old)
+      $(cached-state `33+(state-32-to-33 +.old))
       ::
       ++  our-beam  `beam`[[our %rift %da now] /(scot %p our)]
       ++  state-4-to-5
@@ -4198,7 +4290,7 @@
       ::
       ++  state-30-to-31
         |=  old=axle-30
-        ^-  axle
+        ^-  axle-32
         ~>  %slog.0^leaf/"ames: migrating from state %30 to %31"
         ~>  %slog.1^leaf/"mesa: Directed Messaging is on"
         %=    old
@@ -4229,8 +4321,8 @@
         ==
       ::
       ++  state-31-to-32
-        |=  old=axle
-        ^-  axle
+        |=  old=axle-32
+        ^-  axle-32
         ~>  %slog.0^leaf/"ames: migrating from state %31 to %32"
         ~>  %slog.2^leaf/"mesa: turning on %ames for first contact"
         %=    old
@@ -4256,6 +4348,27 @@
               tip
             (~(del by tip) user-path)
           ==
+        ==
+      ::
+      ++  state-32-to-33
+        |=  old=axle-32
+        ^-  axle
+        ~>  %slog.0^leaf/"ames: migrating from state %32 to %33"
+        ~>  %slog.1^leaf/"ames: %snob soft blocklist"
+        :*  peers.old
+            unix-duct.old
+            life.old
+            rift.old
+            bug.old
+            snub.old
+            cong.old
+            dead.old
+            server-chain.old
+            [saf ring pass]:old
+            chums.old
+            core.old
+            snob=[%deny ~]
+            poof=~
         ==
       ::
       --
@@ -5102,17 +5215,22 @@
               (~(has in ships.snub.ames-state) sndr.shot)
             %-  (ev-trace rcv.veb sndr.shot |.("snubbed"))
             event-core
+          ::  a soft-blocked (%snob) sender may only attest to us, or
+          ::  ask us to attest to it; everything else it sends is
+          ::  dropped until its pki domain vouches for it again.
           ::
-          %.  +<
+          =/  snob=?  (snobbed snob.ames-state sndr.shot)
           ::
           ?.  =(our rcvr.shot)
-            on-hear-forward
+            ?:  snob  (on-hear-drop lane shot dud)
+            (on-hear-forward lane shot dud)
           ::
           ?:  =(%keys content.shot)
-            on-hear-keys
+            (on-hear-keys lane shot dud)
           ::
           ?.  ?=(%pawn (clan:title sndr.shot))
-            on-hear-shut
+            ?:  snob  (on-hear-drop lane shot dud)
+            (on-hear-shut lane shot dud)
           ::  a comet's packet is either a plaintext self-attestation or
           ::  an encrypted $shut-packet, and nothing in the header tells
           ::  them apart.  classify it by shape, never by peer state --
@@ -5135,7 +5253,9 @@
           ::    against.  See +open-jam-shaped.
           ::
           ?:  (is-open-packet shot)
-            on-hear-open
+            (on-hear-open lane shot dud)
+          ?:  snob
+            (on-hear-drop lane shot dud)
           ::  not an attestation.  only a comet we have already promoted
           ::  can be sending us a $shut-packet: otherwise we hold no
           ::  symmetric key to decrypt it with, and +on-hear-shut would
@@ -5143,8 +5263,8 @@
           ::  legitimate to go -- drop it.
           ::
           ?:  ?=([~ %known *] (~(get by peers.ames-state) sndr.shot))
-            on-hear-shut
-          on-hear-drop
+            (on-hear-shut lane shot dud)
+          (on-hear-drop lane shot dud)
         ::  +on-hear-drop: discard a packet we have no way to interpret
         ::
         ::    A gate rather than a bare .event-core because the dispatch
@@ -5198,7 +5318,26 @@
             ?:  ?=([~ ~ [* * ^]] lyf)
               sndr.shot
             (^sein:title sndr.shot)
-          =/  =blob  (attestation-packet sndr.shot 1)
+          ::  answer at the life we hold for the requester if we know
+          ::  it: +sift-open-packet at their end requires rcvr-life to
+          ::  be their current life, and a comet is not pinned at 1.
+          ::
+          =/  [known=? her-life=@ud]
+            =/  per  (~(get by peers.ames-state) sndr.shot)
+            ?:  ?=([~ %known *] per)  [& life.u.per]
+            =/  cum  (~(get by chums.ames-state) sndr.shot)
+            ?:  ?=([~ %known *] cum)  [& life.u.cum]
+            [| 1]
+          =/  =blob  (attestation-packet sndr.shot her-life)
+          ::  a peer that already knows us and asks again suspects our
+          ::  attestation is behind our chain.  ask our own pki domain
+          ::  to refresh our pass as well (see %anew in +call); a
+          ::  vanilla comet has no domain and skips this.
+          ::
+          =?  event-core  known
+            =/  dom  (pass-pki-dom pass.ames-state)
+            ?~  dom  event-core
+            (emit duct %pass /sybl %j %anew u.dom)
           %-  send-blob-via
           [for=| via sndr.shot blob (~(get by peers.ames-state) via)]
         ::  +on-hear-open: handle receipt of plaintext comet self-attestation
@@ -5220,6 +5359,7 @@
           ::
           ?:  ?&  ?=([~ %known *] ship-state)
                   (gte life.u.ship-state sndr-life.open-packet)
+                  !(snobbed snob.ames-state sndr.shot)
               ==
             event-core
           =/  cek  +<:(com:nu:cric:crypto pass.open-packet)
@@ -5230,6 +5370,15 @@
           ::
           ?:  &(?=([%c *] cek) ?=(~ dom))
             event-core
+          ::  does an agent here serve that domain?  if not, this is
+          ::  an ordinary comet to us -- +sift-open-packet has already
+          ::  held it to life 1 and to signing with its genesis key --
+          ::  and it takes the vanilla path below, .xtr ignored.
+          ::
+          =/  served=?
+            ?.  ?=([%c *] cek)  |
+            ?~  dom  |
+            (pki-dom-live rof our now u.dom)
           ::  add comet as an %alien if we haven't already
           ::
           =?  peers.ames-state  ?=(~ ship-state)
@@ -5242,9 +5391,13 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p sndr.shot)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          ?:  ?&  ?=([%c *] cek)
+          ::  a soft-blocked comet re-attests at whatever life it has:
+          ::  the domain asked to hear from it, so let it be heard
+          ::
+          ?:  ?&  served
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
+                      (snobbed snob.ames-state sndr.shot)
                   ==
               ==
             ::  a confidential comet we don't know, or a new life: ask
@@ -5324,18 +5477,37 @@
           ::
           =/  =peer-state   +.u.sndr-state
           =/  =channel      [[our sndr.shot] now channel-state -.peer-state]
-          =?  event-core  !=(sndr-tick.shot (mod life.hers.channel 16))
-            %.  event-core
-            %^  ev-trace  odd.veb  sndr.shot
-            |.  ^-  tape
-            =/  sndr  [sndr-tick=sndr-tick.shot her-life=life.hers.channel]
-            "sndr-tick mismatch {<sndr>}"
-          =?  event-core  !=(rcvr-tick.shot (mod our-life.channel 16))
-            %.  event-core
-            %^  ev-trace  odd.veb  sndr.shot
-            |.  ^-  tape
-            =/  rcvr  [rcvr-tick=rcvr-tick.shot our-life=our-life.channel]
-            "rcvr-tick mismatch {<rcvr>}"
+          ::  a tick that disagrees with the life we hold means one side
+          ::  rekeyed and the other has not heard; the packet cannot be
+          ::  decrypted either way (+sift-shut-packet drops it).  for a
+          ::  pluggable-pki comet we can do better than wait for its
+          ::  domain's scanner: a sndr-tick mismatch means THEY rotated,
+          ::  so ask them to re-attest; a rcvr-tick mismatch means they
+          ::  hold an old view of US, so if we are a comet re-attest to
+          ::  them.  both are rate-limited by the /poof timer.
+          ::
+          =/  suite-c=?
+            ?.  ?=(%pawn (clan:title sndr.shot))  |
+            =/  cek  +<:(com:nu:cric:crypto pass.peer-state)
+            ?=([%c *] cek)
+          ?:  !=(sndr-tick.shot (mod life.hers.channel 16))
+            =.  event-core
+              %.  event-core
+              %^  ev-trace  odd.veb  sndr.shot
+              |.  ^-  tape
+              =/  sndr  [sndr-tick=sndr-tick.shot her-life=life.hers.channel]
+              "sndr-tick mismatch {<sndr>}"
+            ?.  suite-c  event-core
+            (solicit-attestation sndr.shot)
+          ?:  !=(rcvr-tick.shot (mod our-life.channel 16))
+            =.  event-core
+              %.  event-core
+              %^  ev-trace  odd.veb  sndr.shot
+              |.  ^-  tape
+              =/  rcvr  [rcvr-tick=rcvr-tick.shot our-life=our-life.channel]
+              "rcvr-tick mismatch {<rcvr>}"
+            ?.  &(suite-c ?=(%pawn (clan:title our)))  event-core
+            (reattest-to sndr.shot life.hers.channel)
           ~|  %ames-crash-on-packet-from^her.channel
           =/  shut-packet=(unit shut-packet)
             (sift-shut-packet shot [symmetric-key.hers life.hers our-life]:channel)
@@ -5762,6 +5934,24 @@
         ++  on-take-wake
           |=  [=wire error=(unit tang)]
           ^+  event-core
+          ?:  ?=([%poof @ ~] wire)
+            ::  a re-attestation we solicited (or sent) has had its
+            ::  30s.  if the peer is still soft-blocked its domain has
+            ::  not vouched for it yet: ask again.  otherwise a %full
+            ::  lifted the block, or this was a one-off re-attestation
+            ::  to a peer with a stale view of us, and we are done.
+            ::
+            ?^  error
+              %-  (slog 'ames: re-attestation timer failed' u.error)
+              event-core
+            ?~  ship=`(unit @p)`(slaw %p i.t.wire)
+              %-  (slog leaf+"ames: got timer for strange wire: {<wire>}" ~)
+              event-core
+            =.  poof.ames-state  (~(del in poof.ames-state) u.ship)
+            ?.  (snobbed snob.ames-state u.ship)
+              event-core
+            (solicit-attestation u.ship)
+          ::
           ?:  ?=([%alien @ ~] wire)
             ::  if we haven't received an attestation, ask again
             ::
@@ -6252,6 +6442,44 @@
               ^=   sndr-life  life.ames-state
               ^=        rcvr  her
               ^=   rcvr-life  her-life
+          ==
+        ::  +solicit-direct: ask a peer we already know for its attestation
+        ::
+        ::    +fetch-comet-pki is for aliens: it routes through the
+        ::    sponsor and gives up once jael knows the ship.  this is
+        ::    for a comet we know and can reach, whose current pass we
+        ::    have reason to doubt.  one packet, no timer: +sy-poof
+        ::    owns the retry.
+        ::
+        ++  solicit-direct
+          |=  her=ship
+          ^+  event-core
+          =+  (ev-trace msg.veb her |.("requesting fresh attestation"))
+          %-  send-blob
+          [for=| her (sendkeys-packet her) (~(get by peers.ames-state) her)]
+        ::  +solicit-attestation: +sy-poof, from the |ames event core
+        ::
+        ++  solicit-attestation
+          |=  her=ship
+          ^+  event-core
+          =/  sy-core  ~(. sy:(mesa now eny rof) duct)
+          =.  sy-core  sy-core(ames-state ames-state)
+          =^  moves  ames-state  sy-abet:(sy-poof:sy-core her)
+          (emil moves)
+        ::  +reattest-to: re-send our attestation to a peer that holds an
+        ::  old view of us; rate-limited on the same /poof timer
+        ::
+        ++  reattest-to
+          |=  [her=ship =her=life]
+          ^+  event-core
+          ?:  (~(has in poof.ames-state) her)  event-core
+          =.  poof.ames-state  (~(put in poof.ames-state) her)
+          =.  event-core
+            (emit duct %pass /poof/(scot %p her) %b %wait (add now ~s30))
+          %-  send-blob
+          :*  for=|  her
+              (attestation-packet her her-life)
+              (~(get by peers.ames-state) her)
           ==
         ::  +sendkeys-packet: generate a request for a self-attestation.
         ::
@@ -9139,6 +9367,7 @@
         ::  /ax/bones/[ship]               [snd=(set bone) rcv=(set bone)]
         ::  /ax/snd-bones/[ship]/[bone]    vase
         ::  /ax/snubbed                    (?(%allow %deny) (list ship))
+        ::  /ax/snobbed                    (?(%allow %deny) (list ship))
         ::  /ax/fine/hunk/[path/...]       (list @ux) scry response fragments
         ::  /ax/fine/ducts/[path/]         (list duct)
         ::  /ax/fine/shut/[path/]          @ux encrypted response
@@ -9263,6 +9492,9 @@
           ::
               [%snubbed ~]
             ``noun+!>([form.snub.ames-state ~(tap in ships.snub.ames-state)])
+          ::
+              [%snobbed ~]
+            ``noun+!>([form.snob.ames-state ~(tap in ships.snob.ames-state)])
           ::
               [%fine %ducts pax=^]
             ?~  bulk=(de-path-soft:balk pax.tyl)  ~
@@ -9455,6 +9687,8 @@
                 %cong  sy-abet:sy-cong:sy-core
                 %prod  sy-abet:(sy-prod:sy-core ships.task)
                 %snub  sy-abet:(sy-snub:sy-core [form act ships]:task)
+                %snob  sy-abet:(sy-snob:sy-core [form act ships]:task)
+                %poof  sy-abet:(sy-poof:sy-core ship.task)
                 ::  ask our pki-domain agent (via jael) to re-encode
                 ::  our pass with the current off-chain reveal log;
                 ::  the fresh pass returns on /sybl (+sy-sybl %anew).
@@ -11368,16 +11602,17 @@
         ::    snub the claimed identity and drop its pending requests;
         ::    a fraudulent attestation is not retried.  the snub does
         ::    not expire; only a later %full lifts it.
-        ::    %lost: no live agent is registered for the pki domain.
+        ::    %lost: the pki domain is registered but suspended.
         ::    stubbed out as a no-op for now.
-        ::    %stale: the ship's verified attestation went out of date
-        ::    on-chain and jael dropped its point.  demote a %known
-        ::    peer to a fresh %alien: messaging state is wiped (as on
-        ::    breach) and outbound requests made while unverified
-        ::    queue in the alien agenda, draining through the normal
-        ::    promotion machinery when a fresh attestation verifies.
-        ::    snub nothing: staleness is not fraud, and the ship's
-        ::    replacement packet must be able to arrive.
+        ::    %snob: the domain can no longer vouch for the ship's
+        ::    verified attestation (its identity moved on-chain) and
+        ::    wants a fresh one.  jael KEEPS the point and we keep the
+        ::    peer and every flow with it; we soft-block it (+sy-snob)
+        ::    so nothing but an attestation gets through, and ask it
+        ::    to re-attest (+sy-poof).  a later %full lifts the block;
+        ::    if the new attestation raised the ship's rift, jael
+        ::    breaches it for us on the way (+feel).  never a snub:
+        ::    this is not fraud, and the replacement must arrive.
         ::
         ++  sy-sybl
           |=  =writ-result:jael
@@ -11400,6 +11635,11 @@
             ::  actually arriving is the only thing that clears one.
             ::
             =.  sy-core  (sy-snub %deny %del ~[her])
+            ::  and lift any soft block: the domain vouches again.
+            ::  the /poof timer, if armed, finds the ship unblocked
+            ::  and stops.
+            ::
+            =.  sy-core  (sy-snob %deny %del ~[her])
             %+  sy-publ  /sybl
             [%full (my [her point.writ-result]~)]
           ::
@@ -11414,6 +11654,7 @@
             ::  the mirror of the %full branch's un-snub, same machinery
             ::
             =.  sy-core  (sy-snub %deny %add ~[her])
+            =.  sy-core  (sy-snob %deny %del ~[her])
             ::  drop pending requests from this identity; only alien
             ::  state is dropped, an already-known peer is untouched
             ::
@@ -11433,36 +11674,15 @@
                 ==
             sy-core
           ::
-              %stale
+              %snob
             =*  her  ship.writ-result
             %-  %-  trace
                 :*  %mesa  odd.veb.bug.ames-state  her
                     ships.bug.ames-state
-                    |.("attestation stale; demoting peer to alien")
+                    |.("attestation withdrawn; soft-blocking and re-soliciting")
                 ==
-            =/  peer  (find-peer her)
-            ?~  +.peer
-              sy-core
-            ?:  ?=([?(%ames %mesa) ~ %alien *] peer)
-              sy-core
-            ::  cancel pump timers, as +on-publ-breach does
-            ::
-            =?  sy-core    ?=(%ames -.peer)
-              %+  roll  ~(tap by snd.u.peer)
-              |=  [[=snd=bone =message-pump-state] core=_sy-core]
-              ^+  core
-              ?~  next-wake=next-wake.packet-pump-state.message-pump-state
-                core
-              =/  wire  (make-pump-timer-wire her snd-bone)
-              =/  duct  ~[/ames]
-              (sy-emit:core duct %pass wire %b %rest u.next-wake)
-            ::  demote to a fresh %alien with an empty agenda
-            ::
-            =?  chums.ames-state  ?=(%mesa -.peer)
-              (~(put by chums.ames-state) her alien/*ovni-state)
-            =?  peers.ames-state  ?=(%ames -.peer)
-              (~(put by peers.ames-state) her alien/*alien-agenda)
-            sy-core
+            =.  sy-core  (sy-snob %deny %add ~[her])
+            (sy-poof her)
           ::
           ::  our own freshly re-encoded pass, with an updated
           ::  off-chain reveal log in its (un-tweaked) xtr data.
@@ -12019,23 +12239,84 @@
         ++  sy-snub
           |=  [form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
           ^+  sy-core
+          sy-core(snub.ames-state (edit-list snub.ames-state form act ships))
+        ::  +sy-snob: the same, for the soft blocklist
+        ::
+        ::    a snobbed ship's packets are dropped as a snubbed ship's
+        ::    are, except its self-attestations and its requests for
+        ::    ours (+snobbed and its call sites).  +sy-sybl's %snob arm
+        ::    adds and %full removes; both through the editing forms.
+        ::
+        ++  sy-snob
+          |=  [form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
+          ^+  sy-core
+          sy-core(snob.ames-state (edit-list snob.ames-state form act ships))
+        ::  +edit-list: the %set/%add/%del arithmetic both lists share
+        ::
+        ++  edit-list
+          |=  $:  cur=[form=?(%allow %deny) ships=(set ship)]
+                  form=?(%allow %deny)
+                  act=?(%add %del %set)
+                  ships=(list ship)
+              ==
+          ^-  [form=?(%allow %deny) ships=(set ship)]
           =/  new  (^sy ships)
-          =.  snub.ames-state
-            ?-    act
-                %set  [form new]
-                %add
-              :-  form.snub.ames-state
-              ?:  =(form form.snub.ames-state)
-                (~(uni in ships.snub.ames-state) new)
-              (~(dif in ships.snub.ames-state) new)
-            ::
-                %del
-              :-  form.snub.ames-state
-              ?:  =(form form.snub.ames-state)
-                (~(dif in ships.snub.ames-state) new)
-              (~(uni in ships.snub.ames-state) new)
-            ==
-          sy-core
+          ?-    act
+              %set  [form new]
+              %add
+            :-  form.cur
+            ?:  =(form form.cur)
+              (~(uni in ships.cur) new)
+            (~(dif in ships.cur) new)
+          ::
+              %del
+            :-  form.cur
+            ?:  =(form form.cur)
+              (~(dif in ships.cur) new)
+            (~(uni in ships.cur) new)
+          ==
+        ::  +sy-poof: ask a comet for a fresh self-attestation
+        ::
+        ::    whether or not we know it, and regardless of what jael
+        ::    holds -- the point is that what we hold may be behind.
+        ::    one solicitation outstanding per ship: .poof records it
+        ::    and a /poof timer clears it after 30s, re-soliciting if
+        ::    the ship is still soft-blocked (+on-take-wake).
+        ::
+        ::    a |mesa chum is asked over its lane (or its galaxy's, as
+        ::    +al-enqueue-alien-todo does) with the proof peek; an |ames
+        ::    peer with a %keys packet sent straight to it.
+        ::
+        ++  sy-poof
+          |=  her=ship
+          ^+  sy-core
+          ?.  ?=(%pawn (clan:title her))  sy-core
+          ?:  (~(has in poof.ames-state) her)  sy-core
+          =.  poof.ames-state  (~(put in poof.ames-state) her)
+          =.  sy-core
+            (sy-emit ~[/ames] %pass /poof/(scot %p her) %b %wait (add now ~s30))
+          =/  peer  (find-peer her)
+          ?:  ?=(%mesa -.peer)
+            =/  lane=(unit lane:pact)
+              ?.  ?=([%mesa ~ %known *] peer)  ~
+              ?~  lane.u.peer  ~
+              `lane.u.lane.u.peer
+            =/  lane=(unit lane:pact)
+              ?^  lane  lane
+              =/  sax
+                %^  rof  [~ ~]  /ames
+                j/`beam`[[our %saxo %da now] /(scot %p her)]
+              ?.  ?=([~ ~ *] sax)  ~
+              =/  gal  (rear ;;((list @p) q.q.u.u.sax))
+              ?:(=(our gal) ~ ``@ux`gal)
+            ?~  lane  sy-core
+            %-  sy-emil
+            =<  moves
+            (al-peek-proof:~(. al ~[/ames]) her u.lane)
+          =/  ames-core  (ev:ames now^eny^rof hen ames-state)
+          =^  moves  ames-state
+            abet:(solicit-direct:ames-core her)
+          (sy-emil moves)
         ::
         ++  sy-stun
           |=  =stun
@@ -12847,6 +13128,13 @@
             (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p comet)])
           ?:  ?=([~ ~ [* * ^]] lyf)
             (al-emit [[//keys]~ %pass /public-keys %j %public-keys comet ~ ~])
+          (al-peek-proof comet lane)
+        ::  +al-peek-proof: peek a comet's attestation proof, no questions
+        ::  asked (+sy-poof wants one even when jael knows the ship)
+        ::
+        ++  al-peek-proof
+          |=  [comet=ship =lane:pact]
+          ^+  al-core
           =/  =space  [%publ life=1]
           =/  =path
             %+  make-space-path  space
@@ -12939,9 +13227,10 @@
           ?>  =(her.name sndr.open-packet)
           ?>  &(=(our rcvr.open-packet) =(life.ames-state rcvr-life.open-packet))
           =/  cic  (com:nu:cric:crypto pass.open-packet)
-          ::  the comet's public key must hash to its @p address
+          ::  the proof must be signed by the key its pass carries: the
+          ::  current life key (sgn is cry for suite %c).  see
+          ::  +sift-open-packet for what that does and does not prove.
           ::
-          ?>  =(her.name fig:ex:cic)
           =/  =public-keys  ded:ex:cic
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
@@ -12953,6 +13242,22 @@
           ::
           ?:  &(?=([%c *] cek) ?=(~ dom))
             al-core
+          ::  who vouches for the name?  the domain's agent, if one
+          ::  serves the domain here.  otherwise the pass itself, as
+          ::  for any comet: the signer is the genesis key, at life 1.
+          ::
+          =/  served=?
+            ?.  ?=([%c *] cek)  |
+            ?~  dom  |
+            (pki-dom-live rof our now u.dom)
+          ?>  ?|  served
+                  ?&  =(her.name fig:ex:cic)
+                      ?.  ?=([%c *] cek)  &
+                      ?&  =(ugn.tw.pub.cek cry.pub.cek)
+                          =(1 sndr-life.open-packet)
+                      ==
+                  ==
+              ==
           ::  what does jael already know about this comet?
           ::
           =/  lyf=(unit @ud)
@@ -12960,9 +13265,10 @@
               (rof [~ ~] /ames %j `beam`[[our %lyfe %da now] /(scot %p her.name)])
             ?.  ?=([~ ~ *] res)  ~
             ;;((unit @ud) q.q.u.u.res)
-          ?:  ?&  ?=([%c *] cek)
+          ?:  ?&  served
                   ?|  ?=(~ lyf)
                       (lth u.lyf sndr-life.open-packet)
+                      (snobbed snob.ames-state her.name)
                   ==
               ==
             ::  a confidential comet we don't know, or a new life: ask
@@ -13928,6 +14234,15 @@
         %-  %+  %*(ev-tace ev-core her sndr.shot)  rcv.veb.bug.ames-state
             |.("snubbed")
         `vane-gate
+      ::  soft-blocked: only an attestation, or a request for ours
+      ::
+      ?:  ?&  (snobbed snob.ames-state sndr.shot)
+              !(is-open-packet shot)
+              !=(%keys content.shot)
+          ==
+        %-  %+  %*(ev-tace ev-core her sndr.shot)  rcv.veb.bug.ames-state
+            |.("snobbed")
+        `vane-gate
       ::
       =/  ship-state  (find-peer sndr.shot)
       ?:  ?=([%ames *] ship-state)
@@ -14165,6 +14480,19 @@
             %-  %+  %*(ev-tace ev-core her her)  rcv.veb.bug.ames-state
                 |.("snubbed")
             `ames-state
+          ::  soft-blocked: only an attestation proof page passes
+          ::
+          ?:  ?&  (snobbed snob.ames-state her)
+                  =/  proof=(unit ?)
+                    %-  mole
+                    |.
+                    =/  pit  (validate-path +>.pat.name.pact)
+                    ?=(poof-pith pit)
+                  ?~(proof & !u.proof)
+              ==
+            %-  %+  %*(ev-tace ev-core her her)  rcv.veb.bug.ames-state
+                |.("snobbed")
+            `ames-state
           =/  chum-state  (find-peer her)
           ?.  ?=([%mesa *] chum-state)
             %-  %+  %*(ev-tace ev-core her her)  odd.veb.bug.ames-state
@@ -14194,8 +14522,22 @@
                 pat.ack.pact  `(pole term)`pat.ack.pact
               ==
           =/  chum-state  (find-peer her-pok)
+          ::  soft-blocked: only an attestation proof passes
+          ::
+          ?:  ?&  (snobbed snob.ames-state her-pok)
+                  !?=([%publ @ %a %x %'1' %$ mut=muth:poof-pith] pat.ack.pact)
+              ==
+            %-  %+  %*(ev-tace ev-core her her-pok)  rcv.veb.bug.ames-state
+                |.("snobbed")
+            `ames-state
           ?:  ?=([%publ @ %a %x %'1' %$ mut=muth:poof-pith] pat.ack.pact)
-            ?:  ?=([~ %known *] +.chum-state)  `ames-state
+            ::  a known chum re-attesting is ignored unless its domain
+            ::  asked to hear from it again (it is soft-blocked)
+            ::
+            ?:  ?&  ?=([~ %known *] +.chum-state)
+                    !(snobbed snob.ames-state her-pok)
+                ==
+              `ames-state
             ?>  ?=([%publ @ %a %x %'1' %$ puf=pok:poof-pith] pat.pok.pact)
             =/  puf
               =>  [puf.pat.pok.pact ..ride]
@@ -14525,6 +14867,7 @@
     ::
       $?  %vega  %init  %born  %snub  %spew  %stun  %gulp
           %sift  %plug  %dear  %init  %tame  %cong  %anew
+          %snob  %poof
       ==
     (call:me-core sample)
     ::  common tasks
@@ -14593,7 +14936,7 @@
   take:am-core
 ::  +stay: extract state before reload
 ::
-++  stay  [%32 adult/ames-state]
+++  stay  [%33 adult/ames-state]
 ::  +load: load in old state after reload
 ::
 ++  load

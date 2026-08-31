@@ -37,6 +37,48 @@
   ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
   (pure:m ~)
 ::
+++  assert-snobbed
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /snobbed/noun
+  =+  ;;  val=(unit [form=?(%allow %deny) ships=(list @p)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  ?>  =(%deny form.u.val)
+  ?>  (lien ships.u.val |=(her=@p =(who her)))
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is soft-blocked"]
+  (pure:m ~)
+::
+++  assert-not-snobbed
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /snobbed/noun
+  =+  ;;  val=(unit [form=?(%allow %deny) ships=(list @p)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  ?>  =(%deny form.u.val)
+  ?>  !(lien ships.u.val |=(her=@p =(who her)))
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is not soft-blocked"]
+  (pure:m ~)
+::
+::  +poke-snob: make .ship's fake %test-pki withdraw its vouch for .who
+::
+++  poke-snob
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ~?  >>  loud  [tag "{(cite:title ship)}: %test-pki withdraws its vouch for {(cite:title who)}"]
+  ;<  ~  bind:m  (poke-app ship %test-pki %noun [%snob who])
+  (pure:m ~)
+::
 ++  start-cc-comet
   |=  [comet=@p core=?(%ames %mesa) =onchain]
   =.  onchain  (sort-onchain onchain)

@@ -260,8 +260,9 @@
 ::    before any attestation logic runs.
 ::
 ::    Current values, for grepping:
-::      ok    ~tirdyn-hocpes-ribtyl-fitfyr--winrus-dabdyl-nardev-dapryc
-::      fail  ~hodwyn-topmul-sogfun-hatfeb--riblug-nomnep-fidben-macfun
+::      ok    ~savsem-tadteb-moswyl-rivmun--loswer-nisser-dinlep-lavdeb
+::      fail  ~socres-nodhec-mogpec-nacleb--tobhec-pichec-rapdut-bisrut
+::    (kelvin 8; regenerated with +gw-btc!aqua-fixtures on 2026-08-31)
 ::
 ++  cc-comet-ok    ^~(`@p`(cc-fig %ok))
 ++  cc-comet-fail  ^~(`@p`(cc-fig %fail))
@@ -296,10 +297,8 @@
   |=  which=?(%ok %fail)
   ^-  @
   ?:  ?=(%ok which)
-    0x7.3eb7.25af.2e7b.3683.2a1b.d0cd.2e18.31df.5519.7823.7daf.23bc.
-    8bf0.a173.bcc7.4648
-  0x390.e9b6.5e2b.cb96.6345.3bbb.e508.3813.adcf.63a8.96a7.afb2.d4bf.
-  21b5.cd22.c28b.9a48
+    0x2.9888.d81e.8208
+  0x58.c445.a043.0208
 ::  +cc-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
 ::
 ::    Excluded from the key tweak, so it may grow without renaming the
@@ -323,22 +322,18 @@
   ?:  ?=(%ok which)
     ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
         %1
-      0x17.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
-      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
-      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
-      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
-      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
-      8000.ec05
+    0xaea.3b1c.ccf4.0b3a.437a.b6fb.bc10.0e66.9f03.3377.b7a2.71b6.655e.
+    f944.a9f5.6671.9588.d426.797d.cbdb.48be.78c6.0e8d.28ee.5a31.7601.
+    0019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.c1c0.a6ff.36cb.738a.
+    3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.8000.ec05
     ::
         %2
-      0x1.5402.8720.3a94.943e.bb94.44be.8d19.5cdc.ecc3.0cb4.17c9.7010.
-      95a7.f00c.ffbd.42f7.8027.de01.0019.90b4.f8d9.bdf1.1480.c444.000b.
-      602f.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
-      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
-      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
-      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
-      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
-      8000.ec05
+    0x5.512a.1d47.9ded.62d6.773a.4664.4514.1448.4ea2.66c2.783a.2fd2.
+    b3ee.07d4.5cb7.72c0.4df3.bec0.0cc8.5a7c.6cde.f88a.4062.2200.05b0.
+    16ea.3b1c.ccf4.0b3a.437a.b6fb.bc10.0e66.9f03.3377.b7a2.71b6.655e.
+    f944.a9f5.6671.9588.d426.797d.cbdb.48be.78c6.0e8d.28ee.5a31.7601.
+    0019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.c1c0.a6ff.36cb.738a.
+    3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.8000.ec05
     ==
   ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
       %1
@@ -374,9 +369,18 @@
   |=  [which=?(%ok %fail) lyfe=life]
   ^-  @
   =/  base  (shal 64 (cc-seed which))
-  =/  sgn   (end 8 base)
-  =/  cry   (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
-  (can 3 ~[[32 sgn] [32 cry]])
+  ::  kelvin 8 ring: [kes ugn].  kes is THIS life's 32-byte seed --
+  ::  the genesis seed at life 1, a life-salted derivative after --
+  ::  and ugn is the genesis key's PUBLIC half, which the name
+  ::  commits and which every life carries unchanged.  see
+  ::  +cric:crypto and groundwire's doc/lifekey-revision.md.
+  ::
+  =/  gen  (end 8 base)
+  =/  ugn  pub:(luck:ed:crypto gen)
+  =/  kes
+    ?:  =(1 lyfe)  gen
+    (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
+  (can 3 ~[[32 kes] [32 ugn]])
 ::  +cc-crub: activate a suite-%c core from an explicit 64-byte seed
 ::
 ::    +pit:nu:cric derives the whole seed by hashing one number, which

@@ -39,12 +39,26 @@ the bytes it is handed is out of scope here.
 
 `$open-packet` is the ordinary Ames open packet, unchanged. Crypto suite
 `%b` remains the vanilla comet path, also unchanged. Suite `%c` marks a
-comet whose pass carries two extra payloads:
+comet whose pass carries a genesis key and two extra payloads:
 
-- `dat.tw.pub` is hashed into the signing-key tweak and therefore into
-  the comet's name. It is immutable for the life of the identity.
+- `ugn.tw.pub` is the public half of the comet's *genesis* key. Tweaked by
+  `dat` and hashed, it is the comet's name. It never changes, and nothing
+  is ever signed with it: after life 1 it has no live secret.
+- `dat.tw.pub` is hashed into that tweak and therefore into the name. It
+  is immutable for the life of the identity.
 - `xtr.tw.pub` is not hashed into the key. It carries refreshable
   evidence and may change without changing the comet's name.
+
+The pass's `cry` is the comet's *current* key. It both encrypts (ECDH for
+channel keys) and signs (`sgn` **is** `cry` for suite `%c`): the attestation
+packet, Fine responses and Mesa page roots are all signed with it, and a
+rekey rotates it. At life 1 the current key is the genesis key, so
+`ugn == cry`; later lives carry a fresh `cry` and the same `ugn`. Whether a
+given `cry` is really the identity's current key is the domain's to
+establish (§4); the kernel only ever checks that a packet is signed by the
+key its pass claims. One key signing on the Edwards form and agreeing on the
+Montgomery form is sound given domain separation; nothing signed by a
+suite-`%c` key may be a bare point or a peer-chosen atom.
 
 The kernel's entire contract with `dat` is its leading field:
 
@@ -66,7 +80,9 @@ a Jael request is created.
 `+dome`, a Jael scry (`.^((unit @tas) %j /=dome=/[ship])`), reports the
 domain committed in a known ship's pass, or `~` for a suite-`%b` or
 unknown ship. It mirrors `+pass-pki-dom:ames` and the two must stay in
-step.
+step. `+dose` (`.^((unit ?) %j /=dose=/[dom])`) reports whether an agent
+has registered `dom` and, if so, whether the registration is live — the
+same test `%writ` applies before forwarding.
 
 ## 3. Jael domain API
 
@@ -97,7 +113,7 @@ registered path:
 
 ```hoon
 +$  verdict        [dom=@tas =ship res=(unit point)]
-+$  stale-notice   [dom=@tas =ship]
++$  snob-notice    [dom=@tas =ship]
 ```
 
 Jael stores a successful point through its normal `feel` machinery and
@@ -119,15 +135,27 @@ registered domain or from an explicitly authorized app source.
 
 ## 4. Ames intake
 
-Both the Mesa and legacy Ames packet paths apply the same branches:
+Both the Mesa and legacy Ames packet paths apply the same branches. Every
+attestation first passes the structural checks (bounded shape, sender,
+receiver, receiver life, sponsor class) and a signature check under the
+`cry` carried in its own pass. Then:
 
-1. For an unknown suite-C comet, or a candidate at a higher life than one
-   already accepted, validate the packet/pass/name relationships, extract
-   a well-formed domain, subscribe to its public keys, and send `%writ` to
-   Jael. Do not register the peer locally yet.
-2. For a state already accepted at the same or a later life, retain the
+1. Extract the domain from a suite-C pass; a malformed one is dropped.
+   Ask Jael (`+dose`) whether that domain has a live verifier here.
+2. **Domain served.** The name is *not* checked in the kernel. For an
+   unknown comet, or a candidate at a higher life than one already
+   accepted (or one the domain has asked to hear from again), subscribe
+   to its public keys and send `%writ`. Do not register the peer locally.
+   For a state already accepted at the same or a later life, retain the
    ordinary key subscription.
-3. For a vanilla suite-B comet, retain the existing local life-1
+3. **Domain not served.** Treat the comet as an ordinary comet: require
+   `ugn == cry` (the verification key, tweaked and hashed, is the `@p`)
+   and life 1, register it locally from the pass, ignore `xtr`. A rotated
+   comet fails this and is dropped: a kernel without the domain can
+   follow such an identity exactly until its first rotation, and no
+   further. This is what makes suite-C comets usable by ships that have
+   installed no domain agent at all.
+4. For a vanilla suite-B comet, retain the existing local life-1
    verification and registration behavior.
 
 Until a verdict arrives the sender stays an alien with a bounded agenda.
@@ -150,18 +178,46 @@ stored in Jael, visible in `/pynt`, and never actually routed to.
 Jael likewise publishes the fief of a point installed from a
 `%verdict` to its `%fief` subscribers.
 
-## 6. Staleness
+## 6. Withdrawn vouches: soft block and re-solicitation
 
-An attestation can stop being true without ever having been fraudulent:
-the external fact it rests on may simply move on. That is not a reason to
-snub anyone.
+An attestation can stop being something its domain will vouch for without
+ever having been fraudulent: the external fact it rests on may simply
+move on. That is not a reason to snub anyone, and it is not a reason to
+tear down the flows a ship has with that peer.
 
-A domain agent that notices this gives Jael a `$stale-notice`. Jael drops
-the point, removes the ship from that domain's vouched-for set, and gives
-`[%sybl %stale dom ship]`. Ames demotes a `%known` peer to a *fresh*
-`%alien` with an empty agenda — never deleting it, never snubbing it — and
-leaves an already-`%alien` peer untouched. The peer can then re-attest
-through the ordinary first-contact path.
+A domain agent that can no longer vouch for a ship gives Jael a
+`$snob-notice`. Jael **keeps** the point and the ship's place in the
+domain's vouched-for set, and gives `[%sybl %snob dom ship]`. Ames puts
+the ship on its *soft* blocklist (`snob`, edited with the `%snob` task
+exactly as `snub` is with `%snub`) and asks it for a fresh attestation
+(`%poof`): a `%keys` packet on the legacy path, the proof peek on Mesa,
+retried every 30 seconds while the ship stays soft-blocked. A soft-blocked
+ship's packets are dropped as a snubbed ship's are — on both cores — with
+two exceptions: its own self-attestations, and its requests for ours.
+Nothing else about the peer changes: `%known` state, flows, routes and
+subscriptions all stand.
+
+When the domain vouches again, the ordinary `%full` verdict lifts the soft
+block (and any snub) and installs the new point through `+on-publ-full`,
+which keeps the existing peer state — a rekey, not a breach. If the new
+point raises the ship's rift, Jael's `+feel` signals `%breach` first, and
+Ames and Gall wipe their state for that ship as for any breach. This is
+why the point is retained rather than dropped: with no prior point there
+would be nothing to compare the rift against.
+
+A negative verdict on a ship the domain has vouched for is the domain
+withdrawing that vouch. Jael deletes the point and the ship's `hep` entry
+(so a later `%ghul` cannot un-snub it), gives `%fail` (Ames snubs), and
+gives `[%public-keys %breach ship]`, exactly as `%bane` does per ship.
+
+Ames also solicits on its own initiative: a shut packet from a suite-C
+`%known` comet whose sender tick disagrees with the life Ames holds means
+the comet rekeyed and Ames has not heard — the packet is undecryptable
+anyway, so Ames drops it and asks (`%poof`, rate-limited). A receiver tick
+mismatch means the peer holds an old view of *us*; a comet re-sends its
+own attestation in reply. And a `%keys` request from a peer that already
+knows us makes a comet ask its domain agent to refresh its own pass
+(`%anew`) as well as answering.
 
 ## 7. Re-attestation of our own identity
 
@@ -183,8 +239,10 @@ about a new life through the same path that admitted us.
   assumed by anything here.
 - Aqua must cover the real Ames -> Jael -> Gall -> Jael -> Ames
   asynchronous path with a deterministic oracle: acceptance, rejection, a
-  malformed `dat`, and a higher life. Those scenarios live in
-  `ted/ph/cc/`, and their fake domain verifier is generated from the
+  malformed `dat`, a higher life, and a withdrawn vouch (`snob-reattest`:
+  `%snob-notice` -> soft block -> `%poof` solicitation -> re-attestation ->
+  `%full`, with the peer's flows intact throughout). Those scenarios live
+  in `ted/ph/cc/`, and their fake domain verifier is generated from the
   fixtures in `lib/aqua-azimuth.hoon` so it cannot go stale against them.
   It is a lookup table, deliberately: base arvo must not contain a
   verifier.
