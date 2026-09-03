@@ -78,7 +78,7 @@ jobs:
           repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || env.URBIT_BRANCH }}
           path: gwbtc-urbit
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Checkout gwbtc/groundwire
         uses: actions/checkout@v4
@@ -86,7 +86,7 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Checkout gwbtc/urbit-mcp
         uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
           repository: gwbtc/urbit-mcp
           ref: ${{ env.URBIT_MCP_BRANCH }}
           path: gwbtc-urbit-mcp
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Checkout Vitriol
         uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
           repository: gwbtc/vitriol
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       # -- Boot fake ~zod --
 
@@ -297,7 +297,7 @@ jobs:
           repository: gwbtc/urcrypt
           ref: ${{ env.URCRYPT_BRANCH }}
           path: gwbtc-urcrypt
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Prepare urcrypt
         run: |
@@ -310,7 +310,7 @@ jobs:
           repository: gwbtc/vere
           ref: ${{ env.VERE_BRANCH }}
           path: gwbtc-vere
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Build vere
         run: |
@@ -387,7 +387,7 @@ jobs:
           repository: gwbtc/urcrypt
           ref: ${{ env.URCRYPT_BRANCH }}
           path: gwbtc-urcrypt
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Prepare urcrypt
         run: |
@@ -400,7 +400,7 @@ jobs:
           repository: gwbtc/comet-miner
           ref: ${{ env.COMET_MINER_BRANCH }}
           path: gwbtc-comet-miner
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Build comet-miner
         run: |
@@ -433,7 +433,7 @@ jobs:
           repository: gwbtc/groundwire
           ref: ${{ env.GROUNDWIRE_BRANCH }}
           path: gwbtc-groundwire-onboard
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Set up Python for PyInstaller
         uses: actions/setup-python@v5
@@ -618,4 +618,4 @@ jobs:
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT_RELEASE }}
