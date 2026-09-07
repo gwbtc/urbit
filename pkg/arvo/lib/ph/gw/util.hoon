@@ -58,6 +58,7 @@
       /marbud/harrep  /marbud/liblyn  /marbud/hidreb
       /mardev/molpyx  /mardev/fosnys  /mardev/tonmep
       /mardev/holwyx  /mardev/hacmet  /mardev/ribmut
+      /nomdyl/gw-ok   /rilfun/gw-fail
   ==
 ::
 ++  comets
@@ -78,6 +79,9 @@
       ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
       ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
       ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
+      :: prototype %gw-btc asynchronous-path identities
+      ~nilnyd-tabmec-ravfer-fabler--dozpub-balsym-lasled-nomdyl
+      ~fadbep-panrev-rolluc-rapbes--racmur-lavrel-sapryc-rilfun
   ==
 ::
 ++  gw-agent
@@ -126,6 +130,85 @@
     ++  noun  dis
     --
   ++  grad  %noun
+  --
+  '''
+::
+++  gw-btc-agent
+  '''
+  /+  default-agent
+  =|  (list [dom=@tas ship=@p pass=@])
+  =*  pending  -
+  ^-  agent:gall
+  |_  =bowl:gall
+  +*  this  .
+      def   ~(. (default-agent this %.n) bowl)
+  ++  on-init
+    ^-  (quip card:agent:gall _this)
+    :_  this
+    [%pass /anex %arvo %j %anex /writs]~
+  ++  on-poke
+    |=  [=mark =vase]
+    ^-  (quip card:agent:gall _this)
+    ?>  (team:title [our src]:bowl)
+    ?>  ?=(%noun mark)
+    ?.  ?=([%jael-writ @ @ *] q.vase)
+      [~ this]
+    =/  task  ;;([tag=@tas dom=@tas ship=@p pass=@] q.vase)
+    =/  req=[dom=@tas ship=@p pass=@]  [dom.task ship.task pass.task]
+    ?:  (lien pending |=(old=[dom=@tas ship=@p pass=@] =(old req)))
+      [~ this]
+    =/  wen=@da  (add now.bowl ~s1)
+    ~&  [%gw-btc-test %queued ship.task]
+    :_  this(pending (weld pending ~[req]))
+    ?:  ?=(~ pending)
+      [%pass /verify %arvo %b %wait wen]~
+    ~
+  ++  on-watch
+    |=  =path
+    ^-  (quip card:agent:gall _this)
+    ?>  =(/writs path)
+    `this
+  ++  on-arvo
+    |=  [=wire sign=sign-arvo]
+    ^-  (quip card:agent:gall _this)
+    ?.  =(/verify wire)
+      (on-arvo:def wire sign)
+    ?>  ?=(%wake +<.sign)
+    ?~  pending
+      [~ this]
+    =/  req  i.pending
+    =/  cic  (com:nu:cric:crypto pass.req)
+    ?>  ?=([%c *] +<.cic)
+    =/  verdict  (cue xtr.tw.pub:+<.cic)
+    =/  ok=?
+      ?@  verdict
+        ;;(? verdict)
+      ;;(? -.verdict)
+    =/  verified-life=life
+      ?@  verdict
+        1
+      ;;(life +.verdict)
+    =/  keys=(map life [@ud pass])
+      (~(put by *(map life [@ud pass])) verified-life [2 pass.req])
+    ::  Aqua's prototype gw-ok comet is route-table index 12.
+    =/  point=point:jael
+      [rift=0 life=verified-life keys sponsor=`ship.req fief=`[%if `@`0xdead.beef 12]]
+    =/  res=(unit point:jael)  ?:(ok `point ~)
+    ~&  [%gw-btc-test %response ship.req ok]
+    =/  fact=card:agent:gall
+      [%give %fact ~[/writs] %writ-response !>([dom.req ship.req res])]
+    :_  this(pending t.pending)
+    ?:  ?=(~ t.pending)
+      [fact]~
+    :~  fact
+        [%pass /verify %arvo %b %wait (add now.bowl ~s1)]
+    ==
+  ++  on-save   on-save:def
+  ++  on-load   on-load:def
+  ++  on-leave  on-leave:def
+  ++  on-agent  on-agent:def
+  ++  on-peek   on-peek:def
+  ++  on-fail   on-fail:def
   --
   '''
 --
