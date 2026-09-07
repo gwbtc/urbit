@@ -7,8 +7,10 @@
 =/  tag  %gw-az-key-cycle
 =/  io  ~(. gw-io loud tag)
 ::
-=/  comet-1  ~fasteg-dinhet-malrum-ransub--hocduc-digtev-radsut-marbud
-=/  comet-2  ~molpyx-novtyc-wortyc-noswyd--taltyv-loplev-dabwen-mardev
+::  Keep this legacy Azimuth key-cycle case on vanilla suite-B comets.
+::  Suite-C async verification is covered by the attestation-* cases.
+=/  comet-1  ~harrep-podpec-torsut-docnyx--mopsyx-fosdus-ladpen-marbud
+=/  comet-2  ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
 ::
 =/  =onchain:io
   :~  [comet-1 1 0 ~ %if]

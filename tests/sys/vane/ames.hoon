@@ -100,6 +100,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.bud
         sponsor=~nec
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%& ~nec]]
   [%known peer-state]
@@ -113,6 +114,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.marbud
         sponsor=~bud
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
@@ -126,6 +128,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.nec
         sponsor=~nec
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
@@ -139,6 +142,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.marbud
         sponsor=~bud
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
@@ -151,6 +155,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.bud
         sponsor=~bud
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
@@ -163,6 +168,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.marbud
         sponsor=~bud
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
@@ -175,6 +181,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.bud
         sponsor=~bud
+        fief=~
     ==
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`%lane-bar]]
   [%known peer-state]
@@ -193,6 +200,7 @@
         rift=0
         [public-keys=pub.saf pass=pass]:ames-state.bud
         sponsor=~bud
+        fief=~
     ==
   =.  lane.fren-state  `[hop=0 `lane:pact:ames``@`~bud]
   [%known fren-state]
@@ -483,6 +491,7 @@
           life=4
           keys=[[life=4 [crypto-suite=1 `@`pass.ames-state.nec]] ~ ~]
           sponsor=`~bus
+          fief=~
       ==
     %-  take
     :^  bud  /public-keys  ~[//unix]
@@ -562,6 +571,7 @@
           life=2
           keys=[[life=2 [crypto-suite=1 `@`pass.ames-state.nec]] ~ ~]
           sponsor=`~nec
+          fief=~
       ==
     %-  take
     :^  comet  /public-keys  ~[//unix]
@@ -963,6 +973,7 @@
           rift=0
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y `lane:ames`[%& `@`~bud]]
     [%known peer-state]
@@ -1004,6 +1015,7 @@
           rift=0
           [public-keys=pub.saf pass=pass]:ames-state.comet
           sponsor=~bud
+          fief=~
       ==
     +:*fren-state:ames
   =.  chums.ames-state.comet  (~(del by chums.ames-state.comet) ~bud)
@@ -1016,6 +1028,7 @@
           rift=0
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y `lane:ames`[%& `@`~bud]]
     [%known peer-state]

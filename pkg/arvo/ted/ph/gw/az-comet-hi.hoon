@@ -7,7 +7,9 @@
 =/  tag  %gw-az-comet-hi
 =/  io  ~(. gw-io loud tag)
 ::
-=/  gw-comet-1  ~fasteg-dinhet-malrum-ransub--hocduc-digtev-radsut-marbud
+::  This legacy case covers vanilla Azimuth interoperability.  The
+::  canonical suite-C verification path lives in attestation-hi.
+=/  gw-comet-1  ~hidreb-naptev-banben-bicrup--massup-dantus-fodwet-marbud
 ::  Azimuth suite B comets under ~marbud
 ::
 =/  az-comet-1  ~harrep-podpec-torsut-docnyx--mopsyx-fosdus-ladpen-marbud
