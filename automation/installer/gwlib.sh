@@ -371,7 +371,7 @@ gwl_add_peers() {
   { printf '=/  ips=(list @ux)  ~[%s]\n' "$vals"
     printf '|-  ^-  form:m\n'
     printf "?~  ips  (pure:m !>('done'))\n"
-    printf ';<  ~  bind:m  (poke-our %%bitcoin-client %%add-earth-peer !>([%%ipv4 i.ips 8.333]))\n'
+    printf ';<  ~  bind:m  (poke-our %%bitcoin-client %%bitcoin-client-connect-peer !>([%%ipv4 i.ips 8.333]))\n'
     printf '$(ips t.ips)\n'
   } | gwl_eval 300
 }
