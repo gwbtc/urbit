@@ -518,8 +518,8 @@
   (base lyc pov vis bem)
 ::
 ++  saxo-roof
-  ::  Give route setup a non-empty sponsor list for an alien |mesa chum.
-  ::  The default fixture roof returns an empty list, on which +rear bails.
+  ::  Give +sy-poof a non-empty route for an alien |mesa chum.  The
+  ::  default fixture roof returns an empty list, on which +rear bails.
   ::
   ^-  roof
   |=  [lyc=gang pov=path vis=view bem=beam]
@@ -1604,6 +1604,18 @@
       !>  (~(has by peers.ames-state.bud) our-comet)
   ::
   ==
+::  Hard %snub and soft %snob both delegate to +blocked.  Pin all four
+::  truth-table cells here so neither transport can accidentally invert
+::  allow-list semantics while preserving deny-list behavior.
+::
+++  test-blocked-policy-deny-allow-hit-miss  ^-  tang
+  =/  ships=(set ship)  (silt ~[~dev])
+  ;:  weld
+    (expect-eq !>(%.y) !>((blocked:ames [%deny ships] ~dev)))
+    (expect-eq !>(%.n) !>((blocked:ames [%deny ships] ~rus)))
+    (expect-eq !>(%.n) !>((blocked:ames [%allow ships] ~dev)))
+    (expect-eq !>(%.y) !>((blocked:ames [%allow ships] ~rus)))
+  ==
 ::  additive %snub (decisions-addendum section 9): %set replaces the
 ::  list wholesale, while %add/%del edit it in place without clobbering
 ::  a manually-curated blocklist.  see +sy-snub.
@@ -1639,9 +1651,24 @@
     (expect-eq !>([%deny (silt ~[~rus])]) !>(after-add))
     (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
   ==
-::  Verifier outcomes cannot override an operator/domain hard blocklist.
+::  %snob is a separate, soft blocklist task with the same edit algebra.
 ::
-++  test-sybl-full-keeps-snub  ^-  tang
+++  test-snob-task-edits-only-soft-list  ^-  tang
+  =/  snub-before  snub.ames-state.nec
+  =^  m1  nec  (call nec ~[//unix] [%snob %deny %set ~[~dev ~rus]])
+  =^  m2  nec  (call nec ~[//unix] [%snob %deny %del ~[~dev]])
+  ;:  weld
+    (expect-eq !>([%deny (silt ~[~rus])]) !>(snob.ames-state.nec))
+    (expect-eq !>(snub-before) !>(snub.ames-state.nec))
+  ==
+::  Verifier outcomes never edit the operator/domain hard blocklist.
+::
+::    A positive verdict clears the verifier-owned %snob state and
+::    publishes the point, but it cannot override a manual %snub or a
+::    domain-suspension policy.  A negative verdict likewise cannot
+::    create a hard snub from an attacker-controlled claimed identity.
+::
+++  test-sybl-full-clears-snob-but-keeps-snub  ^-  tang
   =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'verified-peer') %b ~)
   =/  verdict=sign:ames
     :*  %jael  %sybl  %full  %test-dom  our-comet
@@ -1654,11 +1681,14 @@
   ::  a manually curated deny list that also holds our-comet
   ::
   =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev our-comet]])
-  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  =^  m2  nec  (call nec ~[//unix] [%snob %deny %set ~[our-comet]])
+  =^  m3  nec  (take nec /sybl ~[/ames] verdict)
   ;:  weld
-    ::  a verifier result cannot override the hard policy
+    ::  the hard policy is untouched, while the verifier-owned soft
+    ::  block is lifted
     ::
     (expect-eq !>([%deny (silt ~[~dev our-comet])]) !>(snub.ames-state.nec))
+    (expect-eq !>([%deny `(set @p)`~]) !>(snob.ames-state.nec))
     ::  and the verified point was applied: the ship is now %known
     ::
     %+  expect-eq  !>(&)
@@ -1675,12 +1705,14 @@
   =/  peers-before  peers.ames-state.nec
   =/  chums-before  chums.ames-state.nec
   =/  snub-before   snub.ames-state.nec
+  =/  snob-before   snob.ames-state.nec
   =^  moves  nec
     (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet2])
   ;:  weld
     (expect-eq !>(peers-before) !>(peers.ames-state.nec))
     (expect-eq !>(chums-before) !>(chums.ames-state.nec))
     (expect-eq !>(snub-before) !>(snub.ames-state.nec))
+    (expect-eq !>(snob-before) !>(snob.ames-state.nec))
   ==
 ::
 ++  test-sybl-full-keeps-an-allow-list-snub  ^-  tang
@@ -1718,16 +1750,18 @@
 ::
 ++  test-sybl-fail-drops-only-the-alien-candidate  ^-  tang
   ::  .cc-comet begins as an alien |mesa chum.  A failed verification
-  ::  discards that retryable candidate, but cannot alter the
-  ::  operator's hard blocklist.
+  ::  discards that retryable candidate, but cannot alter either the
+  ::  operator's hard blocklist or the domain's soft blocklist.
   ::
   =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev]])
-  =^  m2  nec
+  =^  m2  nec  (call nec ~[//unix] [%snob %deny %set ~[~rus cc-comet]])
+  =^  m3  nec
     (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom cc-comet])
   ;:  weld
     (expect-eq !>(%.n) !>((~(has by chums.ames-state.nec) cc-comet)))
     (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
     (expect-eq !>([%deny (silt ~[~dev])]) !>(snub.ames-state.nec))
+    (expect-eq !>([%deny (silt ~[~rus cc-comet])]) !>(snob.ames-state.nec))
   ==
 ::
 ++  test-sybl-fail-keeps-a-known-peer  ^-  tang
@@ -1740,44 +1774,113 @@
   ;:  weld
     (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
     (expect-eq !>([%deny `(set @p)`~]) !>(snub.ames-state.nec))
+    (expect-eq !>([%deny `(set @p)`~]) !>(snob.ames-state.nec))
   ==
-::  %stale writ-result (decisions-addendum section 3): a %known peer
-::  whose on-chain attestation goes stale is DEMOTED to a fresh %alien
-::  (empty agenda), never deleted, and nothing is snubbed.  an already
-::  %alien peer is left untouched.  see +sy-sybl.
+::  %snob writ-result: a withdrawn attestation soft-blocks the identity,
+::  but preserves its peer state and the hard blocklist.  It also arms
+::  one re-attestation solicitation; a later %full clears the soft block.
 ::
-++  test-stale-demotes-known-to-alien  ^-  tang
+++  test-snob-keeps-known-peer-and-solicits  ^-  tang
+  =.  chums.ames-state.nec
+    (~(del by chums.ames-state.nec) cc-comet)
+  =.  peers.ames-state.nec
+    %+  ~(put by peers.ames-state.nec)  cc-comet
+    (known-comet cc-nec-sym 1 cc)
+  =/  before  (~(get by peers.ames-state.nec) cc-comet)
   =/  snub-before  snub.ames-state.nec
   =^  moves  nec
-    (take nec /sybl ~[/ames] [%jael %sybl %stale %test-dom ~bud])
+    (take nec /sybl ~[/ames] [%jael %sybl %snob %test-dom cc-comet])
   ;:  weld
-    ::  ~bud demoted to a fresh alien, not deleted
+    ::  no demotion, deletion, or key/route churn
     ::
-    %+  expect-eq
-      !>  `[%alien *alien-agenda:ames]
-    !>  (~(get by peers.ames-state.nec) ~bud)
-    ::  still a known-of ship
+    (expect-eq !>(before) !>((~(get by peers.ames-state.nec) cc-comet)))
+    ::  soft and hard blocks remain distinct
     ::
-    (expect-eq !>(&) !>((~(has by peers.ames-state.nec) ~bud)))
-    ::  staleness is not fraud: the blocklist is untouched
-    ::
+    (expect-eq !>([%deny (silt ~[cc-comet])]) !>(snob.ames-state.nec))
     (expect-eq !>(snub-before) !>(snub.ames-state.nec))
-    ::  no cards emitted (no pump timers to cancel, no snub)
+    ::  the timer and direct attestation request were emitted once
     ::
-    (expect-eq !>(~) !>(moves))
+    (expect !>((~(has in poof.ames-state.nec) cc-comet)))
+    (expect !>((gth (lent moves) 0)))
   ==
 ::
-++  test-stale-leaves-alien-untouched  ^-  tang
-  ::  bud holds our-comet as an %alien; a stale notice is a no-op.
+++  test-snob-keeps-alien-pending  ^-  tang
+  ::  ~nec already holds cc-comet as an alien |mesa chum.  Withdrawal
+  ::  must not erase its queued work or convert it into another state.
   ::
-  =/  before  peers.ames-state.bud
-  =/  snub-before  snub.ames-state.bud
-  =^  moves  bud
-    (take bud /sybl ~[/ames] [%jael %sybl %stale %test-dom our-comet])
+  =.  rof.nec  saxo-roof
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =/  snub-before  snub.ames-state.nec
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %snob %test-dom cc-comet])
   ;:  weld
-    (expect-eq !>(before) !>(peers.ames-state.bud))
-    (expect-eq !>(snub-before) !>(snub.ames-state.bud))
-    (expect-eq !>(~) !>(moves))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>([%deny (silt ~[cc-comet])]) !>(snob.ames-state.nec))
+    (expect-eq !>(snub-before) !>(snub.ames-state.nec))
+    (expect !>((~(has in poof.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-poof-timer-error-retries-while-snobbed  ^-  tang
+  ::  Groundwire suppresses duplicate withdrawal notices while its snob
+  ::  record stands.  A failed BehN wake must therefore re-arm the kernel's
+  ::  own retry instead of clearing the only outstanding marker forever.
+  ::
+  =.  chums.ames-state.nec
+    (~(del by chums.ames-state.nec) cc-comet)
+  =.  peers.ames-state.nec
+    %+  ~(put by peers.ames-state.nec)  cc-comet
+    (known-comet cc-nec-sym 1 cc)
+  =.  snob.ames-state.nec  [%deny (silt ~[cc-comet])]
+  =.  poof.ames-state.nec  (silt ~[cc-comet])
+  =/  err=(unit tang)  `~[leaf+"test poof timer error"]
+  =^  moves  nec
+    (take nec /poof/(scot %p cc-comet) ~[/ames] [%behn %wake err])
+  ;:  weld
+    (expect !>((~(has in poof.ames-state.nec) cc-comet)))
+    (expect !>((gth (lent moves) 0)))
+  ==
+::
+++  test-poof-timer-error-stops-after-full  ^-  tang
+  ::  Conversely, once %full has lifted the soft block, a delayed failed
+  ::  wake only clears its old marker and must not launch another request.
+  ::
+  =.  chums.ames-state.nec
+    (~(del by chums.ames-state.nec) cc-comet)
+  =.  peers.ames-state.nec
+    %+  ~(put by peers.ames-state.nec)  cc-comet
+    (known-comet cc-nec-sym 1 cc)
+  =.  snob.ames-state.nec  [%deny `(set @p)`~]
+  =.  poof.ames-state.nec  (silt ~[cc-comet])
+  =/  err=(unit tang)  `~[leaf+"test poof timer error"]
+  =^  moves  nec
+    (take nec /poof/(scot %p cc-comet) ~[/ames] [%behn %wake err])
+  ;:  weld
+    (expect-eq !>(%.n) !>((~(has in poof.ames-state.nec) cc-comet)))
+    (expect-eq !>(0) !>((lent moves)))
+  ==
+::
+++  test-sybl-full-clears-snob  ^-  tang
+  =/  verdict=sign:ames
+    :*  %jael  %sybl  %full  %test-dom  cc-comet
+        rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=2 pass.ames-state.cc]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =.  rof.nec  saxo-roof
+  =^  m1  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %snob %test-dom cc-comet])
+  =/  after-snob  snob.ames-state.nec
+  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  =/  after  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect-eq !>([%deny (silt ~[cc-comet])]) !>(after-snob))
+    (expect-eq !>([%deny `(set @p)`~]) !>(snob.ames-state.nec))
+    (expect-eq !>([%unborn now.nec]) !>(qos.+.after))
+    %+  expect-eq  !>(&)
+    !>  ?=([~ %known *] (~(get by chums.ames-state.nec) cc-comet))
   ==
 ::
 ++  test-sybl-full-preserves-known-peer-qos  ^-  tang
@@ -2329,6 +2432,8 @@
   =.  peers.ames-state.b
     %+  ~(put by peers.ames-state.b)  cc-comet
     (known-comet b-a-life2-sym 2 cc-life2)
+  =/  poof-a-before  poof.ames-state.a
+  =/  poof-b-before  poof.ames-state.b
   ::
   ::  Activate both private life-3 rings.  The separate proactive call sites
   ::  continue to bind their announcements to the exact stored peer life 2.
@@ -2449,6 +2554,8 @@
     (expect-eq !>(2) !>((lent verify-b-moves)))
     (expect-eq !>(a-peer-life2) !>(a-peer-pending))
     (expect-eq !>(b-peer-life2) !>(b-peer-pending))
+    (expect-eq !>(poof-a-before) !>(poof.ames-state.a))
+    (expect-eq !>(poof-b-before) !>(poof.ames-state.b))
     (expect-eq !>(%.n) !>((~(has by chums.ames-state.a) cd-comet)))
     (expect-eq !>(%.n) !>((~(has by chums.ames-state.b) cc-comet)))
     (expect-eq !>(3) !>(life.+.a-peer-life3))
@@ -2800,6 +2907,45 @@
   =^  moves  nec
     (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-proof-push)
   %+  expect-eq  !>(1)  !>((count-writs moves))
+::
+++  test-heer-proof-page-reverifies-a-snobbed-known-chum  ^-  tang
+  ::  +sy-poof solicits a proof with a %peek, whose answer is a %page.
+  ::  A known |mesa chum normally sends pages through +hear-page, but
+  ::  while soft-blocked this proof must instead return to
+  ::  +al-take-proof and the domain verifier.
+  ::
+  =.  chums.ames-state.nec
+    %+  ~(put by chums.ames-state.nec)  cc-comet
+    (known-chum cc-nec-sym 1 cc)
+  =^  snob-moves  nec
+    (call nec ~[//unix] [%snob %deny %set ~[cc-comet]])
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-life2-proof-push)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>([%deny (silt ~[cc-comet])]) !>(snob.ames-state.nec))
+  ==
+::
+++  test-heer-proof-poke-reverifies-a-snobbed-known-chum  ^-  tang
+  ::  Preserve the established %poke proof path alongside the %page
+  ::  solicitation path above.  Its cross-bound lives must still reach
+  ::  +al-take-proof for a soft-blocked known chum.
+  ::
+  =.  chums.ames-state.nec
+    %+  ~(put by chums.ames-state.nec)  cc-comet
+    (known-chum cc-nec-sym 1 cc)
+  =^  snob-moves  nec
+    (call nec ~[//unix] [%snob %deny %set ~[cc-comet]])
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-life2-proof-poke)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>([%deny (silt ~[cc-comet])]) !>(snob.ames-state.nec))
+  ==
 ::
 ++  test-heer-page-snubbed-on-an-allow-list  ^-  tang
   ::  .cc-comet is absent from an %allow list, which is what a snub

@@ -250,6 +250,17 @@
     ^-  (quip card:agent:gall _this)
     ?>  (team:title [our src]:bowl)
     ?>  ?=(%noun mark)
+    ::  [%snob ship]: withdraw our vouch for a verified ship, as a real
+    ::  domain does when the ship's identity moves on-chain.  jael keeps
+    ::  the point and ames soft-blocks the peer and solicits a fresh
+    ::  attestation; the next %jael-writ for it answers from the table
+    ::  as usual, and its %full lifts the block.
+    ::
+    ?:  ?=([%snob @] q.vase)
+      =/  who  ;;(@p +.q.vase)
+      ~&  [%test-pki %snob who]
+      :_  this
+      [%give %fact ~[/writs] %snob-notice !>([dap.bowl who])]~
     ::  [%self-verdict ship pass]: model the userspace domain agent
     ::  publishing its own newly-authorized point before %helm-rekey
     ::  activates the corresponding private ring.
