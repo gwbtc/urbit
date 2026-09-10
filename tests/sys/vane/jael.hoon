@@ -306,43 +306,45 @@
 ++  test-dome-unknown-is-null
   ^-  tang
   (expect-eq !>(~) !>((dome bus ~wes)))
-::  %stale-notice fact (decisions-addendum section 3): the domain agent
-::  reports a verified ship's attestation went out of date on-chain.
-::  jael drops the point from pos and from the domain's hep set and gives
-::  a [%sybl %stale] to its writ subscribers -- never a snub.
+::  %snob-notice fact: the domain agent can no longer vouch for a
+::  verified ship's attestation and asks it to attest again.  Jael keeps
+::  both the point and the domain's peer membership, and gives Ames a
+::  [%sybl %snob] so it can soft-block and solicit without losing flows.
 ::
-++  test-stale-notice-drops-point
+++  test-snob-notice-retains-point
   ^-  tang
   =/  b  bus
   =.  b  (with-dom b %test-dom %test-dom-desk %.y (silt ~[~wes ~dev]))
-  =.  b  (with-point b ~wes (point-for (mk-c-pass 'wes')))
+  =/  point  (point-for (mk-c-pass 'wes'))
+  =.  b  (with-point b ~wes point)
   =.  b  (with-syl b dom-duct)
-  =^  moves  b  (take-fact b %test-dom %stale-notice !>([%test-dom ~wes]))
+  =^  moves  b  (take-fact b %test-dom %snob-notice !>([%test-dom ~wes]))
   ;:  weld
-    ::  point gone from pos
+    ::  identity and current keys remain authoritative while it re-attests
     ::
-    (expect-eq !>(%.n) !>((~(has by pos.zim.pki.lex.b) ~wes)))
-    ::  ~wes removed from the domain's peer set, ~dev retained
+    (expect-eq !>(`point) !>((~(get by pos.zim.pki.lex.b) ~wes)))
+    ::  membership is retained, so suspension/revival still includes it
     ::
     %+  expect-eq
-      !>  (silt ~[~dev])
+      !>  (silt ~[~wes ~dev])
     !>  hep:(~(got by dos.lex.b) %test-dom)
-    ::  a %sybl %stale gift to the lone subscriber, no snub
+    ::  one soft-block/re-attestation request to the lone subscriber
     ::
     %+  expect-eq
-      !>  ~[[dom-duct %give %sybl %stale %test-dom ~wes]]
+      !>  ~[[dom-duct %give %sybl %snob %test-dom ~wes]]
     !>  moves
   ==
 ::
-++  test-stale-notice-ignores-unregistered
-  ::  a stale-notice naming an unknown domain is dropped with no effect
+++  test-snob-notice-ignores-unregistered
+  ::  a snob-notice naming an unknown domain is dropped with no effect
   ::
   ^-  tang
   =/  b  bus
-  =.  b  (with-point b ~wes (point-for (mk-c-pass 'wes')))
-  =^  moves  b  (take-fact b %test-dom %stale-notice !>([%test-dom ~wes]))
+  =/  point  (point-for (mk-c-pass 'wes'))
+  =.  b  (with-point b ~wes point)
+  =^  moves  b  (take-fact b %test-dom %snob-notice !>([%test-dom ~wes]))
   ;:  weld
-    (expect-eq !>(%.y) !>((~(has by pos.zim.pki.lex.b) ~wes)))
+    (expect-eq !>(`point) !>((~(get by pos.zim.pki.lex.b) ~wes)))
     (expect-eq !>(~) !>(moves))
   ==
 ::  %tire additive snub (the fixed arm): a registered domain's desk going

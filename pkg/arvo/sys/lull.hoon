@@ -877,6 +877,15 @@
   ::    %sift: limit verbosity to .ships
   ::    %snub: edit packet blocklist (%set replaces it with .ships;
   ::           %add/%del block or unblock .ships without replacing it)
+  ::    %snob: edit the soft blocklist, same grammar.  a snobbed ship's
+  ::           packets are dropped like a snubbed ship's, except its
+  ::           self-attestations and its requests for ours, which pass:
+  ::           this is how a peer whose identity we can no longer vouch
+  ::           for (its pki domain says so) is held until it re-proves
+  ::           itself, without tearing down our flows with it
+  ::    %poof: ask .ship, a comet, for a fresh self-attestation, whether
+  ::           or not we already know it; retried until a %full verdict
+  ::           clears its soft block
   ::    %spew: set verbosity toggles
   ::    %cong: adjust congestion control parameters
   ::    %stir: recover from timer desync and assorted debug commands
@@ -904,6 +913,8 @@
         [%prod ships=(list ship)]
         [%sift ships=(list ship)]
         [%snub form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
+        [%snob form=?(%allow %deny) act=?(%add %del %set) ships=(list ship)]
+        [%poof =ship]                             ::  solicit attestation
         [%anew ~]                                 ::  refresh our attestation
         [%spew veb=(list verb)]
         [%cong msg=@ud mem=@ud]
@@ -1616,11 +1627,15 @@
   ::    rift:        our $rift
   ::    bug:         debug printing configuration
   ::    snub:        blocklist for incoming packets
+  ::    snob:        soft blocklist: like snub, but attestations and
+  ::                 requests for them pass, so a peer we no longer
+  ::                 vouch for can re-prove itself
+  ::    poof:        peers we have asked to re-attest and are waiting on
   ::    cong:        parameters for marking a flow as clogged
   ::    dead:        dead flow consolidation timer and recork timer, if set
   ::
   +$  axle
-    $+  axle-31
+    $+  axle-33
     $:  peers=(map ship ship-state)         ::  %ames protocol peers
         =unix=duct  ::  [//ames/0v0 ~]
         =life
@@ -1641,6 +1656,8 @@
         core=_`?(%ames %mesa)`%ames         ::  default network core protocol
                                             ::  (always %ames so we can guarantee
                                             ::   communication with past peers)
+        snob=[form=?(%allow %deny) ships=(set ship)]  ::  soft blocklist
+        poof=(set ship)                     ::  re-attestation solicited
         ::  TODOs
         :: XX tmp=(map @ux page)            :: temporary hash-addressed bindings
     ==
@@ -4305,20 +4322,22 @@
     ==
   ::
   +$  fiefs-result  (map ship (unit fief))
-  ::  $writ-result: outcome of one %writ attestation, given to %sybl
-  ::  subscribers as a %sybl gift.  %full carries the verified $point now stored in jael;
-  ::  %fail means the domain agent rejected the attestation; %lost means
-  ::  no agent is registered for the domain.  %stale means the domain
-  ::  agent observed the ship's verified attestation go out of date
-  ::  on-chain: jael has dropped the point and ames demotes the peer.
-  ::  staleness is not fraud and must never snub -- the ship's next
-  ::  packet re-enters verification.
+  ::  $writ-result: domain-protocol result given to %sybl subscribers.
+  ::  %full carries the verified $point now stored in jael; %fail means
+  ::  the domain agent rejected the attestation; %lost means no live
+  ::  registration remained when jael handled the request (for example,
+  ::  the domain was suspended after ames's routing scry).  %snob means
+  ::  the domain agent can no longer vouch for the ship's verified attestation
+  ::  (its identity moved on-chain, or its evidence was orphaned):
+  ::  jael keeps the point; ames soft-blocks the peer (%snob) and asks
+  ::  it to re-attest.  its flows are kept; a later %full lifts the
+  ::  block.  this is not fraud and never snubs.
   ::
   +$  writ-result                                     ::  attestation outcome
     $%  [%full dom=@tas =ship =point]                 ::  verified; point held
         [%fail dom=@tas =ship]                        ::  failed validation
-        [%lost dom=@tas =ship]                        ::  unknown pki domain
-        [%stale dom=@tas =ship]                       ::  attestation outdated
+        [%lost dom=@tas =ship]                        ::  verifier unavailable
+        [%snob dom=@tas =ship]                        ::  re-attestation wanted
         [%anew dom=@tas =pass]                        ::  our fresh attestation
     ==
   ::  $verdict: %fact payload a registered pki-domain agent gives
@@ -4331,12 +4350,12 @@
   ::  current off-chain reveal log in its (un-tweaked) xtr data.
   ::
   +$  anew-response  [dom=@tas =pass]
-  ::  $stale-notice: %fact payload the domain agent gives jael when it
-  ::  observes a verified ship's attestation go out of date on-chain
-  ::  (e.g. its identity utxo was spent).  unprompted, unlike a
-  ::  $verdict.
+  ::  $snob-notice: %fact payload the domain agent gives jael when it
+  ::  can no longer vouch for a verified ship's attestation (e.g. its
+  ::  identity utxo was spent) and wants a fresh one.  unprompted,
+  ::  unlike a $verdict.
   ::
-  +$  stale-notice  [dom=@tas =ship]
+  +$  snob-notice  [dom=@tas =ship]
   ::                                                  ::
   +$  gift                                            ::  out result <-$
     $%  [%done error=(unit error:ames)]               ::  ames message (n)ack
@@ -4370,7 +4389,7 @@
         [%writ dom=@tas =ship =pass]                  ::  verify pki attestation; dom is committed in the pass tweak
         [%anex pax=path]                              ::  register pki domain; the sending agent's name is the domain
         [%anew dom=@tas]                              ::  request fresh self-attestation from the domain agent
-        [%sybl ~]                                     ::  sub to writ results
+        [%sybl ~]                                     ::  sub to domain results
         [%gost dom=@tas]                              ::  suspend pki domain (snub its peers)
         [%ghul dom=@tas]                              ::  revive pki domain (unsnub)
         [%bane dom=@tas]                              ::  destroy pki domain
