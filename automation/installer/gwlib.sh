@@ -282,7 +282,18 @@ seed.bitcoin.jonasschnelli.ch dnsseed.emzy.de seed.bitcoin.wiz.biz
 seed.btc.petertodd.net seed.bitcoin.sprovoost.nl seed.mainnet.achownodes.xyz
 dnsseed.bitcoin.dashjr-list-of-p2p-nodes.us"
 
+# DNS_TOOL is chosen by the installer's preflight, but the supervisor runs
+# from a bare environment (var/<name>.env carries only GW_*), so with it
+# unset every lookup silently returned nothing: a sidecar crash was followed
+# by "pool refill: +0" and "re-seed FAILED ()", and the light client sat
+# with 0 live peers until someone noticed (first real mint, 2026-09-10).
+# Pick a resolver here when nobody did.
 gwl_resolve_a() {
+  if [ -z "${DNS_TOOL:-}" ]; then
+    for t in getent dig host python3; do
+      command -v "$t" >/dev/null 2>&1 && { DNS_TOOL="$t"; break; }
+    done
+  fi
   case "${DNS_TOOL:-}" in
     dig)  dig +short +time=3 +tries=1 A "$1" 2>/dev/null ;;
     host) host -W 3 -t A "$1" 2>/dev/null | awk '/has address/ {print $NF}' ;;
