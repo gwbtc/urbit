@@ -5,10 +5,10 @@ signing, readiness, or own-rift design changes.
 
 ## Branches and merge order
 
-1. `hd/cc-key-rotation` targets `hd/cc-kernel`: suite-C name/live-key separation,
+1. [PR #71](https://github.com/gwbtc/urbit/pull/71), `hd/cc-key-rotation`, targets `hd/cc-kernel`: suite-C name/live-key separation,
    Jael point/ring reconciliation and authority checks, life/rift fixes,
    current-key re-attestation, bounded intake, fallback, and their tests.
-2. `hd/cc-snob-only` initially targets `hd/cc-key-rotation`: soft blocking,
+2. [PR #72](https://github.com/gwbtc/urbit/pull/72), `hd/cc-snob-only`, initially targets `hd/cc-key-rotation`: soft blocking,
    attestation solicitation/retry, domain withdrawal notices retaining points,
    and the corresponding unit/Aqua coverage.
 
@@ -55,7 +55,7 @@ life-1 signing question remains open in lifecycle §12.
 | Repair Jael suite on that ship | 25 passed, `ok=%.y` |
 | Repair Ames suite on that ship | 81 passed, same six documented baseline failures, `ok=%.n` |
 | Repair-pill Aqua life-2 over legacy Ames | Passed through point-first publication, exact rekey, peer acceptance and final hi |
-| Repair-pill Aqua life-2 over Mesa | Inconclusive reruns; see below, not counted as a pass |
+| Repair-pill Aqua life-2 over Mesa | Passed on a fresh host: final hi acknowledged and peer at life 2; completion was delayed, see below |
 | Composed source/test equivalence | Matches the preserved checkpoint byte-for-byte |
 | Diff whitespace checks | Passed |
 
@@ -67,15 +67,16 @@ No backward state migration or compatibility shim was added for testing.
 
 The reused-host Mesa run eventually completed initial contact and reached an
 authorized/active life 2, but did not produce the final hi acknowledgement
-before it was stopped. A separate fresh-host rerun also waited at first
-contact after a positive verifier response. Neither is an assertion failure
-demonstrating a signing defect, nor is either a completed passing scenario.
-The prior composed-kernel Mesa success does not substitute for completing
-this prerequisite-only check. No cause or misplaced split dependency was
-established by source review; keep this as an explicit review/validation gap.
+before it was stopped; that run is inconclusive. The separate fresh-host
+rerun also paused at first contact and after the life-2 verdict, then completed
+without intervention: final hi acknowledged, peer point at life 2, `done`,
+and result `0`. This is a passing prerequisite-only scenario, not an inference
+from the prior composed-kernel run. No cause of the delay or misplaced split
+dependency was established by source review; completion latency still merits
+testing-harness investigation.
 
 One testing-harness issue found during that inspection is that `ph/io`'s
 `stop-threads` is a no-op, so repeated scenarios can retain Aqua worker
 threads. That is a separate cleanup concern, not an established explanation
-for the delay (including the fresh-host observation). The testing chapter
+for the delay (including the successful fresh-host run). The testing chapter
 should give scenarios bounded completion and reliable worker cleanup.
