@@ -378,6 +378,11 @@ gwl_add_peers() {
     vals="$vals $(gwl_ip_hoon "$ip")"
   done
   [ -n "$vals" ] || return 1
+  # The list literal is `~[a b]`; a space after `~[` is a syntax error the
+  # ship reports as %thread-fail, which seed_peers used to read as "no reply"
+  # -- so every batch failed and the light client never got a peer
+  # (~fossyd's mint, 2026-09-10).  Trim the join's leading space.
+  vals="${vals# }"
   # shellcheck disable=SC2016  # $(ips t.ips) is Hoon recursion, not shell
   { printf '=/  ips=(list @ux)  ~[%s]\n' "$vals"
     printf '|-  ^-  form:m\n'
