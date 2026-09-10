@@ -395,7 +395,11 @@ gwl_add_peers() {
 # %bitcoin-client's ++peek is literally ~ for every path
 # (bitcoin-client.hoon:181-184), so status cannot be scried: &log-info dumps
 # it into the ship's log and we read it back out of there.
-gwl_log_info() { gwl_poke bitcoin-client log-info '!>(~)' 30 >/dev/null 2>&1 || true; }
+# Waits up to 10 min: a khan client that disconnects while the ship is still
+# working on its reply crashes the king (gwbtc/vere conn double-close), and
+# this poke is sent to busy ships constantly -- by boot.sh's liveness check,
+# by the supervisor, by operators.
+gwl_log_info() { gwl_poke bitcoin-client log-info '!>(~)' 600 >/dev/null 2>&1 || true; }
 
 # $1 key, e.g. %headers.  Prints the last value seen, dots stripped.
 gwl_log_last() {
