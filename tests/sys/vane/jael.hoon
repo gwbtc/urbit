@@ -5,6 +5,9 @@
 =/  now  ~1111.1.1
 =/  eny  `@uvJ`0xdead.beef
 =/  dom-duct=duct  [[%gall %use %test-dom '0' ~] ~]
+::  the duct a /public-keys plea to a ship source is answered on
+::
+=/  pk-duct=duct  ~[/gall/sys/era /dill //term/1]
 ::
 ::  a suite-%c dat: a +mat-encoded pki domain, then opaque domain data.
 ::
@@ -120,6 +123,37 @@
   ^-  [(list move:bus) _bus]
   =/  core  (vane now=now eny=eny rof=*roof)
   (take:core /tire dom-duct dud=~ [%clay %tire %| %zest desk zst])
+::  +take-boon: a ship source answers our /public-keys plea
+::
+++  take-boon
+  |=  [vane=_bus payload=*]
+  ^-  [(list move:bus) _bus]
+  =/  core  (vane now=now eny=eny rof=*roof)
+  (take:core /public-keys pk-duct dud=~ [%ames %boon payload])
+::  +take-lost: ames lost the reply to our /public-keys plea
+::
+++  take-lost
+  |=  vane=_bus
+  ^-  [(list move:bus) _bus]
+  =/  core  (vane now=now eny=eny rof=*roof)
+  (take:core /public-keys pk-duct dud=~ [%ames %lost ~])
+::  +stock-full: a %full result as a stock (mainnet) jael sends it:
+::  its points carry no fief
+::
+++  stock-full
+  |=  [who=ship =pass spon=(unit @p)]
+  ^-  *
+  :+  %public-keys-result  %full
+  %-  my
+  :_  ~
+  :-  who
+  [rift=0 life=1 keys=(malt ~[[1 [crypto-suite=2 pass]]]) sponsor=spon]
+::  +our-full: the same result as this kernel sends it
+::
+++  our-full
+  |=  [who=ship =point:jael]
+  ^-  *
+  [%public-keys-result %full (my [who point]~)]
 --
 ::
 |%
@@ -270,4 +304,75 @@
   !>  ?!
       %+  lien  moves
       |=(=move:bus ?=([* %give %fief *] move))
+::  A stock jael (mainnet) answers a /public-keys plea with points that
+::  have no fief.  Jael must lift them rather than crash the event.
+::
+++  test-stock-point-is-lifted
+  ^-  tang
+  =/  pas  (mk-b-pass 'marzod')
+  =/  b  bus
+  =^  moves  b  (take-boon b (stock-full ~marzod pas `~nec))
+  %+  expect-eq
+    !>  ^-  (unit point:jael)
+        `[rift=0 life=1 keys=(malt ~[[1 [crypto-suite=2 pas]]]) sponsor=`~nec fief=~]
+  !>  `(unit point:jael)`(~(get by pos.zim.pki.lex.b) ~marzod)
+::  A stock point sponsored by ~zod is the one noun both shapes accept
+::  ([0 0] tail).  A planet always has a sponsor, so it is read as
+::  stock and keeps ~zod.
+::
+++  test-stock-point-under-zod-keeps-its-sponsor
+  ^-  tang
+  =/  pas  (mk-b-pass 'marzod')
+  =/  b  bus
+  =^  moves  b  (take-boon b (stock-full ~marzod pas `~zod))
+  %+  expect-eq
+    !>  ^-  (unit point:jael)
+        `[rift=0 life=1 keys=(malt ~[[1 [crypto-suite=2 pas]]]) sponsor=`~zod fief=~]
+  !>  `(unit point:jael)`(~(get by pos.zim.pki.lex.b) ~marzod)
+::  ... whereas a galaxy has no sponsor, so its [0 0] tail is our own
+::  [sponsor=~ fief=~] and must not be misread as sponsored by ~zod.
+::
+++  test-our-galaxy-point-keeps-no-sponsor
+  ^-  tang
+  =/  pas  (mk-b-pass 'zod')
+  =/  b  bus
+  =^  moves  b  (take-boon b (our-full ~zod (point-for pas)))
+  %+  expect-eq
+    !>  `(unit point:jael)``(point-for pas)
+  !>  `(unit point:jael)`(~(get by pos.zim.pki.lex.b) ~zod)
+::  Our own shape, sponsor and fief present, passes through unchanged.
+::
+++  test-our-point-passes-through
+  ^-  tang
+  =/  pt  (point-with-fief (mk-c-pass 'wes') [%if .206.189.188.16 49.818])
+  =.  sponsor.pt  `~marzod
+  =/  b  bus
+  =^  moves  b  (take-boon b (our-full ~wes pt))
+  %+  expect-eq
+    !>  `(unit point:jael)``pt
+  !>  `(unit point:jael)`(~(get by pos.zim.pki.lex.b) ~wes)
+::  A reply in neither shape is logged and dropped, not crashed on.
+::
+++  test-unrecognized-boon-is-ignored
+  ^-  tang
+  =/  b  bus
+  =^  moves  b  (take-boon b [%public-keys-result %bogus 1])
+  ;:  weld
+    (expect-eq !>(~) !>(moves))
+    (expect-eq !>(%.n) !>((~(has by pos.zim.pki.lex.b) ~marzod)))
+  ==
+::  A %lost reply (the boon crashed on the way in) resends the plea on
+::  the nack timer instead of crashing jael.
+::
+++  test-lost-boon-resends-the-plea
+  ^-  tang
+  =/  b  bus
+  =^  moves  b  (take-lost b)
+  ;:  weld
+    %-  expect
+    !>  %+  lien  moves
+        |=  =move:bus
+        ?=([* %pass [%public-keys ~] %b %wait *] move)
+    (expect-eq !>(%.y) !>(?=(^ +.tim.lex.b)))
+  ==
 --
