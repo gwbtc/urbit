@@ -250,6 +250,16 @@
     ^-  (quip card:agent:gall _this)
     ?>  (team:title [our src]:bowl)
     ?>  ?=(%noun mark)
+    ::  [%self-verdict ship pass]: model the userspace domain agent
+    ::  publishing its own newly-authorized point before %helm-rekey
+    ::  activates the corresponding private ring.
+    ::
+    ?:  ?=([%self-verdict @ @] q.vase)
+      =/  [who=@p =pass]  +.q.vase
+      =/  res=(unit point:jael)  (verify oracle who pass)
+      ~&  [%test-pki %self-verdict who ?=(^ res)]
+      :_  this
+      [%give %fact ~[/writs] %verdict !>([dap.bowl who res])]~
     ?.  ?=([%jael-writ @ @ *] q.vase)
       [~ this]
     =/  task  ;;([tag=@tas dom=@tas ship=@p pass=@] q.vase)

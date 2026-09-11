@@ -80,6 +80,21 @@
 ::
 =/  cc-core  (pit:nu:cric:crypto 512 (shaz 'cc-comet') %c q:(mat %gw-btc))
 =/  cc-comet  `@p`fig:ex:cc-core
+=/  cc-life2-ring
+  ::  Preserve the life-1 ring's immutable public genesis key and .dat,
+  ::  but replace its current 32-byte seed.  The resulting core must have
+  ::  the same @p and a different live signing/ECDH key.
+  ::
+  (sew 3 [1 32 (shaz 'cc-comet-life-2')] sec:ex:cc-core)
+=/  cc-life2-core  (nol:nu:cric:crypto cc-life2-ring)
+=/  cc-mat-dat  (mat q:(mat %gw-btc))
+=/  cc-life2-refreshed-ring
+  (add cc-life2-ring (lsh [0 (add 520 p.cc-mat-dat)] 0x1234))
+=/  cc-life2-refreshed-core
+  (nol:nu:cric:crypto cc-life2-refreshed-ring)
+=/  cc-life3-ring
+  (sew 3 [1 32 (shaz 'cc-comet-life-3')] sec:ex:cc-core)
+=/  cc-life3-core  (nol:nu:cric:crypto cc-life3-ring)
 =/  cc  ^$:(%*($ ames ahoy-on %.n, +< cc-comet))
 =.  now.cc        ~1111.1.1
 =.  eny.cc        `@uvJ`0xfeed.face
@@ -89,6 +104,56 @@
 =.  saf.ames-state.cc   saf:ex:cc-core
 =.  ring.ames-state.cc  sec:ex:cc-core
 =.  pass.ames-state.cc  pub:ex:cc-core
+::  a second-life instance of the same suite-%c identity, used to prove
+::  that routing keys change without changing the sender name.
+::
+=/  cc-life2  cc
+=.  eny.cc-life2        `@uvJ`0xfeed.f00d
+=.  life.ames-state.cc-life2  2
+=.  saf.ames-state.cc-life2   saf:ex:cc-life2-core
+=.  ring.ames-state.cc-life2  sec:ex:cc-life2-core
+=.  pass.ames-state.cc-life2  pub:ex:cc-life2-core
+::  A second suite-C identity lets the recovery test put both endpoints
+::  through the same rotation at once, rather than using a conventional ship
+::  whose current life is available from Azimuth.
+::
+=/  cd-core  (pit:nu:cric:crypto 512 (shaz 'cd-comet') %c q:(mat %gw-btc))
+=/  cd-comet  `@p`fig:ex:cd-core
+=/  cd-life2-ring
+  (sew 3 [1 32 (shaz 'cd-comet-life-2')] sec:ex:cd-core)
+=/  cd-life2-core  (nol:nu:cric:crypto cd-life2-ring)
+=/  cd-life3-ring
+  (sew 3 [1 32 (shaz 'cd-comet-life-3')] sec:ex:cd-core)
+=/  cd-life3-core  (nol:nu:cric:crypto cd-life3-ring)
+=/  cd  ^$:(%*($ ames ahoy-on %.n, +< cd-comet))
+=.  now.cd        ~1111.1.1
+=.  eny.cd        `@uvJ`0xcafe.face
+=.  life.ames-state.cd  1
+=.  rift.ames-state.cd  0
+=.  rof.cd  |=(* ``[%noun !>(*(list turf))])
+=.  saf.ames-state.cd   saf:ex:cd-core
+=.  ring.ames-state.cd  sec:ex:cd-core
+=.  pass.ames-state.cd  pub:ex:cd-core
+=/  cd-life2  cd
+=.  eny.cd-life2        `@uvJ`0xcafe.f002
+=.  life.ames-state.cd-life2  2
+=.  saf.ames-state.cd-life2   saf:ex:cd-life2-core
+=.  ring.ames-state.cd-life2  sec:ex:cd-life2-core
+=.  pass.ames-state.cd-life2  pub:ex:cd-life2-core
+::  an intentionally misnamed suite-%c signer.  Its packet and Mesa
+::  page consistently claim .our-comet, but carry .cc-comet's pass and
+::  are signed by .cc-comet's live key.  This isolates the immutable
+::  name-binding check from signature and packet-consistency checks.
+::
+=/  cc-misnamed  ^$:(%*($ ames ahoy-on %.n, +< our-comet))
+=.  now.cc-misnamed        ~1111.1.1
+=.  eny.cc-misnamed        `@uvJ`0xfeed.bad0
+=.  life.ames-state.cc-misnamed  1
+=.  rift.ames-state.cc-misnamed  0
+=.  rof.cc-misnamed  |=(* ``[%noun !>(*(list turf))])
+=.  saf.ames-state.cc-misnamed   saf:ex:cc-core
+=.  ring.ames-state.cc-misnamed  sec:ex:cc-core
+=.  pass.ames-state.cc-misnamed  pub:ex:cc-core
 ::
 =/  cc-nec-sym
   (derive-symmetric-key:ames pub.saf.ames-state.nec sek.saf.ames-state.cc)
@@ -229,6 +294,13 @@
     ==
   =.  lane.fren-state  `[hop=0 `lane:pact:ames``@`~nec]
   [%known fren-state]
+::  the life-2 signer serves the same proof path with the same peer setup.
+::
+=.  chums.ames-state.cc-life2  chums.ames-state.cc
+::  the misnamed signer also needs a real recipient relationship in
+::  order for %mage to construct and sign a page.
+::
+=.  chums.ames-state.cc-misnamed  chums.ames-state.cc
 ::
 =.  chums.ames-state.nec
   %+  ~(put by chums.ames-state.nec)  cc-comet
@@ -254,6 +326,9 @@
 =>  .(comet +:(call:(comet) ~[//unix] ~ %born ~))
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %born ~))
 =>  .(cc +:(call:(cc) ~[//unix] ~ %born ~))
+=>  .(cc-life2 +:(call:(cc-life2) ~[//unix] ~ %born ~))
+=>  .(cd-life2 +:(call:(cd-life2) ~[//unix] ~ %born ~))
+=>  .(cc-misnamed +:(call:(cc-misnamed) ~[//unix] ~ %born ~))
 ::  |ames as the default network core
 ::
 =>  .(nec +:(call:(nec) ~[//unix] ~ %load %ames))
@@ -261,6 +336,9 @@
 =>  .(comet +:(call:(comet) ~[//unix] ~ %load %ames))
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %load %ames))
 =>  .(cc +:(call:(cc) ~[//unix] ~ %load %ames))
+=>  .(cc-life2 +:(call:(cc-life2) ~[//unix] ~ %load %ames))
+=>  .(cd-life2 +:(call:(cd-life2) ~[//unix] ~ %load %ames))
+=>  .(cc-misnamed +:(call:(cc-misnamed) ~[//unix] ~ %load %ames))
 ::  helper core
 ::
 =>
@@ -400,12 +478,15 @@
   ``val
 ::
 ++  pki-roof
-  ::  the two scries a comet self-attestation makes: who sponsors the
-  ::  comet (+sein, asserted by +sift-open-packet) and what life jael
-  ::  already knows for it (+on-hear-open).  every other scry keeps the
-  ::  fixtures' `(list turf)` stub.
+  ::  the three jael scries a suite-%c self-attestation makes: who
+  ::  sponsors the comet, whether an agent serves its domain, and what
+  ::  life jael already knows for it.  +dose is deliberately richer
+  ::  than a boolean so the tests can distinguish an unregistered domain
+  ::  from a registered-but-suspended one, and can prove that malformed
+  ::  scry data fails closed.  every other scry keeps the fixtures'
+  ::  `(list turf)` stub.
   ::
-  |=  lyf=(unit @ud)
+  |=  [lyf=(unit @ud) dose=?(%unregistered %live %suspended %malformed)]
   ^-  roof
   |=  [lyc=gang pov=path vis=view bem=beam]
   ^-  (unit (unit cage))
@@ -414,7 +495,38 @@
   ?+  q.bem  ``noun+!>(*(list turf))
     %sein  ``noun+!>(`ship`~marbud)
     %lyfe  ``noun+!>(lyf)
+    %dose
+      ?-  dose
+        %unregistered  ``noun+!>(`(unit ?)`~)
+        %live          ``noun+!>(`(unit ?)`[~ %.y])
+        %suspended     ``noun+!>(`(unit ?)`[~ %.n])
+        %malformed     ``noun+!>(%not-a-dose)
+      ==
   ==
+::
+++  pki-roof-with-sein
+  ::  Override the sponsorship scry while retaining the requested
+  ::  domain state, for transport-parity admission tests.
+  ::
+  |=  [lyf=(unit @ud) dose=?(%unregistered %live %suspended %malformed) sponsor=ship]
+  ^-  roof
+  =/  base  (pki-roof lyf dose)
+  |=  [lyc=gang pov=path vis=view bem=beam]
+  ^-  (unit (unit cage))
+  ?:  &(=(vis %j) =(%sein q.bem))
+    ``noun+!>(sponsor)
+  (base lyc pov vis bem)
+::
+++  saxo-roof
+  ::  Give route setup a non-empty sponsor list for an alien |mesa chum.
+  ::  The default fixture roof returns an empty list, on which +rear bails.
+  ::
+  ^-  roof
+  |=  [lyc=gang pov=path vis=view bem=beam]
+  ^-  (unit (unit cage))
+  ?:  &(=(vis %j) =(%saxo q.bem))
+    ``noun+!>(`(list ship)`~[~marbud])
+  ``noun+!>(*(list turf))
 ::
 ++  sein-roof
   ::  a roof whose +sein answers from .sponsors, so a routing test can
@@ -478,6 +590,23 @@
   =.  route.peer-state  `[direct=%.y `lane:ames`[%| `@`0xffff.7f00.0001]]
   [%known peer-state]
 ::
+++  known-chum
+  ::  |mesa state for a comet we have already promoted
+  ::
+  |=  [=symmetric-key:ames lyf=@ud comet=_comet]
+  ^-  chum-state:ames
+  =|  =fren-state:ames
+  =.  -.fren-state
+    :*  symmetric-key=symmetric-key
+        life=lyf
+        rift=0
+        [public-keys=pub.saf pass=pass]:ames-state.comet
+        sponsor=~marbud
+        fief=~
+    ==
+  =.  lane.fren-state  `[hop=0 `lane:pact:ames``@`cc-comet]
+  [%known fren-state]
+::
 ++  n-frags
   |=  n=@
   ^-  @ux
@@ -529,13 +658,71 @@
   ::
   (take:vane-core wire duct ~ sign)
 ::
+++  cue-bomb
+  ::  A root jam backreference whose 88-bit cursor cannot be represented
+  ::  by +cue's direct-atom index.  Peer-controlled uses must reject it
+  ::  structurally, before asking +cue to allocate or follow the cursor.
+  ::
+  ^-  @
+  (can 0 ~[[2 0b11] [8 0b1000.0000] [88 0x11.2233.4455.6677.8899.aabb]])
+::
+++  pact-to-blob
+  |=  =pact:pact:ames
+  ^-  blob:ames
+  p:(fax:plot (en:pact:ames pact))
+::
+++  cc-attestation-at
+  |=  [sender=_cc claimed=ship lyf=@ud]
+  (cc-attestation-for sender claimed lyf ~nec 2)
+::
+++  cc-attestation-for
+  |=  [sender=_cc claimed=ship lyf=@ud rcvr=ship rcvr-life=@ud]
+  ^-  blob:ames
+  %-  attestation
+  :*  [pass.ames-state.sender claimed lyf rcvr rcvr-life]
+      saf.ames-state.sender
+  ==
+::
 ++  cc-proof-push
-  ::  the %page .cc pushes when ~nec peeks for its self-attestation:
+  (cc-proof-push-at cc cc-comet 1 pass.ames-state.cc)
+::
+++  cc-life2-proof-push
+  (cc-proof-push-at cc-life2 cc-comet 2 pass.ames-state.cc-life2)
+::
+++  cc-misnamed-proof-push
+  (cc-proof-push-at cc-misnamed our-comet 1 pass.ames-state.cc-misnamed)
+::
+++  cc-malformed-proof-push
+  ::  The outer page is genuine and signed, but the embedded suite-%c
+  ::  pass is deliberately too short to carry even its domain +mat.
+  ::
+  (cc-proof-push-at cc cc-comet 1 'c')
+::
+++  cc-malformed-inner-proof-push
+  ::  A genuine proof page whose outer gage advertises %open-packet but
+  ::  whose payload cannot be cast to $open-packet.
+  ::
+  (cc-proof-push-with cc !>(42))
+::
+++  cc-proof-push-at
+  ::  the %page a suite-%c vane pushes when ~nec peeks for its
+  ::  self-attestation:
   ::  a real signed suite-%c proof, built by the vane that signs it
   ::  rather than assembled by hand, so the receiver's checks in
   ::  +al-take-proof all have something genuine to verify.
   ::
+  |=  [sender=_cc claimed=ship lyf=@ud =pass]
   ^-  [lane:pact:ames blob:ames]
+  =/  =open-packet:ames  [pass claimed lyf ~nec 2]
+  (cc-proof-push-with sender !>(open-packet))
+::
+++  cc-proof-push-with
+  |=  [sender=_cc payload=vase]
+  ^-  [lane:pact:ames blob:ames]
+  ::  `%publ 1` and `/proof/1` deliberately mirror +al-peek-proof:
+  ::  that namespace coordinate is fixed even after the sender rotates.
+  ::  The current sender life is carried inside the signed open packet.
+  ::
   =/  proof-path=path
     /a/x/1//pawn/proof/1/[(scot %p ~nec)]/[(scot %ud 2)]
   ::  the two scries %mage makes outside the vane.
@@ -551,8 +738,45 @@
   ::    $open-packet +peek-pawn would have built.
   ::
   =/  cc-roof=roof
+    |=  [lyc=gang pov=path vis=view bem=beam]
+    ^-  (unit (unit cage))
+    ?:  &(=(vis %j) =(%saxo q.bem))
+      ``noun+!>(`(list ship)`~[~nec])
+    ?:  ?=([%pawn %proof *] s.bem)
+      ``[%open-packet payload]
+    [~ ~]
+  ::  %mage only answers a duct from %ames itself
+  ::
+  =^  moves  sender
+    (call sender(rof cc-roof) ~[/ames] [%mage [%publ 1] ~nec proof-path])
+  (snag-push 0 moves)
+::
+++  cc-life2-proof-poke
+  ::  The other established proof carrier: +al-poke-proof answers an
+  ::  existing |mesa request with a %poke whose ack and payload paths
+  ::  cross-bind both ships and lives.  Build it through %moke so the
+  ::  packet, page hash, and signature are all genuine.
+  ::
+  ^-  [lane:pact:ames blob:ames]
+  =/  poof-path=path
+    :~  %pawn  %proof
+        (scot %ud 2)
+        (scot %p ~nec)
+        (scot %ud 2)
+    ==
+  =/  mut-path=path
+    :~  %a  %x  %'1'  %$  %muth
+        (scot %ud 2)
+        (scot %p cc-comet)
+        (scot %ud 2)
+    ==
+  =/  poke-path=path
+    :*  %a  %x  %'1'  %$
+        poof-path
+    ==
+  =/  proof-roof=roof
     =/  =open-packet:ames
-      [pass.ames-state.cc cc-comet 1 ~nec 2]
+      [pass.ames-state.cc-life2 cc-comet 2 ~nec 2]
     |=  [lyc=gang pov=path vis=view bem=beam]
     ^-  (unit (unit cage))
     ?:  &(=(vis %j) =(%saxo q.bem))
@@ -560,10 +784,12 @@
     ?:  ?=([%pawn %proof *] s.bem)
       ``[%open-packet !>(open-packet)]
     [~ ~]
-  ::  %mage only answers a duct from %ames itself
-  ::
-  =^  moves  cc
-    (call cc(rof cc-roof) ~[/ames] [%mage [%publ 1] ~nec proof-path])
+  =^  moves  cc-life2
+    %:  call
+      cc-life2(rof proof-roof)
+      ~[/ames]
+      [%moke [%publ 2] [~nec mut-path] poke-path]
+    ==
   (snag-push 0 moves)
 --
 ::  test core
@@ -586,6 +812,155 @@
   %+  expect-eq
     !>  shot
     !>  decoded
+::
+++  test-suite-c-life-key-model  ^-  tang
+  =/  one  cc-core
+  =/  two  cc-life2-core
+  ?>  ?=(%c suite.+<.one)
+  ?>  ?=(%c suite.+<.two)
+  =/  one-keys  ded:ex:one
+  =/  two-keys  ded:ex:two
+  =/  msg  (jam [%cc-life-key-model cc-comet])
+  =/  one-sig  (sigh:as:one msg)
+  =/  two-sig  (sigh:as:two msg)
+  =/  two-nec-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.nec sek.saf.ames-state.cc-life2)
+  ;:  weld
+    ::  the immutable name and genesis commitment survive rotation
+    ::
+    (expect-eq !>(cc-comet) !>(`@p`fig:ex:one))
+    (expect-eq !>(fig:ex:one) !>(fig:ex:two))
+    (expect-eq !>(ugn.tw.pub.+<.one) !>(ugn.tw.pub.+<.two))
+    (expect-eq !>(dat.tw.pub.+<.one) !>(dat.tw.pub.+<.two))
+    ::  life 1 is the compatibility key; life 2 is genuinely rotated
+    ::
+    (expect-eq !>(ugn.tw.pub.+<.one) !>(cry.pub.+<.one))
+    (expect !>(!=(ugn.tw.pub.+<.two cry.pub.+<.two)))
+    (expect-eq !>(-.one-keys) !>(+.one-keys))
+    (expect-eq !>(-.two-keys) !>(+.two-keys))
+    (expect !>(!=(-.one-keys -.two-keys)))
+    ::  signatures and channel agreement both use the current-life key
+    ::
+    (expect !>((safe:as:one one-sig msg)))
+    (expect !>(!(safe:as:two one-sig msg)))
+    (expect !>((safe:as:two two-sig msg)))
+    (expect !>(!(safe:as:one two-sig msg)))
+    (expect !>(!=(cc-nec-sym two-nec-sym)))
+  ==
+::
+++  test-anew-cannot-restore-an-old-life-key  ^-  tang
+  ::  Model a delayed response prepared at life 1: its un-tweaked xtr
+  ::  changed, but it still carries the old life key.  Once Ames is at
+  ::  life 2, accepting it would make .pass disagree with .saf.
+  ::
+  =/  stale-core
+    (pit:nu:cric:crypto 512 (shaz 'cc-comet') %c [q:(mat %gw-btc) 0x1234])
+  =/  stale-pass  pub:ex:stale-core
+  =/  pass-before  pass.ames-state.cc-life2
+  =/  saf-before  saf.ames-state.cc-life2
+  =^  moves  cc-life2
+    (take cc-life2 /sybl ~[/ames] [%jael %sybl %anew %gw-btc stale-pass])
+  ;:  weld
+    (expect !>(!=(stale-pass pass-before)))
+    (expect-eq !>(pass-before) !>(pass.ames-state.cc-life2))
+    (expect-eq !>(saf-before) !>(saf.ames-state.cc-life2))
+    (expect-eq !>(2) !>(life.ames-state.cc-life2))
+  ==
+::
+++  test-private-key-resend-cannot-undo-anew  ^-  tang
+  ::  A valid %anew changes only suite C's opaque evidence tail.  Jael's
+  ::  cached active ring can still contain the previous tail, so a later
+  ::  %resend of that exact ring must be a no-op instead of restoring its
+  ::  stale public pass in Ames.
+  ::
+  =/  refreshed-pass  pub:ex:cc-life2-refreshed-core
+  ?>  =(cc-comet `@p`fig:ex:cc-life2-refreshed-core)
+  ?>  =(saf:ex:cc-life2-core saf:ex:cc-life2-refreshed-core)
+  ?>  !=(pass.ames-state.cc-life2 refreshed-pass)
+  =/  old-ring  ring.ames-state.cc-life2
+  =/  [anew-moves=(list move:ames) after-anew=_cc-life2]
+    (take cc-life2 /sybl ~[/ames] [%jael %sybl %anew %gw-btc refreshed-pass])
+  =/  vein=(map life ring)  (my [2 old-ring] ~)
+  =/  [resend-moves=(list move:ames) after-resend=_cc-life2]
+    (take after-anew /private-keys ~[/ames] [%jael %private-keys 2 vein])
+  ;:  weld
+    (expect-eq !>(~) !>(anew-moves))
+    (expect-eq !>(~) !>(resend-moves))
+    (expect-eq !>(refreshed-pass) !>(pass.ames-state.after-anew))
+    (expect-eq !>(refreshed-pass) !>(pass.ames-state.after-resend))
+    (expect-eq !>(old-ring) !>(ring.ames-state.after-resend))
+    (expect-eq !>(2) !>(life.ames-state.after-resend))
+  ==
+::
+++  test-private-keys-cannot-replace-active-life  ^-  tang
+  ::  Even with the same immutable suite-C name, a different seed at the
+  ::  already-active life is never a second candidate for that life.
+  ::
+  =/  alternate-ring
+    (sew 3 [1 32 (shaz 'cc-comet-alternate-life-2')] cc-life2-ring)
+  =/  pass-before  pass.ames-state.cc-life2
+  =/  ring-before  ring.ames-state.cc-life2
+  =/  saf-before  saf.ames-state.cc-life2
+  =/  vein=(map life ring)  (my [2 alternate-ring] ~)
+  =/  [moves=(list move:ames) after=_cc-life2]
+    (take cc-life2 /private-keys ~[/ames] [%jael %private-keys 2 vein])
+  ;:  weld
+    (expect-eq !>(~) !>(moves))
+    (expect-eq !>(pass-before) !>(pass.ames-state.after))
+    (expect-eq !>(ring-before) !>(ring.ames-state.after))
+    (expect-eq !>(saf-before) !>(saf.ames-state.after))
+    (expect-eq !>(2) !>(life.ames-state.after))
+  ==
+::
+++  test-private-keys-cannot-roll-ames-back  ^-  tang
+  =/  pass-before  pass.ames-state.cc-life2
+  =/  ring-before  ring.ames-state.cc-life2
+  =/  saf-before  saf.ames-state.cc-life2
+  =/  vein=(map life ring)
+    (malt ~[[1 sec:ex:cc-core]])
+  =^  moves  cc-life2
+    (take cc-life2 /private-keys ~[/ames] [%jael %private-keys 1 vein])
+  ;:  weld
+    (expect-eq !>(2) !>(life.ames-state.cc-life2))
+    (expect-eq !>(pass-before) !>(pass.ames-state.cc-life2))
+    (expect-eq !>(ring-before) !>(ring.ames-state.cc-life2))
+    (expect-eq !>(saf-before) !>(saf.ames-state.cc-life2))
+  ==
+::
+++  test-private-keys-cannot-rename-a-comet  ^-  tang
+  ::  Even a numerically newer gift is inert if its suite-C ring derives
+  ::  another immutable @p.
+  ::
+  =/  foreign
+    (pit:nu:cric:crypto 512 (shaz 'foreign-cc-comet') %c q:(mat %gw-btc))
+  =/  pass-before  pass.ames-state.cc-life2
+  =/  ring-before  ring.ames-state.cc-life2
+  =/  saf-before  saf.ames-state.cc-life2
+  =/  vein=(map life ring)
+    (malt ~[[3 sec:ex:foreign]])
+  =^  moves  cc-life2
+    (take cc-life2 /private-keys ~[/ames] [%jael %private-keys 3 vein])
+  ;:  weld
+    (expect !>(!=(cc-comet `@p`fig:ex:foreign)))
+    (expect-eq !>(2) !>(life.ames-state.cc-life2))
+    (expect-eq !>(pass-before) !>(pass.ames-state.cc-life2))
+    (expect-eq !>(ring-before) !>(ring.ames-state.cc-life2))
+    (expect-eq !>(saf-before) !>(saf.ames-state.cc-life2))
+  ==
+::
+++  test-pki-domain-state-is-tristate  ^-  tang
+  ;:  weld
+    %+  expect-eq  !>(%none)
+    !>  (pki-dom-state:ames (pki-roof ~ %unregistered) ~nec now.nec %gw-btc)
+    %+  expect-eq  !>(%live)
+    !>  (pki-dom-state:ames (pki-roof ~ %live) ~nec now.nec %gw-btc)
+    %+  expect-eq  !>(%dead)
+    !>  (pki-dom-state:ames (pki-roof ~ %suspended) ~nec now.nec %gw-btc)
+    ::  a present but ill-typed %dose result is not "unregistered"
+    ::
+    %+  expect-eq  !>(%dead)
+    !>  (pki-dom-state:ames (pki-roof ~ %malformed) ~nec now.nec %gw-btc)
+  ==
 ::
 ++  test-origin-encoding  ^-  tang
   ::
@@ -1264,19 +1639,10 @@
     (expect-eq !>([%deny (silt ~[~rus])]) !>(after-add))
     (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
   ==
-::  a positive verdict lifts a snub (+sy-sybl %full).
+::  Verifier outcomes cannot override an operator/domain hard blocklist.
 ::
-::    %fail snubs additively and %stale never snubs, but %full used to
-::    leave .ships.snub alone entirely, so a snub was terminal by
-::    construction rather than by policy: a snub drops the peer's
-::    incoming packets, and its attestation packet is what earns the
-::    verdict that would clear it.  A ship that does reach a positive
-::    verdict must be admitted.  The un-snub is the exact inverse of
-::    the %fail snub, through the same +sy-snub, and it never expires
-::    on its own -- no timer, no sweep.
-::
-++  test-sybl-full-unsnubs  ^-  tang
-  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'unsnub-peer') %b ~)
+++  test-sybl-full-keeps-snub  ^-  tang
+  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'verified-peer') %b ~)
   =/  verdict=sign:ames
     :*  %jael  %sybl  %full  %test-dom  our-comet
         rift=0
@@ -1290,9 +1656,9 @@
   =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev our-comet]])
   =^  m2  nec  (take nec /sybl ~[/ames] verdict)
   ;:  weld
-    ::  our-comet is admitted; the manual entry is not disturbed
+    ::  a verifier result cannot override the hard policy
     ::
-    (expect-eq !>([%deny (silt ~[~dev])]) !>(snub.ames-state.nec))
+    (expect-eq !>([%deny (silt ~[~dev our-comet])]) !>(snub.ames-state.nec))
     ::  and the verified point was applied: the ship is now %known
     ::
     %+  expect-eq  !>(&)
@@ -1301,29 +1667,25 @@
         ==
   ==
 ::
-++  test-sybl-fail-then-full-round-trips  ^-  tang
-  ::  the live sequence: a comet is snubbed by a bad verdict, then an
-  ::  operator re-pokes the writ and it comes back good.
+++  test-sybl-fail-cannot-prepoison-an-unknown-ship  ^-  tang
+  ::  A claimed identity is attacker-controlled until a positive writ
+  ::  result.  A negative result for an unknown name must allocate no
+  ::  durable peer or blocklist state.
   ::
-  =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'roundtrip-peer') %b ~)
-  =/  verdict=sign:ames
-    :*  %jael  %sybl  %full  %test-dom  our-comet2
-        rift=0
-        life=1
-        keys=(malt ~[[1 [crypto-suite=1 pass]]])
-        sponsor=`~bud
-        fief=~
-    ==
-  =^  m1  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet2])
-  =/  after-fail  snub.ames-state.nec
-  =^  m2  nec  (take nec /sybl ~[/ames] verdict)
+  =/  peers-before  peers.ames-state.nec
+  =/  chums-before  chums.ames-state.nec
+  =/  snub-before   snub.ames-state.nec
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet2])
   ;:  weld
-    (expect-eq !>([%deny (silt ~[our-comet2])]) !>(after-fail))
-    (expect-eq !>([%deny `(set @p)`~]) !>(snub.ames-state.nec))
+    (expect-eq !>(peers-before) !>(peers.ames-state.nec))
+    (expect-eq !>(chums-before) !>(chums.ames-state.nec))
+    (expect-eq !>(snub-before) !>(snub.ames-state.nec))
   ==
 ::
-++  test-sybl-full-admits-on-an-allow-list  ^-  tang
-  ::  on an %allow list a snub is absence, so the verdict must ADD.
+++  test-sybl-full-keeps-an-allow-list-snub  ^-  tang
+  ::  In allow-list mode absence is the hard policy.  A verifier cannot
+  ::  add the ship and thereby override it.
   ::
   =/  =pass  pub:ex:(pit:nu:cric:crypto 512 (shaz 'allow-peer') %b ~)
   =/  verdict=sign:ames
@@ -1336,7 +1698,7 @@
     ==
   =^  m1  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev]])
   =^  m2  nec  (take nec /sybl ~[/ames] verdict)
-  (expect-eq !>([%allow (silt ~[~dev our-comet])]) !>(snub.ames-state.nec))
+  (expect-eq !>([%allow (silt ~[~dev])]) !>(snub.ames-state.nec))
 ::
 ++  test-sybl-full-leaves-an-unsnubbed-ship-alone  ^-  tang
   ::  a verdict for a ship we never snubbed must not edit the list.
@@ -1354,18 +1716,30 @@
   =^  m2  nec  (take nec /sybl ~[/ames] verdict)
   (expect-eq !>([%deny (silt ~[~dev ~rus])]) !>(snub.ames-state.nec))
 ::
-++  test-sybl-fail-still-snubs  ^-  tang
-  ::  the un-snub must not have cost us the snub.  additively, in both
-  ::  modes: a %deny list gains the ship, an %allow list loses it.
+++  test-sybl-fail-drops-only-the-alien-candidate  ^-  tang
+  ::  .cc-comet begins as an alien |mesa chum.  A failed verification
+  ::  discards that retryable candidate, but cannot alter the
+  ::  operator's hard blocklist.
   ::
   =^  m1  nec  (call nec ~[//unix] [%snub %deny %set ~[~dev]])
-  =^  m2  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet])
-  =/  denied  snub.ames-state.nec
-  =^  m3  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev our-comet]])
-  =^  m4  nec  (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom our-comet])
+  =^  m2  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom cc-comet])
   ;:  weld
-    (expect-eq !>([%deny (silt ~[~dev our-comet])]) !>(denied))
-    (expect-eq !>([%allow (silt ~[~dev])]) !>(snub.ames-state.nec))
+    (expect-eq !>(%.n) !>((~(has by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+    (expect-eq !>([%deny (silt ~[~dev])]) !>(snub.ames-state.nec))
+  ==
+::
+++  test-sybl-fail-keeps-a-known-peer  ^-  tang
+  =.  chums.ames-state.nec
+    %+  ~(put by chums.ames-state.nec)  cc-comet
+    (known-chum cc-nec-sym 1 cc)
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %fail %test-dom cc-comet])
+  ;:  weld
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>([%deny `(set @p)`~]) !>(snub.ames-state.nec))
   ==
 ::  %stale writ-result (decisions-addendum section 3): a %known peer
 ::  whose on-chain attestation goes stale is DEMOTED to a fresh %alien
@@ -1404,6 +1778,223 @@
     (expect-eq !>(before) !>(peers.ames-state.bud))
     (expect-eq !>(snub-before) !>(snub.ames-state.bud))
     (expect-eq !>(~) !>(moves))
+  ==
+::
+++  test-sybl-full-preserves-known-peer-qos  ^-  tang
+  ::  Replaying an unchanged whole point refreshes PKI fields, not transport
+  ::  liveness.  A known peer's established QoS must survive intact.
+  ::
+  =/  live-qos  [%live now.nec]
+  =/  known  (known-chum cc-nec-sym 1 cc)
+  ?>  ?=(%known -.known)
+  =/  =fren-state:ames  +.known
+  =.  qos.fren-state  live-qos
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) cc-comet [%known fren-state])
+  =/  point
+    :*  rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=2 pass.ames-state.cc]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %full %test-dom cc-comet point])
+  =/  after  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  (expect-eq !>(live-qos) !>(qos.+.after))
+::
+++  test-sybl-full-breaches-known-peer-on-rift-increase  ^-  tang
+  ::  A domain verdict is a complete authoritative point, and can arrive
+  ::  without Jael's per-ship subscription having first supplied a separate
+  ::  %breach gift.  Its higher rift must therefore cross the continuity
+  ::  boundary here instead of preserving live transport state.
+  ::
+  =/  live-qos  [%live now.nec]
+  =/  known  (known-chum cc-nec-sym 1 cc)
+  ?>  ?=(%known -.known)
+  =/  =fren-state:ames  +.known
+  =.  qos.fren-state  live-qos
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) cc-comet [%known fren-state])
+  =/  point
+    :*  rift=1
+        life=1
+        keys=(malt ~[[1 [crypto-suite=2 pass.ames-state.cc]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %full %test-dom cc-comet point])
+  ::  The default transport is legacy Ames, so breach deliberately migrates
+  ::  the reset peer back to that table before the whole point rehydrates it.
+  ::
+  =/  after  (~(got by peers.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect-eq !>(1) !>(rift.+.after))
+    (expect-eq !>([%unborn now.nec]) !>(qos.+.after))
+  ==
+::
+++  test-publ-full-breaches-known-peer-on-rift-increase  ^-  tang
+  ::  The same guarantee belongs to the common whole-point installation
+  ::  path: an initial public-key subscription can return a higher-rift %full
+  ::  without any preceding %breach notification.
+  ::
+  =/  live-qos  [%live now.nec]
+  =/  known  (known-comet cc-nec-sym 1 cc)
+  ?>  ?=(%known -.known)
+  =/  =peer-state:ames  +.known
+  =.  qos.peer-state  live-qos
+  =.  chums.ames-state.nec
+    (~(del by chums.ames-state.nec) cc-comet)
+  =.  peers.ames-state.nec
+    (~(put by peers.ames-state.nec) cc-comet [%known peer-state])
+  =/  point
+    :*  rift=1
+        life=1
+        keys=(malt ~[[1 [crypto-suite=2 pass.ames-state.cc]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  moves  nec
+    %:  take
+      nec
+      /public-keys
+      ~[//unix]
+      [%jael %public-keys %full [n=[cc-comet point] ~ ~]]
+    ==
+  =/  after  (~(got by peers.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect-eq !>(1) !>(rift.+.after))
+    (expect-eq !>([%unborn now.nec]) !>(qos.+.after))
+  ==
+::
+++  test-publ-full-initializes-qos-after-breach  ^-  tang
+  ::  Breach deliberately replaces the transport tail with its default QoS.
+  ::  A later whole point must timestamp that sentinel as a fresh connection,
+  ::  not preserve the meaningless default time zero.
+  ::
+  =/  live-qos  [%live now.nec]
+  =/  known  (known-comet cc-nec-sym 1 cc)
+  ?>  ?=(%known -.known)
+  =/  =peer-state:ames  +.known
+  =.  qos.peer-state  live-qos
+  =.  chums.ames-state.nec
+    (~(del by chums.ames-state.nec) cc-comet)
+  =.  peers.ames-state.nec
+    (~(put by peers.ames-state.nec) cc-comet [%known peer-state])
+  =^  breach-moves  nec
+    (take nec /public-keys ~[//unix] [%jael %public-keys %breach cc-comet])
+  =/  breached  (~(got by peers.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.breached)
+  =/  point
+    :*  rift=0
+        life=1
+        keys=(malt ~[[1 [crypto-suite=2 pass.ames-state.cc]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  full-moves  nec
+    %:  take
+      nec
+      /public-keys
+      ~[//unix]
+      [%jael %public-keys %full [n=[cc-comet point] ~ ~]]
+    ==
+  =/  after  (~(got by peers.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect-eq !>(*qos:ames) !>(qos.+.breached))
+    (expect-eq !>([%unborn now.nec]) !>(qos.+.after))
+  ==
+::
+++  test-sybl-full-rederives-known-mesa-paths-on-rotation  ^-  tang
+  ::  A whole-point verifier verdict is also the remote rekey event for
+  ::  a suite-C comet.  Existing encrypted |mesa requests must move to
+  ::  paths derived from the new shared key, exactly as for an ordinary
+  ::  incremental %keys update.
+  ::
+  =/  live-qos  [%live now.nec]
+  =/  known  (known-chum cc-nec-sym 1 cc)
+  ?>  ?=(%known -.known)
+  =/  =fren-state:ames  +.known
+  =.  qos.fren-state  live-qos
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) cc-comet [%known fren-state])
+  =.  rof.nec  saxo-roof
+  =^  request-moves  nec
+    (call nec ~[/rotation-test] [%chum cc-comet /rotation-test])
+  =/  before  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.before)
+  =/  before-pit=(map path request-state:ames)  pit.+.before
+  =/  pt
+    :*  rift=0
+        life=2
+        keys=(malt ~[[2 [crypto-suite=2 pass.ames-state.cc-life2]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =/  verdict=sign:ames
+    [%jael %sybl %full %test-dom cc-comet pt]
+  =^  rotation-moves  nec  (take nec /sybl ~[/ames] verdict)
+  =/  after  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect !>(?=(^ before-pit)))
+    (expect !>(!=(before-pit pit.+.after)))
+    (expect !>(?=(^ pit.+.after)))
+    (expect-eq !>(2) !>(life.+.after))
+    (expect-eq !>(pass.ames-state.cc-life2) !>(pass.+.after))
+    (expect-eq !>(live-qos) !>(qos.+.after))
+  ==
+::
+++  test-sybl-same-key-evidence-refresh-preserves-mesa-state  ^-  tang
+  ::  A same-life suite-C verdict may replace only mutable evidence.  Since
+  ::  the live key did not change, it must not take the rekey path and discard
+  ::  an in-flight Mesa request's partial page state while rederiving paths.
+  ::
+  =/  life2-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.cc-life2 sek.saf.ames-state.nec)
+  =/  known  (known-chum life2-sym 2 cc-life2)
+  ?>  ?=(%known -.known)
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) cc-comet known)
+  =.  rof.nec  saxo-roof
+  =^  request-moves  nec
+    (call nec ~[/evidence-refresh-test] [%chum cc-comet /evidence-refresh-test])
+  =/  staged  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.staged)
+  =/  =fren-state:ames  +.staged
+  =.  qos.fren-state  [%live now.nec]
+  =.  pit.fren-state
+    %-  ~(run by pit.fren-state)
+    |=  req=request-state:ames
+    req(ps `*pact-state:ames)
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) cc-comet [%known fren-state])
+  =/  before  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.before)
+  ?>  ?=(^ pit.+.before)
+  =/  transport-before  +>.+.before
+  =/  point
+    :*  rift=0
+        life=2
+        keys=(malt ~[[2 [crypto-suite=2 pub:ex:cc-life2-refreshed-core]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  refresh-moves  nec
+    (take nec /sybl ~[/ames] [%jael %sybl %full %test-dom cc-comet point])
+  =/  after  (~(got by chums.ames-state.nec) cc-comet)
+  ?>  ?=(%known -.after)
+  ;:  weld
+    (expect-eq !>(2) !>(life.+.after))
+    (expect-eq !>(pub:ex:cc-life2-refreshed-core) !>(pass.+.after))
+    (expect-eq !>(pub.saf.ames-state.cc-life2) !>(public-keys.+.after))
+    (expect-eq !>(life2-sym) !>(symmetric-key.+.after))
+    (expect-eq !>(transport-before) !>(+>.+.after))
   ==
 ::  A whole POINT carrying a fief must push that fief to the runtime,
 ::  the way an incremental [%diff @ %fief *] does (+on-publ-fief).
@@ -1475,13 +2066,16 @@
     0x5f71.d5ce.9153.a875.20f8.fc95.b1d8.533e.3734.3386.
       fc4f.6993.3ba9.766a.001c.9e5d.a8bf.e4e2.4690.aaaf.
       e503.17b8.6203
-  ::  a bare backreference: tag %11, then a +mat-encoded 88-bit index
+  ::  Wrapping the synthetic bomb as .signed gives the outer packet the
+  ::  exact expected [@ @] shape.  +open-jam-shaped must still inspect
+  ::  the inner jam before any caller cues it.
   ::
-  =/  synthetic=@
-    (can 0 ~[[2 0b11] [8 0b1000.0000] [88 0x11.2233.4455.6677.8899.aabb]])
+  =/  wrapped=@  (jam [0 cue-bomb])
   ;:  weld
     (expect !>(!(open-jam-shaped:ames bomb)))
-    (expect !>(!(open-jam-shaped:ames synthetic)))
+    (expect !>(!(jam-safe:ames cue-bomb)))
+    (expect !>(!(open-jam-shaped:ames cue-bomb)))
+    (expect !>(!(open-jam-shaped:ames wrapped)))
     ::  and random-looking ciphertext of assorted lengths is rejected too
     ::
     =/  ns=(list @ud)  (gulf 1 64)
@@ -1494,16 +2088,51 @@
   ==
 ::
 ++  test-is-open-packet-accepts-a-real-attestation  ^-  tang
-  ::  the shape +etch-open-packet actually produces: (jam [@ @])
+  ::  Exercise the actual suite-%c encoder as well as minimal [@ @]
+  ::  shapes.  The outer jam and its signed inner jam must both pass.
   ::
+  =/  blob  (cc-attestation-at cc cc-comet 1)
+  =/  =shot:ames  (sift-shot:ames blob)
+  =/  [signature=@ signed=@]
+    ;;([signature=@ signed=@] (cue content.shot))
   ;:  weld
-    (expect !>((open-jam-shaped:ames (jam [(shaz 'sig') (shaz 'signed')]))))
-    (expect !>((open-jam-shaped:ames (jam [0 0]))))
+    (expect !>((open-jam-shaped:ames content.shot)))
+    (expect !>((jam-safe:ames signed)))
+    (expect !>((is-open-packet:ames shot)))
+    (expect !>((open-jam-shaped:ames (jam [(shaz 'sig') (jam 42)]))))
+    (expect !>((open-jam-shaped:ames (jam [0 (jam 0)]))))
     ::  ... and nothing else: an atom, a 3-tuple, or trailing bytes
     ::
     (expect !>(!(open-jam-shaped:ames (jam 42))))
     (expect !>(!(open-jam-shaped:ames (jam [1 2 3]))))
     (expect !>(!(open-jam-shaped:ames (lsh [0 1] (jam [1 2])))))
+  ==
+::
+++  test-sift-open-rejects-a-raw-malformed-suite-c-pass  ^-  tang
+  ::  The low three bits announce suite %c, but this atom ends before
+  ::  the domain +mat at bit 520.  Reaching +com with it is unsafe; the
+  ::  raw shape gate must turn that into a catchable structural reject.
+  ::
+  =/  bad-pass=pass  'c'
+  =/  =open-packet:ames  [bad-pass cc-comet 1 ~nec 2]
+  =/  signed=@  (jam open-packet)
+  =/  =shot:ames
+    :*  [sndr=cc-comet rcvr=~nec]
+        req=&  sam=&
+        sndr-tick=0b1
+        rcvr-tick=0b10
+        origin=~
+        content=(jam [signature=0 signed])
+    ==
+  =/  tried=(unit open-packet:ames)
+    %-  mole
+    |.  (sift-open-packet:ames [(pki-roof ~ %live) ~nec now.nec] shot ~nec 2)
+  ;:  weld
+    (expect !>((open-jam-shaped:ames content.shot)))
+    (expect !>((is-open-packet:ames shot)))
+    (expect-eq !>(~) !>((pass-pki-dom:ames bad-pass)))
+    (expect !>(!(pass-shaped:ames bad-pass)))
+    (expect !>(?=(~ tried)))
   ==
 ::  +on-hear-packet routes a comet's packet by SHAPE, and drops what it
 ::  cannot route.  Four cases, and the obvious fixes break one of them:
@@ -1511,10 +2140,12 @@
 ::    1. unknown comet + valid attestation -> +on-hear-open.  this is
 ::       the whole comet onboarding path, and the regression a careless
 ::       fix causes.
-::    2. known comet + re-attestation -> +on-hear-open.  a comet
-::       re-attests while its domain verifier is still deciding, and a
-::       suite-%c comet re-attests at every new life, so attestations
-::       do arrive from peers we have already promoted.  routing one to
+  ::    2. known comet + re-attestation -> +on-hear-open.  a retransmitted
+  ::       attestation can arrive after a local Jael gift has promoted the
+  ::       peer, and a suite-%c comet sends one at every new life, so an
+  ::       attestation can arrive from a peer we already classify as known.
+  ::       This local routing race is not a competing-rotation protocol.
+  ::       Routing the attestation to
 ::       +on-hear-shut feeds plaintext to AES-SIV, which bails %evil;
 ::       that livelocked two healthy mainnet comets for six hours.
 ::    3. known comet + $shut-packet -> +on-hear-shut.
@@ -1529,6 +2160,403 @@
 ::    Note how case 4 fails if it regresses: %meme escapes +mole and
 ::    +mule, so the test thread CRASHES rather than reporting FAILED.
 ::
+++  test-hear-suite-c-name-is-always-bound  ^-  tang
+  ::  The packet is internally consistent and correctly signed by the
+  ::  pass's life key, but the claimed @p is not +fig of that pass.  A
+  ::  live domain cannot override this immutable name binding.
+  ::
+  =/  blob  (cc-attestation-at cc-misnamed our-comet 1)
+  =/  tried
+    %-  mole
+    |.  (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  (expect !>(?=(~ tried)))
+::
+++  test-hear-suite-c-life1-falls-back-without-agent  ^-  tang
+  ::  At life 1 .ugn equals .cry, so an explicitly unregistered domain
+  ::  admits the ship exactly as an ordinary comet and emits no writ.
+  ::
+  =.  chums.ames-state.nec  (~(del by chums.ames-state.nec) cc-comet)
+  =/  blob  (cc-attestation-at cc cc-comet 1)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((count-writs moves)))
+    %+  expect-eq  !>(&)
+    !>  ?=([~ %known *] (~(get by peers.ames-state.nec) cc-comet))
+  ==
+::
+++  test-hear-suite-c-life1-fallback-rechecks-a-new-live-domain  ^-  tang
+  ::  Local fallback is compatibility state, not permanent authority.
+  ::  If the domain later registers, the same life-1 attestation must be
+  ::  offered to its verifier even though Ames already knows the peer.
+  ::
+  =.  chums.ames-state.nec  (~(del by chums.ames-state.nec) cc-comet)
+  =/  blob  (cc-attestation-at cc cc-comet 1)
+  =^  fallback-moves  nec
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] blob)
+  =/  after-fallback  (~(get by peers.ames-state.nec) cc-comet)
+  =^  verify-moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((count-writs fallback-moves)))
+    (expect !>(?=([~ %known *] after-fallback)))
+    (expect-eq !>(1) !>((count-writs verify-moves)))
+    (expect !>(?=([~ %known *] (~(get by peers.ames-state.nec) cc-comet))))
+  ==
+::
+++  test-hear-suite-c-accepts-bootstrap-receiver-life  ^-  tang
+  ::  An unknown responder to legacy %keys can know only the requester's
+  ::  four-bit tick, so its signed attestation uses receiver life 1 as the
+  ::  bootstrap coordinate.  A rotated receiver still verifies the sender's
+  ::  full life and forwards the candidate to its live domain.
+  ::
+  =/  blob  (cc-attestation-for cc-life2 cc-comet 2 ~nec 1)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  (expect-eq !>(1) !>((count-writs moves)))
+::
+++  test-hear-suite-c-rejects-unrelated-receiver-life  ^-  tang
+  ::  Life 1 is the only bootstrap exception; another stale or future value
+  ::  is still rejected rather than inferred from the unauthenticated tick.
+  ::
+  =/  blob  (cc-attestation-for cc-life2 cc-comet 2 ~nec 3)
+  =/  tried
+    %-  mole
+    |.  (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  (expect !>(?=(~ tried)))
+::
+++  test-hear-bootstrap-replay-of-known-current-peer-is-idempotent  ^-  tang
+  ::  The bootstrap coordinate changes only receiver-life admission.  Once
+  ::  Ames and Jael already hold this exact life, replay neither mutates the
+  ::  peer nor starts another verifier job.
+  ::
+  =/  replay-nec  nec
+  =.  chums.ames-state.replay-nec
+    (~(del by chums.ames-state.replay-nec) cc-comet)
+  =/  sym
+    (derive-symmetric-key:ames pub.saf.ames-state.cc-life2 sek.saf.ames-state.nec)
+  =.  peers.ames-state.replay-nec
+    %+  ~(put by peers.ames-state.replay-nec)  cc-comet
+    (known-comet sym 2 cc-life2)
+  =/  before  (~(get by peers.ames-state.replay-nec) cc-comet)
+  =/  blob  (cc-attestation-for cc-life2 cc-comet 2 ~nec 1)
+  =^  moves  replay-nec
+    (call replay-nec(rof (pki-roof `2 %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((count-writs moves)))
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by peers.ames-state.replay-nec) cc-comet)))
+  ==
+::
+++  test-legacy-keys-bootstrap-completes-a-reciprocal-attestation  ^-  tang
+  ::  A life-2 suite-C comet asks an unknown life-1 comet for its keys.
+  ::  The responder necessarily answers for receiver life 1.  Accepting that
+  ::  signed bootstrap response promotes it; the ordinary meet path then sends
+  ::  our full life-2 attestation back, which reaches the domain verifier.
+  ::
+  =/  request=blob:ames
+    (etch-shot:ames (encode-keys-packet:ames cc-comet our-comet 2))
+  =/  responder  comet
+  ::  Before learning the requester's PKI point, legacy Ames can only route
+  ::  its answer through the numerical sponsor encoded in the comet @p.
+  ::  Prime that relay with the fixture's existing direct sponsor route.
+  ::
+  =/  legacy-sponsor  (^sein:title cc-comet)
+  =.  peers.ames-state.responder
+    %+  ~(put by peers.ames-state.responder)  legacy-sponsor
+    (~(got by peers.ames-state.responder) ~marbud)
+  =^  reply-moves  responder
+    (call responder(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& legacy-sponsor] request)
+  =/  reply  (snag-packet 0 reply-moves)
+  =/  reply-shot=shot:ames  (sift-shot:ames +.reply)
+  =/  reply-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof ~ %unregistered) cc-comet now.cc-life2]
+        reply-shot
+        cc-comet
+        2
+    ==
+  =/  requester  cc-life2
+  ::  The ordinary meet path emits our reciprocal attestation through the
+  ::  newly learned comet's numerical sponsor before recording the incoming
+  ::  direct lane.  Give the fixture that existing relay relationship too.
+  ::
+  =/  reply-sponsor  (^sein:title our-comet)
+  =.  peers.ames-state.requester
+    %+  ~(put by peers.ames-state.requester)  reply-sponsor
+    (~(got by peers.ames-state.nec) ~marbud)
+  =^  meet-moves  requester
+    (call requester(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] +.reply)
+  =/  reciprocal  (snag-packet 0 meet-moves)
+  =/  reciprocal-shot=shot:ames  (sift-shot:ames +.reciprocal)
+  =/  reciprocal-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof ~ %live) our-comet now.responder]
+        reciprocal-shot
+        our-comet
+        1
+    ==
+  =^  verify-moves  responder
+    (call responder(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] +.reciprocal)
+  ;:  weld
+    (expect-eq !>([our-comet 1 cc-comet 1]) !>([sndr sndr-life rcvr rcvr-life]:reply-open))
+    (expect-eq !>([cc-comet 2 our-comet 1]) !>([sndr sndr-life rcvr rcvr-life]:reciprocal-open))
+    (expect-eq !>(1) !>((count-writs verify-moves)))
+    (expect !>(?=([~ %known *] (~(get by peers.ames-state.requester) our-comet))))
+  ==
+::
+++  test-known-suite-c-simultaneous-rotation-recovers-with-keys  ^-  tang
+  ::  Both endpoints know each other at life 2, then independently activate
+  ::  life 3 before either receives the other's proactive announcement.  Each
+  ::  stored view is consequently stale.  A reactive %keys answer cannot use
+  ::  that stored life as the signed receiver coordinate: the requester is
+  ::  already at life 3 and would reject it.  The fixed life-1 sentinel lets
+  ::  both current, life-3 signatures reach the domain verifier in one shot.
+  ::
+  =/  a  cc-life2
+  =/  b  cd-life2
+  =.  peers.ames-state.a  *(map ship ship-state:ames)
+  =.  chums.ames-state.a  *(map ship chum-state:ames)
+  =.  peers.ames-state.b  *(map ship ship-state:ames)
+  =.  chums.ames-state.b  *(map ship chum-state:ames)
+  =/  a-b-life2-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.cd-life2 sek.saf.ames-state.a)
+  =/  b-a-life2-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.cc-life2 sek.saf.ames-state.b)
+  =.  peers.ames-state.a
+    %+  ~(put by peers.ames-state.a)  cd-comet
+    (known-comet a-b-life2-sym 2 cd-life2)
+  =.  peers.ames-state.b
+    %+  ~(put by peers.ames-state.b)  cc-comet
+    (known-comet b-a-life2-sym 2 cc-life2)
+  ::
+  ::  Activate both private life-3 rings.  The separate proactive call sites
+  ::  continue to bind their announcements to the exact stored peer life 2.
+  ::  We deliberately lose those packets to model simultaneous/offline rekey.
+  ::
+  =/  a-vein=(map life ring)  (my [3 cc-life3-ring]~)
+  =^  a-proactive-moves  a
+    (take a /private-keys ~[/ames] [%jael %private-keys 3 a-vein])
+  =/  a-proactive  (snag-packet 0 a-proactive-moves)
+  =/  a-proactive-shot=shot:ames  (sift-shot:ames +.a-proactive)
+  =/  a-proactive-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof `2 %live) cd-comet now.b]
+        a-proactive-shot
+        cd-comet
+        2
+    ==
+  =/  b-vein=(map life ring)  (my [3 cd-life3-ring]~)
+  =^  b-proactive-moves  b
+    (take b /private-keys ~[/ames] [%jael %private-keys 3 b-vein])
+  =/  b-proactive  (snag-packet 0 b-proactive-moves)
+  =/  b-proactive-shot=shot:ames  (sift-shot:ames +.b-proactive)
+  =/  b-proactive-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof `2 %live) cc-comet now.a]
+        b-proactive-shot
+        cc-comet
+        2
+    ==
+  ::  Local rotation necessarily rederives the still-life-2 channels with the
+  ::  new local secret.  Snapshot after that legitimate change so the next
+  ::  comparison isolates the %keys/proof exchange itself.
+  ::
+  =/  a-peer-life2  (~(get by peers.ames-state.a) cd-comet)
+  =/  b-peer-life2  (~(get by peers.ames-state.b) cc-comet)
+  ::
+  ::  Each life-3 endpoint now asks for the other's current attestation.  The
+  ::  request carries only a wrapping tick; both responders still store life
+  ::  2 for the requester, but sign their answers for bootstrap life 1.
+  ::
+  =/  request-a=blob:ames
+    (etch-shot:ames (encode-keys-packet:ames cc-comet cd-comet 3))
+  =/  request-b=blob:ames
+    (etch-shot:ames (encode-keys-packet:ames cd-comet cc-comet 3))
+  =^  reply-to-a-moves  b
+    (call b(rof (pki-roof `2 %live)) ~[//unix] %hear [%& cc-comet] request-a)
+  =^  reply-to-b-moves  a
+    (call a(rof (pki-roof `2 %live)) ~[//unix] %hear [%& cd-comet] request-b)
+  =/  reply-to-a  (snag-packet 0 reply-to-a-moves)
+  =/  reply-to-b  (snag-packet 0 reply-to-b-moves)
+  =/  reply-to-a-shot=shot:ames  (sift-shot:ames +.reply-to-a)
+  =/  reply-to-b-shot=shot:ames  (sift-shot:ames +.reply-to-b)
+  =/  reply-to-a-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof `2 %live) cc-comet now.a]
+        reply-to-a-shot
+        cc-comet
+        3
+    ==
+  =/  reply-to-b-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof `2 %live) cd-comet now.b]
+        reply-to-b-shot
+        cd-comet
+        3
+    ==
+  =^  verify-a-moves  a
+    (call a(rof (pki-roof `2 %live)) ~[//unix] %hear [%& cd-comet] +.reply-to-a)
+  =^  verify-b-moves  b
+    (call b(rof (pki-roof `2 %live)) ~[//unix] %hear [%& cc-comet] +.reply-to-b)
+  =/  a-peer-pending  (~(get by peers.ames-state.a) cd-comet)
+  =/  b-peer-pending  (~(get by peers.ames-state.b) cc-comet)
+  ::
+  ::  Model the two successful domain verdicts.  Until these arrive Ames has
+  ::  retained the life-2 channels verbatim; afterward each side advances to
+  ::  the signed life-3 pass and derives the matching current channel key.
+  ::
+  =/  point-b
+    :*  rift=0
+        life=3
+        keys=(malt ~[[3 [crypto-suite=2 pub:ex:cd-life3-core]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =/  point-a
+    :*  rift=0
+        life=3
+        keys=(malt ~[[3 [crypto-suite=2 pub:ex:cc-life3-core]]])
+        sponsor=`~marbud
+        fief=~
+    ==
+  =^  verdict-a-moves  a
+    (take a /sybl ~[/ames] [%jael %sybl %full %gw-btc cd-comet point-b])
+  =^  verdict-b-moves  b
+    (take b /sybl ~[/ames] [%jael %sybl %full %gw-btc cc-comet point-a])
+  =/  a-peer-life3  (~(got by peers.ames-state.a) cd-comet)
+  =/  b-peer-life3  (~(got by peers.ames-state.b) cc-comet)
+  ?>  ?=(%known -.a-peer-life3)
+  ?>  ?=(%known -.b-peer-life3)
+  =/  a-b-life3-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.b sek.saf.ames-state.a)
+  =/  b-a-life3-sym
+    (derive-symmetric-key:ames pub.saf.ames-state.a sek.saf.ames-state.b)
+  ;:  weld
+    (expect-eq !>([cc-comet 3 cd-comet 2]) !>([sndr sndr-life rcvr rcvr-life]:a-proactive-open))
+    (expect-eq !>([cd-comet 3 cc-comet 2]) !>([sndr sndr-life rcvr rcvr-life]:b-proactive-open))
+    (expect-eq !>(1) !>((lent a-proactive-moves)))
+    (expect-eq !>(1) !>((lent b-proactive-moves)))
+    (expect-eq !>([cd-comet 3 cc-comet 1]) !>([sndr sndr-life rcvr rcvr-life]:reply-to-a-open))
+    (expect-eq !>([cc-comet 3 cd-comet 1]) !>([sndr sndr-life rcvr rcvr-life]:reply-to-b-open))
+    (expect-eq !>(pass.ames-state.b) !>(pass.reply-to-a-open))
+    (expect-eq !>(pass.ames-state.a) !>(pass.reply-to-b-open))
+    (expect-eq !>(1) !>((lent reply-to-a-moves)))
+    (expect-eq !>(1) !>((lent reply-to-b-moves)))
+    (expect-eq !>(1) !>((count-writs verify-a-moves)))
+    (expect-eq !>(1) !>((count-writs verify-b-moves)))
+    (expect-eq !>(2) !>((lent verify-a-moves)))
+    (expect-eq !>(2) !>((lent verify-b-moves)))
+    (expect-eq !>(a-peer-life2) !>(a-peer-pending))
+    (expect-eq !>(b-peer-life2) !>(b-peer-pending))
+    (expect-eq !>(%.n) !>((~(has by chums.ames-state.a) cd-comet)))
+    (expect-eq !>(%.n) !>((~(has by chums.ames-state.b) cc-comet)))
+    (expect-eq !>(3) !>(life.+.a-peer-life3))
+    (expect-eq !>(3) !>(life.+.b-peer-life3))
+    (expect-eq !>(pub:ex:cd-life3-core) !>(pass.+.a-peer-life3))
+    (expect-eq !>(pub:ex:cc-life3-core) !>(pass.+.b-peer-life3))
+    (expect-eq !>(a-b-life3-sym) !>(symmetric-key.+.a-peer-life3))
+    (expect-eq !>(b-a-life3-sym) !>(symmetric-key.+.b-peer-life3))
+  ==
+::
+++  test-legacy-keys-from-known-mesa-peer-gets-attestation  ^-  tang
+  ::  A peer's transport state cannot hide the legacy bootstrap control
+  ::  packet.  ~nec is known only as a Mesa chum, but its %keys request must
+  ::  still receive our ordinary, current-life signed attestation without
+  ::  migrating or resetting either peer-table entry.
+  ::
+  =/  before-chum  (~(get by chums.ames-state.cc-life2) ~nec)
+  =/  before-peer  (~(get by peers.ames-state.cc-life2) ~nec)
+  =/  request=blob:ames
+    (etch-shot:ames (encode-keys-packet:ames ~nec cc-comet 2))
+  =^  moves  cc-life2
+    (call cc-life2(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] request)
+  =/  reply  (snag-packet 0 moves)
+  =/  reply-shot=shot:ames  (sift-shot:ames +.reply)
+  =/  reply-open=open-packet:ames
+    %-  sift-open-packet:ames
+    :*  [(pki-roof ~ %live) ~nec now.cc-life2]
+        reply-shot
+        ~nec
+        2
+    ==
+  =/  expected-open=open-packet:ames
+    [pass.ames-state.cc-life2 cc-comet 2 ~nec 1]
+  ;:  weld
+    (expect-eq !>(1) !>((lent moves)))
+    (expect-eq !>(expected-open) !>(reply-open))
+    (expect-eq !>(before-chum) !>((~(get by chums.ames-state.cc-life2) ~nec)))
+    (expect-eq !>(before-peer) !>((~(get by peers.ames-state.cc-life2) ~nec)))
+  ==
+::
+++  test-hear-suite-c-life2-needs-agent  ^-  tang
+  ::  The same @p with a rotated, valid signer is not an ordinary comet:
+  ::  without its committed domain agent there is no authority for life 2.
+  ::
+  =/  blob  (cc-attestation-at cc-life2 cc-comet 2)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-hear-suite-c-suspended-domain-fails-closed  ^-  tang
+  ::  Suspension is deliberately distinct from absence: even the
+  ::  otherwise-compatible life-1 pass must not fall back.
+  ::
+  =/  blob  (cc-attestation-at cc cc-comet 1)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %suspended)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-hear-suite-c-malformed-dose-fails-closed  ^-  tang
+  =/  blob  (cc-attestation-at cc cc-comet 1)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %malformed)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-hear-suite-c-live-domain-routes-current-key  ^-  tang
+  ::  A live agent is the authority that makes the rotated life-2 key
+  ::  eligible for on-chain verification.  Ames queues exactly one writ.
+  ::  This fixture already has an alien |mesa chum, which must remain in
+  ::  place rather than being mirrored into the legacy peer table.
+  ::
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =/  blob  (cc-attestation-at cc-life2 cc-comet 2)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-hear-suite-c-higher-life-from-known-mesa-routes-writ  ^-  tang
+  ::  +sy-priv announces a rotated key with a legacy plaintext
+  ::  attestation even when the relationship already lives in |mesa.
+  ::  The outer dispatcher must let that structurally-open packet reach
+  ::  +on-hear-open instead of treating it as migrated application data.
+  ::
+  =.  chums.ames-state.nec
+    %+  ~(put by chums.ames-state.nec)  cc-comet
+    (known-chum cc-nec-sym 1 cc)
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =/  blob  (cc-attestation-at cc-life2 cc-comet 2)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    (expect-eq !>(%.n) !>((~(has by peers.ames-state.nec) cc-comet)))
+  ==
+::
 ++  test-hear-attestation-from-unknown-comet  ^-  tang
   ::  case 1: first contact.  ~nec has never seen .our-comet, and this
   ::  is a genuine, correctly signed self-attestation.
@@ -1542,7 +2570,7 @@
     ==
   =/  =blob:ames  (attestation open-packet saf.ames-state.comet)
   =^  moves  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] blob)
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] blob)
   ::  it reached +on-hear-open and the comet was promoted
   ::
   %+  expect-eq
@@ -1569,7 +2597,7 @@
     ==
   =/  =blob:ames  (attestation open-packet saf.ames-state.comet)
   =^  moves  nec
-    (call nec(rof (pki-roof `1)) ~[//unix] %hear [%& ~marbud] blob)
+    (call nec(rof (pki-roof `1 %unregistered)) ~[//unix] %hear [%& ~marbud] blob)
   ;:  weld
     %+  expect-eq  !>(0)  !>((lent moves))
   ::
@@ -1605,7 +2633,7 @@
   =/  poke-plea  [%g /talk [%get %post]]
   =^  moves1  comet  (call comet ~[/g/talk] %plea ~nec poke-plea)
   =^  moves2  nec
-    (call nec(rof (pki-roof `1)) ~[//unix] %hear (snag-packet 0 moves1))
+    (call nec(rof (pki-roof `1 %unregistered)) ~[//unix] %hear (snag-packet 0 moves1))
   ::  ~nec decrypted it and handed the $plea up to gall
   ::
   %+  expect-eq
@@ -1633,12 +2661,12 @@
         content=cot
     ==
   =^  moves1  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] (spoof bomb))
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] (spoof bomb))
   ::  and a payload that IS jam-shaped, but decodes to nothing that
   ::  names the sender -- the guard is not just +open-jam-shaped
   ::
   =^  moves2  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %hear [%& ~marbud] (spoof (jam [0 0])))
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %hear [%& ~marbud] (spoof (jam [0 0])))
   ;:  weld
     ::  the event survived both, and answered neither
     ::
@@ -1650,14 +2678,97 @@
       !>  %.n
     !>  (~(has by peers.ames-state.nec) our-comet2)
   ==
+::  The fixed life-1 proof namespace is a bootstrap coordinate, not a
+::  claim about the publisher's current life.  A life-2 comet must serve
+::  its current, genuinely signed gage there, and the receiver must admit
+::  that gage through the normal one-fragment proof path.
+::
+++  test-mage-life1-proof-endpoint-serves-a-life2-gage  ^-  tang
+  =/  [=lane:pact:ames blob=@]  cc-life2-proof-push
+  =/  =pact:pact:ames  (parse-packet:nec blob)
+  ?>  ?=(%page +<.pact)
+  =/  =gage:mess:ames  ;;(gage:mess:ames (cue dat.data.pact))
+  ?>  ?=(^ gage)
+  ?>  ?=(%open-packet p.gage)
+  =/  open  ;;(open-packet:ames q.gage)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer lane blob)
+  ;:  weld
+    (expect-eq !>(1) !>((div (add tob.data.pact 1.023) 1.024)))
+    (expect !>((jam-safe:ames dat.data.pact)))
+    (expect-eq !>(cc-comet) !>(sndr.open))
+    (expect-eq !>(2) !>(sndr-life.open))
+    (expect-eq !>(pass.ames-state.cc-life2) !>(pass.open))
+    (expect-eq !>(1) !>((count-writs moves)))
+  ==
+::
+++  test-heer-drops-a-malformed-inner-open-packet  ^-  tang
+  ::  Keep the same recognized proof path and genuine page signature as the
+  ::  valid fixtures.  Only the noun inside the advertised %open-packet gage
+  ::  is malformed; its failed cast must leave Ames unchanged.
+  ::
+  =/  [=lane:pact:ames blob=@]  cc-malformed-inner-proof-push
+  =/  =pact:pact:ames  (parse-packet:nec blob)
+  ?>  ?=(%page +<.pact)
+  =/  =gage:mess:ames  ;;(gage:mess:ames (cue dat.data.pact))
+  ?>  ?=(^ gage)
+  ?>  ?=(%open-packet p.gage)
+  =/  maybe-open=(unit open-packet:ames)
+    (mole |.(;;(open-packet:ames q.gage)))
+  =/  before  ames-state.nec
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer lane blob)
+  ;:  weld
+    (expect !>((jam-safe:ames dat.data.pact)))
+    (expect !>(?=(~ maybe-open)))
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-heer-drops-a-one-fragment-gage-cue-bomb  ^-  tang
+  ::  Keep the generated page's authenticated path and one-fragment
+  ::  envelope, but replace its anonymous body with the hostile jam
+  ::  backreference.  The event must survive and allocate no peer state.
+  ::
+  =/  [=lane:pact:ames blob=@]  cc-proof-push
+  =/  =pact:pact:ames  (parse-packet:nec blob)
+  ?>  ?=(%page +<.pact)
+  =.  tob.data.pact  (met 3 cue-bomb)
+  =.  dat.data.pact  cue-bomb
+  =/  bad-blob  (pact-to-blob pact)
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer lane bad-blob)
+  ;:  weld
+    (expect-eq !>(1) !>((div (add tob.data.pact 1.023) 1.024)))
+    (expect !>(!(jam-safe:ames dat.data.pact)))
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-heer-rejects-a-raw-malformed-suite-c-pass  ^-  tang
+  ::  %mage signed the page itself, so this reaches the embedded pass
+  ::  guard rather than failing outer page authentication.  As on the
+  ::  legacy path, the raw suite-%c atom must be rejected before +com.
+  ::
+  =/  [=lane:pact:ames blob=@]  cc-malformed-proof-push
+  =/  =pact:pact:ames  (parse-packet:nec blob)
+  ?>  ?=(%page +<.pact)
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer lane blob)
+  ;:  weld
+    (expect !>((jam-safe:ames dat.data.pact)))
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+  ==
 ::  A snub holds on |mesa too, and only on the ship it names.
 ::
 ::    +pe-hear tests .ships.snub the moment it has a $shot, before it
 ::    classifies anything, so nothing from a snubbed sender reaches the
-::    |ames receive path.  +pe-heer's %page branch had no such test:
-::    a snubbed comet could re-attest over |mesa, reach +al-take-proof,
-::    earn a %full from its domain verifier and be readmitted -- the
-::    one route back in that a permanent snub is supposed to deny.
+::    |ames receive path.  +pe-heer's %page branch needs the same rule:
+::    a snubbed comet must not re-attest over |mesa and mutate its
+::    verified key/peer state behind a transport-wide hard policy.
 ::
 ::    The regression the gate risks is the exact opposite, and it is
 ::    worse: a %page from an UNSNUBBED alien is the whole comet
@@ -1670,7 +2781,7 @@
 ++  test-heer-page-from-snubbed-comet-is-dropped  ^-  tang
   =^  m0  nec  (call nec ~[//unix] [%snub %deny %set ~[cc-comet]])
   =^  moves  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-proof-push)
   ;:  weld
     ::  dropped outright: no writ, and nothing else either
     ::
@@ -1687,7 +2798,7 @@
   ::  first contact, unimpeded: the gate must not cost us this.
   ::
   =^  moves  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-proof-push)
   %+  expect-eq  !>(1)  !>((count-writs moves))
 ::
 ++  test-heer-page-snubbed-on-an-allow-list  ^-  tang
@@ -1696,7 +2807,7 @@
   ::
   =^  m0  nec  (call nec ~[//unix] [%snub %allow %set ~[~dev]])
   =^  moves  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-proof-push)
   ;:  weld
     %+  expect-eq  !>(0)  !>((count-writs moves))
     %+  expect-eq  !>(0)  !>((lent moves))
@@ -1707,8 +2818,81 @@
   ::
   =^  m0  nec  (call nec ~[//unix] [%snub %allow %set ~[cc-comet]])
   =^  moves  nec
-    (call nec(rof (pki-roof ~)) ~[//unix] %heer cc-proof-push)
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-proof-push)
   %+  expect-eq  !>(1)  !>((count-writs moves))
+::
+++  test-heer-suite-c-name-is-always-bound  ^-  tang
+  ::  The page signature, packet sender, and page publisher all agree
+  ::  on .our-comet, but the carried pass hashes to .cc-comet.  Even a
+  ::  live domain cannot substitute one immutable identity for another.
+  ::
+  =.  chums.ames-state.nec
+    (~(put by chums.ames-state.nec) our-comet [%alien *ovni-state:ames])
+  =/  tried
+    %-  mole
+    |.  (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-misnamed-proof-push)
+  (expect !>(?=(~ tried)))
+::
+++  test-heer-suite-c-rejects-an-ineligible-sponsor  ^-  tang
+  ::  Legacy and Mesa admission share the same sponsorship invariant:
+  ::  a comet may be sponsored only by a star or another comet.  ~bus
+  ::  is a galaxy, so even a valid proof under a live domain is dropped.
+  ::
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =/  bad-roof  (pki-roof-with-sein ~ %live ~bus)
+  =^  moves  nec
+    (call nec(rof bad-roof) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-heer-suite-c-life1-falls-back-without-agent  ^-  tang
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    (expect-eq !>(0) !>((count-writs moves)))
+    %+  expect-eq  !>(&)
+    !>  ?=([~ %known *] (~(get by chums.ames-state.nec) cc-comet))
+  ==
+::
+++  test-heer-suite-c-life2-needs-agent  ^-  tang
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %unregistered)) ~[//unix] %heer cc-life2-proof-push)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+    %+  expect-eq  !>(%.n)
+    !>  ?=([~ %known *] (~(get by chums.ames-state.nec) cc-comet))
+  ==
+::
+++  test-heer-suite-c-suspended-domain-fails-closed  ^-  tang
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %suspended)) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-heer-suite-c-malformed-dose-fails-closed  ^-  tang
+  =/  before  (~(get by chums.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %malformed)) ~[//unix] %heer cc-proof-push)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>((~(get by chums.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-heer-suite-c-live-domain-routes-current-key  ^-  tang
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer cc-life2-proof-push)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    %+  expect-eq  !>(%.n)
+    !>  ?=([~ %known *] (~(get by chums.ames-state.nec) cc-comet))
+  ==
 ::  A committed $fief must give a conventionally sponsored peer a route.
 ::
 ::    +sy-put-ship has always set route=[%& ship] when =(ship (sein
