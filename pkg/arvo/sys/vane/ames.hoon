@@ -5209,11 +5209,22 @@
           ^+  event-core
           =+  %^  ev-trace  msg.veb  sndr.shot
               |.("got attestation")
-          ::  assert the comet can't pretend to be a moon or other address
+          ::  a comet can't pretend to be a moon or other address, and
+          ::  a bad attestation (malformed, mis-signed, wrong sponsor
+          ::  class) is a packet to drop, not an event to crash: this
+          ::  is the side of a ship that faces the open internet
           ::
-          ?>  ?=(%pawn (clan:title sndr.shot))
+          ?.  ?=(%pawn (clan:title sndr.shot))
+            %-  (slog leaf+"ames: dropped open packet from non-comet {<sndr.shot>}" ~)
+            event-core
           =/  ship-state  (~(get by peers.ames-state) sndr.shot)
-          =/  =open-packet  (sift-open-packet [rof our now] shot our life.ames-state)
+          =/  res=(unit open-packet)
+            %-  mole  |.
+            (sift-open-packet [rof our now] shot our life.ames-state)
+          ?~  res
+            %-  (slog leaf+"ames: dropped bad open packet from {<sndr.shot>}" ~)
+            event-core
+          =/  =open-packet  u.res
           ::  if we already know .sndr at this life or later, ignore
           ::  duplicate attestation; a confidential comet may
           ::  legitimately re-attest at a higher life
