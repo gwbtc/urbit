@@ -97,7 +97,7 @@ env:
   # which did not publish node/tcp-sidecar/nostrill.
   DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
   # The PKI gateway a comet's first boot fetches the galaxy table and
-  # network domains from (gw-vere -W; dawn.c =lamp= / =turf=).  gw-vere's
+  # network domains from (gw-vere --gateway; dawn.c =lamp= / =turf=).  gw-vere's
   # built-in default is http://143.198.70.9:8080, a droplet that is gone
   # (2026-09-16: unreachable; the comet-boot validation retried for
   # twelve minutes and failed).  Any ship's eyre serves the same scries;
@@ -1131,7 +1131,7 @@ jobs:
           COMET=$(echo "$MINER_OUT" | grep '^comet:' | sed 's/^comet: ~//')
           FEED=$(echo "$MINER_OUT" | grep '^feed:' | awk '{print $2}')
           echo "Mined comet: $COMET"
-          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" -W "$GW_GATEWAY"
+          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
           echo "Comet boot successful."
           kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1148,7 +1148,7 @@ jobs:
           echo "Mined comet: $COMET"
           # Generate a dummy feed key for testing
           FEED=$(openssl rand -hex 32)
-          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet -W "$GW_GATEWAY"
+          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
           echo "Comet boot with wallet successful."
           kill "$(cat ./mycomet-wallet/.urb/pid 2>/dev/null)" 2>/dev/null || true
