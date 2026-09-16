@@ -51,7 +51,9 @@ env:
   # reproduce the build. It is pinned by full SHA rather than by branch so a
   # given release is reproducible. To bump: read the diff on main, then paste
   # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
-  TCP_SIDECAR_REF: c362083af68ff6e7b30b8236d7e1659d800d3e9d
+  # 2026-09-16: gwbtc/tcp-sidecar hd/read-256k (on main c362083): 256 KB
+  # reads, so a 2 MB block is ~8 %receive events instead of ~250.
+  TCP_SIDECAR_REF: a85248d42c498294bf2525836d3a6e1146c4fc34
   # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
   # a README, so this is pinned to a full SHA rather than a branch name, same
   # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
