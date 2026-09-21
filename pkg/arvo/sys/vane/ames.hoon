@@ -3968,11 +3968,8 @@
                   chums.ames-state
                 (~(put by chums.ames-state) her known/tmp-per)
               ==
-            =+  ev-core=ev:(mesa:adult-core now eny rof)
-            =.  chums.ames-state.ev-core
-              (~(put by chums.ames-state) her known/tmp-per)
             =/  [=space cyf=(unit @) =user=path]
-              (decrypt-path:ev-core ames-path her)
+              (decrypt-path:mesa-core ames-path her)
             %-  ~(rep in for.req)
             |=  [=duct t=_tip]
             (~(put ju t) user-path [duct ames-path])
@@ -4055,7 +4052,7 @@
       ++  moves-28-to-29
         |=  [moz=_moz chums=(map @p chum-state-28-29) state=axle-28-29]
         ^-  (list move)
-        =+  mesa-core=(mesa:adult-core now eny rof)
+        =+  mesa-core=mesa:adult-core
         =+  fo-mop=fo-mop:fo:ev:mesa-core
         %-  ~(rep by chums)
         |=  [[=ship per-sat=chum-state-28-29] moz=_moz]
@@ -4278,7 +4275,7 @@
           ::  pop first off and check if it has an entry in the .tip
           ::
           =/  fo-core
-            %*  fo-core  fo:ev:(mesa:adult-core now eny rof)
+            %*  fo-core  fo:ev:mesa:adult-core
               ames-state  old
                       her  ship
                       per  +.c
@@ -4632,7 +4629,7 @@
         |=  old=axle
         ^-  (list move)
         ~>  %slog.0^leaf/"ames: migrating from state %36 to %37"
-        =+  fo-mop=fo-mop:fo:ev:(mesa:adult-core now eny rof)
+        =+  fo-mop=fo-mop:fo:ev:mesa:adult-core
         ^-  (list move)
         %-  ~(rep by chums.old)
         |=  [[=ship c=chum-state] moz=(list move)]
@@ -5609,7 +5606,7 @@
             ::  our own default network core if this comet doesn't support
             ::  %mesa
             ::
-            =+  sy-core=~(. sy:(mesa now eny rof) duct)
+            =+  sy-core=~(. sy:mesa duct)
             =.  sy-core
               +:(sy-put-ship:sy-core %ames sndr.shot point)
             =^  comet-moves  ames-state
@@ -6316,7 +6313,7 @@
             =<  sy-abet
             ~|  %regress-crashed
             %.  [`ship dry=%.n]
-            %*  sy-rege  sy:(mesa now eny rof)
+            %*  sy-rege  sy:mesa
               ames-state  ahoy-state
             ==
           ::  compare pre/post migrated states
@@ -6383,7 +6380,7 @@
           ::  check that chums has in fact the flow in chums for the
           ::  corresponding bone in the shut-packet
           ::
-          =+  ev-core=(ev-abed:ev:(mesa now eny rof) ~ sndr.shot +.chum-state)
+          =+  ev-core=(ev-abed:ev:mesa ~ sndr.shot +.chum-state)
           =+  fo-core=(fo-abed:fo:ev-core side=[(mix 1 bone) %bak])
           ?~  res=(fo-peek:fo-core %ack message-num)
             %.  event-core
@@ -7127,7 +7124,7 @@
                 =/  fo-core
                   =/  =^duct
                     (~(gut by by-bone.ossuary.peer-state) bone [/ames]~)
-                  =+  mesa-core=(mesa now eny rof)
+                  =+  mesa-core=mesa
                   :: XX check that we don't add a naxplanation .bone here?
                   ::
                   =?  flow  (~(has by flows.fren) bone^dire)
@@ -7512,7 +7509,7 @@
             ++  make-peeks
               |=  fren=fren-state
               ^-  (quip move axle)
-              =+  mesa-core=(mesa now eny rof)
+              =+  mesa-core=mesa
               =/  mesa-ev-core
                (%*(ev-abed ev:mesa-core ames-state ames-state) ~ her fren)
               =.  chums.ames-state  (~(put by chums.ames-state) her known/fren)
@@ -9725,7 +9722,6 @@
     ::  directed M E S s A ging
     ::
     ++  mesa
-      |=  [now=@da eny=@uvJ rof=roof]
       ::
       =<  ::  adult |mesa formal interface, after metamorphosis from larva
           ::
@@ -12795,8 +12791,7 @@
             |=  [her=^ship fren=fren-state state=axle]
             ^-  (quip move axle)
             =+  event-core=(ev:ames now^eny^rof hen state)
-            =/  mesa-core  (mesa now eny rof)
-            =.  mesa-core  mesa-core(ames-state state)
+            =/  mesa-core  mesa(ames-state state)
             =;  core=_event-core
               abet:core
             %-  ~(rep by pit.fren)
@@ -14269,7 +14264,7 @@
     +|  %helpers
     ::
     ++  pe-core  .
-    ++  me-core  (mesa now eny rof)
+    ++  me-core  mesa
     ++  am-core  (ames now eny rof)
     ++  ev-core  ev-core:ev:me-core
     ++  al-core  (al-abed:al:me-core hen)
@@ -14943,7 +14938,7 @@
   ^-  [(list move) _vane-gate]
   ~>  %spin.['call/ames']
   =*  sample  +<
-  =+  me-core=(mesa now eny rof)
+  =+  me-core=mesa
   =+  am-core=(ames now eny rof)
   =/  =task  ((harden task) wrapped-task)
   ?:  &(?=(~ unix-duct) ?=(?(%hear %heer %mess) -.task))
@@ -14999,7 +14994,7 @@
   ^-  [(list move) _vane-gate]
   ~>  %spin.['take/ames']
   =*  sample  +<
-  =+  me-core=(mesa now eny rof)
+  =+  me-core=mesa
   =+  am-core=(ames now eny rof)
   ?^  dud
     ~|(%ames-take-dud (mean tang.u.dud))
@@ -15058,7 +15053,7 @@
   ~>  %spin.['scry/ames']
   |=  [lyc=gang pov=path car=term bem=beam]
   =*  sample  +<
-  =+  me-core=(mesa now eny rof)
+  =+  me-core=mesa
   =+  am-core=(ames now eny rof)
   ?:  ?&  =(our p.bem)
           =(%$ q.bem)
