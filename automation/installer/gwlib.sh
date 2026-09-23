@@ -282,7 +282,18 @@ seed.bitcoin.jonasschnelli.ch dnsseed.emzy.de seed.bitcoin.wiz.biz
 seed.btc.petertodd.net seed.bitcoin.sprovoost.nl seed.mainnet.achownodes.xyz
 dnsseed.bitcoin.dashjr-list-of-p2p-nodes.us"
 
+# DNS_TOOL is chosen by the installer's preflight, but the supervisor runs
+# from a bare environment (var/<name>.env carries only GW_*), so with it
+# unset every lookup silently returned nothing: a sidecar crash was followed
+# by "pool refill: +0" and "re-seed FAILED ()", and the light client sat
+# with 0 live peers until someone noticed (first real mint, 2026-09-10).
+# Pick a resolver here when nobody did.
 gwl_resolve_a() {
+  if [ -z "${DNS_TOOL:-}" ]; then
+    for t in getent dig host python3; do
+      command -v "$t" >/dev/null 2>&1 && { DNS_TOOL="$t"; break; }
+    done
+  fi
   case "${DNS_TOOL:-}" in
     dig)  dig +short +time=3 +tries=1 A "$1" 2>/dev/null ;;
     host) host -W 3 -t A "$1" 2>/dev/null | awk '/has address/ {print $NF}' ;;
@@ -367,11 +378,16 @@ gwl_add_peers() {
     vals="$vals $(gwl_ip_hoon "$ip")"
   done
   [ -n "$vals" ] || return 1
+  # The list literal is `~[a b]`; a space after `~[` is a syntax error the
+  # ship reports as %thread-fail, which seed_peers used to read as "no reply"
+  # -- so every batch failed and the light client never got a peer
+  # (~fossyd's mint, 2026-09-10).  Trim the join's leading space.
+  vals="${vals# }"
   # shellcheck disable=SC2016  # $(ips t.ips) is Hoon recursion, not shell
   { printf '=/  ips=(list @ux)  ~[%s]\n' "$vals"
     printf '|-  ^-  form:m\n'
     printf "?~  ips  (pure:m !>('done'))\n"
-    printf ';<  ~  bind:m  (poke-our %%bitcoin-client %%add-earth-peer !>([%%ipv4 i.ips 8.333]))\n'
+    printf ';<  ~  bind:m  (poke-our %%bitcoin-client %%bitcoin-client-connect-peer !>([%%ipv4 i.ips 8.333]))\n'
     printf '$(ips t.ips)\n'
   } | gwl_eval 300
 }
@@ -379,7 +395,11 @@ gwl_add_peers() {
 # %bitcoin-client's ++peek is literally ~ for every path
 # (bitcoin-client.hoon:181-184), so status cannot be scried: &log-info dumps
 # it into the ship's log and we read it back out of there.
-gwl_log_info() { gwl_poke bitcoin-client log-info '!>(~)' 30 >/dev/null 2>&1 || true; }
+# Waits up to 10 min: a khan client that disconnects while the ship is still
+# working on its reply crashes the king (gwbtc/vere conn double-close), and
+# this poke is sent to busy ships constantly -- by boot.sh's liveness check,
+# by the supervisor, by operators.
+gwl_log_info() { gwl_poke bitcoin-client log-info '!>(~)' 600 >/dev/null 2>&1 || true; }
 
 # $1 key, e.g. %headers.  Prints the last value seen, dots stripped.
 gwl_log_last() {

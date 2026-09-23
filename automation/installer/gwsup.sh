@@ -89,23 +89,63 @@ recover() {
   log "INTERVENTION #$(( N_WEDGE + N_VERE + N_SIDE )) WEDGE (recover #$N_WEDGE): $1"
   [ -n "$(gwl_sidecar_pids)" ] || gwl_start_sidecar
   sleep 3
-  if gwl_poke bitcoin-client kill-peer-connections '!>(~)' 150 >/dev/null 2>&1; then
+  # gwl_poke's exit status is the pipeline's (it ends in `|| true`), so it
+  # cannot say whether the poke landed; the thread's own %ok reply can.
+  # Before node@hd/lc-peers the agent had no %kill-peer-connections arm at
+  # all, this poke nacked every time, and the log said "ok" regardless.
+  out="$(gwl_poke bitcoin-client kill-peer-connections '!>(~)' 150 2>/dev/null)"
+  if printf '%s' "$out" | grep -q '%ok'; then
     log "  kill-peer-connections ok"
   else
-    log "  kill-peer-connections FAILED (control socket unresponsive)"
+    log "  kill-peer-connections FAILED: $(printf '%s' "$out" | tail -c 120 | tr '\n' ' ')"
   fi
   sleep 5
   left="$(gwl_pool_left)"
   [ "${left:-0}" -lt 20 ] && log "  pool refill: +$(gwl_pool_fill 4)"
-  ip="$(gwl_take_peers 1)"
-  # One peer, then let getaddr gossip refill: header sync asks ONE peer for
-  # 2000 headers and waits, so extra peers buy resilience, not speed.
-  if [ -n "$ip" ] && gwl_add_peers "$ip" >/dev/null 2>&1; then
-    log "  re-seeded 1 peer: $ip"
+  # A handful of peers, not one: a single unreachable seed used to waste the
+  # whole cooldown, and the agent tops itself up from gossip either way.
+  # Well under the 25-per-batch bulk-add the sidecar is known to survive
+  # (boot.sh seed_peers).
+  ips="$(gwl_take_peers 5)"
+  n=0
+  for ip in $ips; do
+    if gwl_add_peers "$ip" >/dev/null 2>&1; then n=$(( n + 1 )); fi
+  done
+  if [ "$n" -gt 0 ]; then
+    log "  re-seeded $n peer(s): $(printf '%s' "$ips" | tr '\n' ' ')"
   else
-    log "  re-seed FAILED ($ip)"
+    log "  re-seed FAILED ($ips)"
   fi
   LAST_RECOVER="$(date +%s)"
+}
+
+# 4. live peers.  A ship with no live peers keeps writing events (block
+#    re-requests every few seconds, ping timers), so the event-log age never
+#    trips; it "looks healthy" and does nothing.  Ask the agent (the
+#    %log-info dump prints [%live-earth-peers N]) every PEER_EVERY polls and
+#    recover after two consecutive zeros.  node@hd/lc-peers heals this by
+#    itself (its sweep timer); this is the belt to that suspender, and the
+#    only fix a ship on an older %node gets.
+PEER_EVERY=4
+PEER_TICK=0
+PEER_ZEROS=0
+peer_check() {
+  gwl_log_info
+  sleep 5
+  live="$(gwl_log_last live-earth-peers)"
+  [ -n "$live" ] || return 0
+  if [ "$live" -eq 0 ]; then
+    PEER_ZEROS=$(( PEER_ZEROS + 1 ))
+  else
+    PEER_ZEROS=0
+  fi
+  if [ "$PEER_ZEROS" -ge 2 ]; then
+    now="$(date +%s)"
+    if [ $(( now - LAST_RECOVER )) -ge $COOLDOWN ]; then
+      PEER_ZEROS=0
+      recover "no live peers on two consecutive checks"
+    fi
+  fi
 }
 
 log "supervisor start (pier=$GW_PIER stale=${STALE}s poll=${POLL}s sidecar=${GW_SIDECAR:-none})"
@@ -137,6 +177,13 @@ while true; do
   if [ "$AGE" -gt "$STALE" ]; then
     now="$(date +%s)"
     if [ $(( now - LAST_RECOVER )) -ge $COOLDOWN ]; then recover "event log stale ${AGE}s"; fi
+  fi
+
+  # 4. live peers (see peer_check above)
+  PEER_TICK=$(( PEER_TICK + 1 ))
+  if [ "$PEER_TICK" -ge "$PEER_EVERY" ]; then
+    PEER_TICK=0
+    peer_check
   fi
 
   sleep $POLL
