@@ -48,6 +48,102 @@
   ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
   (pure:m ~)
 ::
+++  assert-snobbed
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /snobbed/noun
+  =+  ;;  val=(unit [form=?(%allow %deny) ships=(list @p)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  ?>  =(%deny form.u.val)
+  ?>  (lien ships.u.val |=(her=@p =(who her)))
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is soft-blocked"]
+  (pure:m ~)
+::
+++  assert-not-snobbed
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /snobbed/noun
+  =+  ;;  val=(unit [form=?(%allow %deny) ships=(list @p)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  ?>  =(%deny form.u.val)
+  ?>  !(lien ships.u.val |=(her=@p =(who her)))
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is not soft-blocked"]
+  (pure:m ~)
+::
+++  assert-known
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /chums/all/noun
+  =+  ;;  val=(unit (map @p [kind=?(%peer %chum) status=?(%alien %known)]))
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  =/  state  (~(get by u.val) who)
+  ?>  ?=(^ state)
+  ?>  =(%known status.u.state)
+  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} remains a known peer"]
+  (pure:m ~)
+::
+++  peer-bones
+  |=  [=ship who=@p core=?(%ames %mesa)]
+  =/  m  (strand:rand ,[snd=(set @ud) rcv=(set @ud)])
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  ?:  =(%mesa core)
+    =/  aqua-pax
+      %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+      /chums/(scot %p who)/noun
+    =+  ;;  val=(unit chum-state:ames)
+        (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+    ?>  ?=(^ val)
+    ?>  ?=([%known *] u.val)
+    =/  sides=(list side:ames)  ~(tap in ~(key by flows.+.u.val))
+    =/  snd=(set @ud)
+      %-  silt
+      %+  turn  (skim sides |=(s=side:ames =(%for dire.s)))
+      |=(s=side:ames bone.s)
+    =/  rcv=(set @ud)
+      %-  silt
+      %+  turn  (skim sides |=(s=side:ames =(%bak dire.s)))
+      |=(s=side:ames bone.s)
+    (pure:m [snd rcv])
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /bones/(scot %p who)/noun
+  =+  ;;  val=(unit [snd=(set @ud) rcv=(set @ud)])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  (pure:m u.val)
+::
+++  assert-bones-retained
+  |=  $:  =ship
+          who=@p
+          core=?(%ames %mesa)
+          before=[snd=(set @ud) rcv=(set @ud)]
+      ==
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ::  A vacuous equality would not establish flow retention.
+  ?>  ?|(?=(^ snd.before) ?=(^ rcv.before))
+  ;<  after=[snd=(set @ud) rcv=(set @ud)]
+      bind:m  (peer-bones ship who core)
+  ?>  =(before after)
+  ~?  >>  loud  [tag "{(cite:title ship)}: retained flows with {(cite:title who)}"]
+  (pure:m ~)
+::
 ++  assert-life-key-model
   |=  who=@p
   =/  m  (strand:rand ,~)
@@ -152,6 +248,16 @@
     :*  tag
         "{(cite:title observer)}: public point for {(cite:title who)} is life {(scow %ud expected-life)}, rift {(scow %ud expected-rift)}"
     ==
+  (pure:m ~)
+::
+::  +poke-snob: make .ship's fake %test-pki withdraw its vouch for .who
+::
+++  poke-snob
+  |=  [=ship who=@p]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ~?  >>  loud  [tag "{(cite:title ship)}: %test-pki withdraws its vouch for {(cite:title who)}"]
+  ;<  ~  bind:m  (poke-app ship %test-pki %noun [%snob who])
   (pure:m ~)
 ::
 ++  poke-self-verdict

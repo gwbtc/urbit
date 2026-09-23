@@ -327,7 +327,7 @@
     ::  the sending agent's name is the domain (1:1 by construction;
     ::  tasks from agents arrive on a [%gall %use dap ...] duct).  we
     ::  watch .pax on that agent for %verdict, %anew-response, and
-    ::  %stale-notice domain facts.  A fact on the same subscription is
+    ::  %snob-notice domain facts.  A fact on the same subscription is
     ::  allowed to carry %azimuth-udiffs only when ordinary %listen source
     ::  selection separately authorizes that agent; %anex alone does not.
     ::  We also watch the agent's liveness through clay %tire (subscribed on
@@ -956,30 +956,28 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %anew dom.res pass.res]
-        ::  %stale-notice: the domain agent observed a verified ship's
-        ::  attestation go out of date on-chain (its identity utxo was
-        ::  spent).  forget the point so the ship's next packet is
-        ::  re-verified from scratch, and tell %sybl subscribers
-        ::  (ames) to demote the peer to an alien.  never a snub:
-        ::  staleness is not fraud, and the replacement packet must
-        ::  be able to arrive.
+        ::  %snob-notice: the domain agent can no longer vouch for a
+        ::  verified ship's attestation (its identity utxo was spent,
+        ::  or the evidence was orphaned) and wants a fresh one.  the
+        ::  point is KEPT: the ship is still who it was, its flows
+        ::  stay up, and a later verdict that raises its rift goes
+        ::  through +feel's ordinary breach rule.  tell %sybl
+        ::  subscribers (ames) to soft-block the peer and solicit.
+        ::  never a snub: this is not fraud, and the replacement packet
+        ::  must be able to arrive.
         ::
-        ?:  ?=(%stale-notice p.cage.p.+>.hin)
-          =+  ;;(res=stale-notice q.q.cage.p.+>.hin)
+        ?:  ?=(%snob-notice p.cage.p.+>.hin)
+          =+  ;;(res=snob-notice q.q.cage.p.+>.hin)
           ?~  reg=(~(get by dos) dom.res)
             +>.$
           ?.  &(liv.u.reg =(dom.res app))
             +>.$
           ?.  (~(has in hep.u.reg) ship.res)
             +>.$
-          =.  dos
-            %+  ~(put by dos)  dom.res
-            u.reg(hep (~(del in hep.u.reg) ship.res))
-          =.  pos.zim.pki  (~(del by pos.zim.pki) ship.res)
           %-  curd  =<  abet
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
-          [%give %sybl %stale dom.res ship.res]
+          [%give %sybl %snob dom.res ship.res]
         ::  anything else is chain updates (udiffs).  Domain registration
         ::  authorizes verdicts for that domain; it does not confer a second,
         ::  unscoped way to rewrite Jael points.  Generic udiffs require the
