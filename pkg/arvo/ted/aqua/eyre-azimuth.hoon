@@ -82,8 +82,9 @@
           /i/http-client/0v1n.2m9vh
           %receive
           num.u.ask-load
-          [%start [200 ~] `(as-octs:mimes:html (jam *versioned-state:dice)) &]
+          [%start [200 ~] `(as-octs:mimes:html (jam *versioned-snap:dice)) &]
       ==
+    %-  some
     :*  %pass  /aqua-events
         %agent  [our %aqua]
         %poke  %aqua-events
@@ -318,11 +319,11 @@
 ++  dawn
   |=  [who=ship feed=(unit feed:jael)]
   ^-  dawn-event:jael
-  =/  spon=(list [ship point:azimuth])
+  =/  spon=(list [ship point-0:azimuth-types])
     %-  flop
-    |-  ^-  (list [ship point:azimuth])
+    |-  ^-  (list [ship point-0:azimuth-types])
     =/  =ship  (^sein:title who)
-    =/  a-point=[^ship point:azimuth]
+    =/  a-point=[^ship point-0:azimuth-types]
       =/  spon-spon  [& (^sein:title ship)]
       =/  life-rift  ~|([ship lives.state] (~(got by lives.state) ship))
       =/  =life  lyfe.life-rift
