@@ -347,10 +347,14 @@ dogfood rotations work mechanically.
 
 ## 11. Kernel chapter review checkpoint (2026-09-07)
 
-This checkpoint describes the uncommitted work on `hd/cc-snob`, based on
+This historical checkpoint describes the then-uncommitted work on `hd/cc-snob`, based on
 `79f649bea8`. It is a review boundary, not an upstream-readiness or daily-driver
 signoff. The companion userspace has not been changed in this chapter, and the
-internal `%snob` / other-kernel-fixes PR split has not yet been made.
+internal `%snob` / other-kernel-fixes PR split had not yet been made. For the
+subsequent split and September 21 RC/Mesa-core preparation, see the
+[split record](pluggable-comet-pki-split.md) and
+[current rebase evidence](pluggable-comet-pki-rebase-408k2.md). The results in
+this section are historical and are not fresh Aqua results for the rebased tips.
 
 The original signing diagnosis needs a precise qualification: `%rekey` already
 replaced Ames's whole private crypto core, including both `sgn` and `cry`.
@@ -379,14 +383,27 @@ source changes were comments only.
 | `-ph/cc/breach %ames` and `%mesa` | Failed during setup | Missing remote Jael point, before traffic or breach: old fixtures use generic comet `udiff` injection now rejected by authority checks; these runs establish no breach result |
 | `git diff --check` | Passed | Whitespace check, not behavioral verification |
 
-The Ames full-suite run used revision 40, before the Jael-only final guard;
-there have been no subsequent Ames behavior edits. The six failures were also
-reproduced against the comparison baseline during the audit:
+The checkpoint's Ames full-suite run used revision 40, before the Jael-only
+final guard; there were no subsequent Ames behavior edits within that checkpoint.
+The six failures were also reproduced against its comparison baseline:
 
 - extra `%nail` effects in `test-message-flow`,
   `test-ames-flow-with-new-rift`, and `test-alien-encounter`;
 - crashes in `test-comet-sends-mesa`, `test-comet-message-flow`, and
   `test-comet-comet-message-flow`.
+
+The initial September 21 recheck reproduced the six on `edf656c1fb`, RC plus
+Mesa restoration, and every prepared CC stage (41/81/89 Ames passes, each with
+three failures and three crashes). The subsequent
+[history investigation](pluggable-comet-pki-ames-test-history.md) establishes
+the July 21 fork point, identical in kernel/tests to that September base, and
+reproduces the same six before the earlier CC draft on July 14. It also finds
+the first Groundwire break in October 2025, with a green upstream parent.
+Two historical comet-routing bugs were fixed in June; corrected sponsorship
+fixtures and the proof-path expectation make all 20 July tests pass without
+production changes. The prepared branch tests have not adopted those diagnostic
+patches, so their recorded failures remain. These unit-test issues remain
+separate from the breach scenario's later authority-check/fixture mismatch.
 
 The full Ames suite is therefore still red. Neither the Aqua successes nor the
 baseline comparison substitutes for repairing that coverage. The obsolete

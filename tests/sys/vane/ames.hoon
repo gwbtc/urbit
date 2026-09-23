@@ -1651,6 +1651,36 @@
     (expect-eq !>([%deny (silt ~[~rus])]) !>(after-add))
     (expect-eq !>([%deny (silt ~[~rus ~fed])]) !>(snub.ames-state.nec))
   ==
+::  Preserve RC state when adding the soft blocklist, including cached larvae.
+::
+++  test-snob-migrates-rc-adult-and-cached-larva  ^-  tang
+  =/  old=axle-37:ames
+    :*  peers.ames-state.nec
+        unix-duct.ames-state.nec
+        life.ames-state.nec
+        rift.ames-state.nec
+        bug.ames-state.nec
+        snub.ames-state.nec
+        cong.ames-state.nec
+        dead.ames-state.nec
+        server-chain.ames-state.nec
+        [saf ring pass]:ames-state.nec
+        chums.ames-state.nec
+        core.ames-state.nec
+    ==
+  =/  larva
+    (%*($ ames ahoy-on %.n, +< ~nec) ~1111.1.1 `@`0xdead.beef rof.nec)
+  =/  adult-loaded  (load:larva [%37 %adult old])
+  =/  cache-loaded  (load:larva [%37 %larva old `[%37 old]])
+  =/  adult-after  +:(call:(adult-loaded) ~[//unix] ~ %born ~)
+  =/  cache-after  +:(call:(cache-loaded) ~[//unix] ~ %born ~)
+  =/  saved  stay:(adult-after)
+  ;:  weld
+    (expect-eq !>(ames-state.nec) !>(ames-state.adult-after))
+    (expect-eq !>(ames-state.adult-after) !>(ames-state.cache-after))
+    (expect-eq !>(%38) !>(-.saved))
+  ==
+::
 ::  %snob is a separate, soft blocklist task with the same edit algebra.
 ::
 ++  test-snob-task-edits-only-soft-list  ^-  tang

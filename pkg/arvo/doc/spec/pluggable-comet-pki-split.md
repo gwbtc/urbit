@@ -3,6 +3,13 @@
 This split preserves the reviewed combined kernel chapter without making new
 signing, readiness, or own-rift design changes.
 
+The [September 21 RC/Mesa-core preparation](pluggable-comet-pki-rebase-408k2.md)
+supersedes the old base and state-version assumptions for current development.
+Its local update branches will target the existing CC branches after the RC
+and Mesa prerequisite PRs merge. No follow-up PR is open yet. That preparation
+preserves the feature-review dependencies below; it does not itself merge the
+feature PRs.
+
 ## Branches and merge order
 
 1. [PR #71](https://github.com/gwbtc/urbit/pull/71), `hd/cc-key-rotation`, targets `hd/cc-kernel`: suite-C name/live-key separation,
@@ -36,10 +43,14 @@ The remote `hd/cc-kernel` also advanced by a CI-only credential-reference
 change, `284820ea2d`, after the reviewed local base `6298aff62a`. The split
 must preserve that newer base change; it is not part of either kernel PR.
 
-The composed source/test tree must match the checkpoint, with only the newer
-base CI file and explicit documentation additions excepted. Separate
-prerequisite compilation/tests are required because combined-tree equivalence
-alone does not prove that the extracted first PR stands on its own.
+At the original extraction, the composed source/test tree was required to match
+the checkpoint, with only the newer base CI file and explicit documentation
+additions excepted. The current RC rebase additionally incorporates upstream
+migrations, the restored direct Mesa core, and the state-38 snob adaptation;
+it is no longer byte-identical to that historical checkpoint. Each current
+stage was separately compiled, freshly booted, and tested, as recorded in the
+rebase evidence. Combined-tree equivalence alone does not prove that the
+extracted first PR stands on its own.
 
 The September 7 verification results and known failures remain recorded in
 the lifecycle checkpoint. No end-to-end Bitcoin regtest or live-own-rift
@@ -47,6 +58,16 @@ success should be inferred from the PR split. The untweaked-versus-tweaked
 life-1 signing question remains open in lifecycle §12.
 
 ## Split verification (2026-09-09)
+
+These are the original split results. The current key-rotation candidate again
+passes 81 Ames cases and all 25 Jael cases, plus all 18 RC Mesa cases. Its same
+six Ames failures are independently confirmed at the original July 21 fork
+point (kernel/tests identical to `edf656c1fb`) and the July 14 base before the
+earlier CC draft. The [history investigation](pluggable-comet-pki-ames-test-history.md)
+traces the first break to October 2025 and distinguishes June production routing
+repairs from remaining fixture drift. Its test-only corrections make the July
+suite green; they are diagnostic patches, not part of these candidate results.
+The Aqua results below were not rerun as part of the RC rebase.
 
 | Check | Result |
 |---|---|
@@ -59,11 +80,13 @@ life-1 signing question remains open in lifecycle §12.
 | Composed source/test equivalence | Matches the preserved checkpoint byte-for-byte |
 | Diff whitespace checks | Passed |
 
-The already-upgraded test host cannot be downgraded from Ames state 33 to
-the prerequisite's state 32, nor can its global Lull types compile the old
+At that historical checkpoint, the already-upgraded test host could not be
+downgraded from Ames state 33 to the prerequisite's state 32, nor could its global Lull types compile the old
 `%stale` interface. Accordingly, the prerequisite was built from an isolated
 source desk and its unit tests run on a fresh ship booted from that pill.
 No backward state migration or compatibility shim was added for testing.
+The current RC uses state 37 in kernel/key rotation and state 38 in snob;
+the September 21 runs likewise used a fresh pill and ship for each stage.
 
 The reused-host Mesa run eventually completed initial contact and reached an
 authorized/active life 2, but did not produce the final hi acknowledgement
