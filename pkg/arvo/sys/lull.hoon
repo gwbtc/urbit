@@ -2900,7 +2900,7 @@
   +$  gift                                              ::  out result <-$
     $%  [%blit p=(list blit)]                           ::  terminal output
         [%logo ~]                                       ::  logout
-        [%meld ~]                                       ::  unify memory
+        [%meld $@(~ [memo=? ford=?])]                   ::  unify memory
         [%pack ~]                                       ::  compact memory
         [%trim p=@ud]                                   ::  trim kernel state
         [%logs =told]                                   ::  system output
@@ -2918,7 +2918,7 @@
         [%logs p=(unit ~)]                              ::  watch system output
         [%mass ~]                                       ::  run memory report
         [%quac p=(list quac)]                           ::  memory runtime
-        [%meld ~]                                       ::  unify memory
+        [%meld $@(~ [memo=? ford=?])]                   ::  unify memory
         [%pack ~]                                       ::  compact memory
         [%seat =desk]                                   ::  install desk
         [%shot ses=@tas task=session-task]              ::  task for session
@@ -2991,7 +2991,7 @@
     $%  [%crop p=@ud]                                   ::  trim kernel state
         $>(%crud told)                                  ::
         [%heft ~]                                       ::
-        [%meld ~]                                       ::  unify memory
+        [%meld $@(~ [memo=? ford=?])]                   ::  unify memory
         [%pack ~]                                       ::  compact memory
         $>(%text told)                                  ::
         [%verb ~]                                       ::  verbose mode
@@ -3695,6 +3695,7 @@
         [%jolt =desk =dude]                             ::  (re)start agent
         [%idle =dude]                                   ::  suspend agent
         [%load =load]                                   ::  load agent
+        [%bump =beak bump=(list [=dude =agent])]        ::  load agent in a desk
         [%nuke =dude]                                   ::  delete agent
         [%doff dude=(unit dude) ship=(unit ship)]       ::  kill subscriptions
         [%rake dude=(unit dude) all=?]                  ::  reclaim old subs
@@ -4850,6 +4851,10 @@
       ++  validate-mark
         |=  [in=* =mark =bowl]
         ^-  cage
+        ?:  =(%noun mark)
+          ::  skip validating raw nouns
+          ::
+          [%noun %noun in]
         =+  .^  =dais:clay  %cb
                 /(scot %p our.bowl)/[q.byk.bowl]/(scot %da now.bowl)/[mark]
             ==
@@ -4874,6 +4879,13 @@
           ?.  ?=(%agent -.in)                  `in
           ?.  ?=(%fact -.sign.in)              `in
           ?:  ?=(%thread-done p.cage.sign.in)  `in
+          ::  if the fact has a %noun type, then it either has a %noun-like
+          ::  mark or it comes from raw-fact in Gall, whose validation got
+          ::  deferred to get the mark from the correct desk. In the former case
+          ::  the validation will no-op, and in the latter case it will fully
+          ::  validate the raw noun.
+          ::
+          ?.  ?=(%noun p.q.cage.sign.in)       `in
           ::
           :-  ~
           :^  %agent  wire.in  %fact

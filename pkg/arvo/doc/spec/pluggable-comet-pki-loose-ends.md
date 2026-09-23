@@ -162,6 +162,20 @@ records the full Ames suite's six inherited failures as well; the testing
 chapter must restore a green, meaningful baseline rather than count only the
 new passing cases.
 
+The [September 21 rebase evidence](pluggable-comet-pki-rebase-408k2.md)
+independently traces those six Ames unit failures back to the original shared
+base `edf656c1fb`, before the RC, Mesa restoration, and later CC branch changes
+(although that base already includes the earlier CC draft). The subsequent
+[history investigation](pluggable-comet-pki-ames-test-history.md) reaches the
+October 2025 Groundwire introduction, isolates the June routing repairs, and
+makes the July pre-draft suite fully green with test-only fixture corrections. Each prepared
+CC stage reproduces exactly those failures and adds passing coverage; changed
+snub/stale policies also replace specific older assertions, listed in that
+report. The breach-scenario setup failure described above is not one of those
+six and has not been demonstrated on that original base. It belongs to the
+later Jael authority-check/fixture mismatch. The rebase did not rerun Aqua,
+Bitcoin regtest, or live-own-rift scenarios.
+
 ## 6. Competing attestations versus local proof-routing races
 
 The fixed Mesa paths tolerate one proof already in flight while Jael's local

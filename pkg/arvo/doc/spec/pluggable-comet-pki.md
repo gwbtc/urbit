@@ -10,6 +10,10 @@ The `hd/cc-key-rotation` prerequisite does not yet include `%snob`; the stacked
 `hd/cc-snob-only` PR adds it. Until both are applied, the inherited `%stale`
 withdrawal path remains. See `pluggable-comet-pki-split.md` for branch scope.
 
+The [408k-2 rebase report](pluggable-comet-pki-rebase-408k2.md) records the
+restored upstream Mesa structure, prepared CC branch order, and measured
+failure baseline versus the additional coverage in each successive branch.
+
 Arvo has always had exactly one kind of self-signed identity: the comet,
 whose `@p` is a fingerprint of its own key. A comet is free but
 unaccountable, so it is cheap to make a million of them. Pluggable comet

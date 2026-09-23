@@ -51,7 +51,9 @@ env:
   # reproduce the build. It is pinned by full SHA rather than by branch so a
   # given release is reproducible. To bump: read the diff on main, then paste
   # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
-  TCP_SIDECAR_REF: c362083af68ff6e7b30b8236d7e1659d800d3e9d
+  # 2026-09-16: gwbtc/tcp-sidecar hd/read-256k (on main c362083): 256 KB
+  # reads, so a 2 MB block is ~8 %receive events instead of ~250.
+  TCP_SIDECAR_REF: a85248d42c498294bf2525836d3a6e1146c4fc34
   # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
   # a README, so this is pinned to a full SHA rather than a branch name, same
   # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
@@ -71,7 +73,15 @@ env:
   # reorg repair is broken on reorgs; at or above it, a %groundwire
   # without the repair is broken on reorgs. Check GROUNDWIRE_BRANCH has
   # the matching desk before bumping.
-  NODE_REF: 063720b920a44109b7129a189f2f2e974dffb728
+  #
+  # fa10f581 (2026-09-16, gwbtc/node branch hd/lc-peers, based on 063720b9):
+  # the peer set heals itself (stale connects reaped, a sweep timer
+  # reconnects, no bans for local faults), the block deserialiser keeps a
+  # cursor instead of copying the block per field, and the four patches
+  # this workflow used to apply with sed are in the desk. NOT the develop
+  # tip: develop renamed /sur/bitcoin/light-client and the marks after
+  # 063720b9, and %gw-btc still consumes the old names.
+  NODE_REF: fa10f581ff556ec6b0757c592fa805b5a8762e62
   # desks
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
@@ -86,6 +96,14 @@ env:
   # can actually serve every one of them -- unlike production's dister,
   # which did not publish node/tcp-sidecar/nostrill.
   DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
+  # The PKI gateway a comet's first boot fetches the galaxy table and
+  # network domains from (gw-vere --gateway; dawn.c =lamp= / =turf=).  gw-vere's
+  # built-in default is http://143.198.70.9:8080, a droplet that is gone
+  # (2026-09-16: unreachable; the comet-boot validation retried for
+  # twelve minutes and failed).  Any ship's eyre serves the same scries;
+  # this is the sponsor's, on the port its runtime currently listens on.
+  # The durable fix is gwbtc/vere#23 (no gateway at boot).
+  GW_GATEWAY: http://146.190.199.0:80
 
 jobs:
   # =============================================================
@@ -368,77 +386,13 @@ jobs:
           ./automation/desk-populate.sh node ./zod
           cp -rL gwbtc-node/desk/* ./zod/node/
 
-          # ======================== TEMPORARY ========================
-          # Two patches so gwbtc/node@NODE_REF installs on a kelvin 408
-          # kernel. Both edit only the copy in Clay's mount, never the
-          # checkout, so `gwbtc-node` stays exactly what NODE_REF names.
-          # Delete each one as node fixes it upstream; see the report in
-          # PR #67 for the asks. This is the same in-CI patching that
-          # build-extras does to comet-miner with sed.
-          #
-          # BOTH re-checked against node@063720b9 on 2026-08-12 and both
-          # are STILL NEEDED: desk/sys.kelvin is still a bare [%zuse 409],
-          # and both bare [%block-filter] call sites are still there
-          # (app/bitcoin-client.hoon:509 and :537). Re-check on every
-          # NODE_REF bump and delete whichever has landed.
-          #
-          # 1. Kelvin. node's desk/sys.kelvin reads [%zuse 409]; this
-          #    kernel is 408, so the desk will not install as published.
-          #    Widen the weft to accept both. gwbtc/tcp-sidecar's desk
-          #    already ships 410/409/408 for exactly this reason, which is
-          #    both the precedent and the upstream ask.
-          #    DELETE ONCE node's sys.kelvin lists 408.
-          echo '[%zuse 409]'  > ./zod/node/sys.kelvin
-          echo '[%zuse 408]' >> ./zod/node/sys.kelvin
-
-          # 2. app/bitcoin-client.hoon passes a bare `[%block-filter]` to
-          #    ~(del in ...) at two call sites. `[a]` is just `a`, so that
-          #    is the atom %block-filter, not the cell [%block-filter ~]
-          #    the set holds. +del:in casts its argument to the set's item
-          #    type, the atom does not nest under the cell, and Clay
-          #    nest-fails -- which crashes the %zeal that makes the desk
-          #    live, i.e. it kills the boot, not just the agent. Verified
-          #    against a fake ~zod on this kernel.
-          #    DELETE ONCE node writes [%block-filter ~] at both sites.
-          #    No -i.bak: a stray .bak in the mount has no mark and would
-          #    fail the commit.
-          BAD=$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)
-          echo "bare [%block-filter] call sites patched: ${BAD}"
-          sed -i 's/\[%block-filter\])/[%block-filter ~])/g' ./zod/node/app/bitcoin-client.hoon
-
-          # 3. mar/bitcoin-client/connect-peer.hoon writes its seven ?+
-          #    cases as bare cords ('ipv4'), not terms (%'ipv4'). A ?+
-          #    case is a ?= pattern, so a bare cord is a SYNTAX ERROR and
-          #    the file does not parse on any kernel. Its twin,
-          #    disconnect-peer.hoon, has the identical block written
-          #    correctly with %'...' -- so this is a typo in one of a
-          #    matched pair, not a kelvin disagreement. Nothing in
-          #    %gw-btc uses this mark; it is the explorer's connect
-          #    button. Added by gwbtc/node@0267143, still present at
-          #    develop (d214564).
-          #    DELETE ONCE node prefixes the seven cases with %.
-          CP=./zod/node/mar/bitcoin-client/connect-peer.hoon
-          BARE=$(grep -cE "^ +'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'" "$CP" || true)
-          echo "bare cord ?+ cases patched in connect-peer: ${BARE}"
-          sed -i -E "s/^( +)'(ipv4|ipv6|torv2|torv3|i2p|cjdns|yggdrasil)'/\\1%'\\2'/" "$CP"
-
-          # 4. mar/bitcoin-client/best-block.hoon was not updated when
-          #    063720b9 changed the mold it prints. Its %reorg-rollback
-          #    branch still reads block-height.bes / block-hash.bes, and
-          #    on that branch those legs are now under .last-common --
-          #    so the file fails to compile with -find.block-height.bes,
-          #    in the very commit that introduced the change. Rewrite the
-          #    two reads to go through .last-common; .stale-branch is
-          #    left out of the JSON rather than invented here, since the
-          #    upstream shape for it is node's to choose.
-          #    DELETE ONCE node fixes its own mark.
-          BB=./zod/node/mar/bitcoin-client/best-block.hoon
-          echo "best-block mar %reorg-rollback reads repointed at .last-common"
-          sed -i '/%reorg-rollback/,$ {
-            s/block-height\.bes/block-height.last-common.bes/
-            s/block-hash\.bes/block-hash.last-common.bes/
-          }' "$BB"
-          # ====================== END TEMPORARY ======================
+          # The four in-CI patches this step used to apply (sys.kelvin 408,
+          # [%block-filter ~], connect-peer mark cases, best-block mark
+          # .last-common reads) are in the desk itself as of NODE_REF
+          # (gwbtc/node hd/lc-peers). Guard against a NODE_REF that has
+          # lost them rather than silently re-patching: fail the build.
+          grep -q '%zuse 408' ./zod/node/sys.kelvin
+          test "$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)" = 0
 
           # desk.ship needs a %ship mark, or clay drops the commit silently.
           mkdir -p "./zod/node/mar"
@@ -1177,7 +1131,7 @@ jobs:
           COMET=$(echo "$MINER_OUT" | grep '^comet:' | sed 's/^comet: ~//')
           FEED=$(echo "$MINER_OUT" | grep '^feed:' | awk '{print $2}')
           echo "Mined comet: $COMET"
-          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED"
+          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
           echo "Comet boot successful."
           kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1194,7 +1148,7 @@ jobs:
           echo "Mined comet: $COMET"
           # Generate a dummy feed key for testing
           FEED=$(openssl rand -hex 32)
-          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet
+          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
           echo "Comet boot with wallet successful."
           kill "$(cat ./mycomet-wallet/.urb/pid 2>/dev/null)" 2>/dev/null || true
