@@ -1,11 +1,11 @@
-/+  gw-io=ph-gw-io
+/+  cc-io=ph-cc-io
 |=  arg=vase
 =/  m  (strand:rand ,vase)
 =/  core=?(%ames %mesa)  (fall !<((unit ?(%ames %mesa)) arg) %ames)
 ::
 =/  loud  %.y
-=/  tag  %gw-key-cycle-sponsor
-=/  io  ~(. gw-io loud tag)
+=/  tag  %cc-key-cycle-sponsor
+=/  io  ~(. cc-io loud tag)
 ::
 =/  comet-1  ~fasteg-dinhet-malrum-ransub--hocduc-digtev-radsut-marbud
 =/  comet-2  ~daldyl-nildem-dispec-tilryx--dondus-dirmet-tintyl-marbud
@@ -21,10 +21,10 @@
 ::
 ;<  ~  bind:m  start-simple:io
 ::
-;<  ~  bind:m  (start-gw-comet:io comet-1 core onchain)
-;<  ~  bind:m  (start-gw-comet:io comet-2 core onchain)
-;<  ~  bind:m  (start-gw-comet:io comet-3 core onchain)
-;<  ~  bind:m  (start-gw-comet:io comet-4 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-1 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-2 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-3 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-4 core onchain)
 ::
 ;<  ~  bind:m  (send-hi:io comet-1 comet-2)
 ;<  ~  bind:m  (send-hi:io comet-3 comet-4)

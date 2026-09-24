@@ -1,21 +1,20 @@
 /+  *test, *vere
 |%
-::  example point for ~zod
+::  example jael point for ~zod
 ::
 ++  pot
-  ^-  point:azimuth-types
-  :+  [0x0 0x0 0x0 0x0]
-    :*  ~
-        life=1
-         pass=2.448.360.348.730.164.860.814.441.775.703.143.856.915.192.920.
-        639.124.529.297.987.279.849.833.790.775.864.413.949.853.880.667.744.
-        188.597.545.066.664.466.963.044.328.182.155.965.137.512.758.548.384.
-        637.214.562
-        continuity-number=0
-        sponsor=[& ~zod]
-        escape=~
-    ==
-  [~ u=[spawn-proxy=0x0 spawned=~]]
+  ^-  point:jael
+  =/  =pass
+    2.448.360.348.730.164.860.814.441.775.703.143.856.915.192.920.
+    639.124.529.297.987.279.849.833.790.775.864.413.949.853.880.667.744.
+    188.597.545.066.664.466.963.044.328.182.155.965.137.512.758.548.384.
+    637.214.562
+  :*  rift=0
+      life=1
+      keys=(malt [1 1 pass] ~)
+      sponsor=`~zod
+      fief=~
+  ==
 ::  secret key for ~zod
 ::
 ++  sec
@@ -40,25 +39,25 @@
   =/  fed  [~zod 1 sec ~]
   %+  expect-eq
     !>  &+[[%2 ~] ~zod 0 [1 sec]~]
-    !>  (veri:dawn ~zod fed pot ~)
+    !>  (veri:dawn ~zod fed pot ~ &)
 ::
 ++  test-veri-not-spawned
   =/  fed  [~zod 1 sec ~]
   %+  expect-eq
     !>  |+[%not-keyed ~]
-    !>  (veri:dawn ~zod fed =>(pot .(net ~)) ~)
+    !>  (veri:dawn ~zod fed =>(pot .(keys ~)) ~ &)
 ::
 ++  test-veri-wrong-key
   =/  fed  [~zod 1 sec:ex:(pit:nu:cric:crypto 24 %foo %b ~) ~]
   %+  expect-eq
     !>  |+[%key-mismatch ~]
-    !>  (veri:dawn ~zod fed pot ~)
+    !>  (veri:dawn ~zod fed pot ~ &)
 ::
 ++  test-veri-life-mismatch
   =/  fed  [~zod 2 sec ~]
   %+  expect-eq
     !>  |+[%life-mismatch ~]
-    !>  (veri:dawn ~zod fed pot ~)
+    !>  (veri:dawn ~zod fed pot ~ &)
 ::
 ++  test-veri-bad-multikey
   =/  fed=feed:jael
@@ -69,23 +68,23 @@
     ==
   %+  expect-eq
     !>  |+[%key-mismatch %life-mismatch ~]
-    !>  (veri:dawn ~zod fed pot ~)
+    !>  (veri:dawn ~zod fed pot ~ &)
 ::
 ++  test-veri-none-multikey
   %+  expect-eq
     !>  |+[%no-key ~]
-    !>  (veri:dawn ~zod [[%1 ~] ~zod ~] pot ~)
+    !>  (veri:dawn ~zod [[%1 ~] ~zod ~] pot ~ &)
 ::
 ++  test-veri-already-booted
   =/  fed  [~zod 1 sec ~]
   ;:  weld
     %+  expect-eq
       !>  |+[%already-booted ~]
-      !>  (veri:dawn ~zod fed pot `[1 |])
+      !>  (veri:dawn ~zod fed pot `[1 |] &)
   ::
     %+  expect-eq
       !>  |+[%already-booted ~]
-      !>  (veri:dawn ~zod fed pot `[2 &])
+      !>  (veri:dawn ~zod fed pot `[2 &] &)
   ==
 ::
 ++  test-veri-earl-good
@@ -99,7 +98,7 @@
     [[%2 ~] who 0 [1 sec:ex:cic]~]
   %+  expect-eq
     !>  &+fed
-    !>  (veri:dawn who fed pot ~)
+    !>  (veri:dawn who fed pot ~ &)
 ::
 ++  test-veri-earl-parent-not-keyed
   =/  cic  (pit:nu:cric:crypto 24 %foo %b ~)
@@ -112,7 +111,7 @@
     [[%2 ~] who 0 [1 sec:ex:cic]~]
   %+  expect-eq
     !>  &+fed
-    !>  (veri:dawn who fed =>(pot .(net ~)) ~)
+    !>  (veri:dawn who fed =>(pot .(keys ~)) ~ &)
 ::
 ++  test-veri-pawn-good
   =/  cic  (pit:nu:cric:crypto 24 %foo %b ~)
@@ -120,7 +119,7 @@
   =/  fed  [who 1 sec:ex:cic ~]
   %+  expect-eq
     !>  &+[[%2 ~] who 0 [1 sec:ex:cic]~]
-    !>  (veri:dawn who fed *point:azimuth-types ~)
+    !>  (veri:dawn who fed *point:jael ~ &)
 ::
 ++  test-veri-pawn-key-mismatch
   =/  cic  (pit:nu:cric:crypto 24 %foo %b ~)
@@ -128,7 +127,7 @@
   =/  sed  [who 1 sec:ex:(pit:nu:cric:crypto 24 %bar %b ~) ~]
   %+  expect-eq
     !>  |+[%key-mismatch ~]
-    !>  (veri:dawn who sed *point:azimuth-types ~)
+    !>  (veri:dawn who sed *point:jael ~ &)
 ::
 ++  test-veri-pawn-invalid-life
   =/  cic  (pit:nu:cric:crypto 24 %foo %b ~)
@@ -136,7 +135,7 @@
   =/  sed  [who 2 sec:ex:cic ~]
   %+  expect-eq
     !>  |+[%invalid-life ~]
-    !>  (veri:dawn who sed *point:azimuth-types ~)
+    !>  (veri:dawn who sed *point:jael ~ &)
 ::
 ++  test-veri-pawn-already-booted
   =/  cic  (pit:nu:cric:crypto 24 %foo %b ~)
@@ -144,5 +143,5 @@
   =/  sed  [who 1 sec:ex:cic ~]
   %+  expect-eq
     !>  |+[%already-booted ~]
-    !>  (veri:dawn who sed *point:azimuth-types `[1 |])
+    !>  (veri:dawn who sed *point:jael `[1 |] &)
 --

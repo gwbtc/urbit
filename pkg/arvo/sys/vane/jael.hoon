@@ -326,8 +326,8 @@
     ::
     ::  the sending agent's name is the domain (1:1 by construction;
     ::  tasks from agents arrive on a [%gall %use dap ...] duct).  we
-    ::  watch .pax on that agent for %writ-response / %anew-response
-    ::  facts (attestation verdicts, fresh self-attestations) and
+    ::  watch .pax on that agent for %verdict / %anew-response
+    ::  facts (attestation outcomes, fresh self-attestations) and
     ::  %azimuth-udiffs facts (ongoing chain updates); and we watch
     ::  the agent's liveness through clay %tire (subscribed on first
     ::  registration), reacting to its desk going down as %gost and
@@ -337,7 +337,17 @@
       =/  dom
         ?>  ?=([[%gall %use @ @ *] *] hen)
         ;;(term i.t.t.i.hen)
-      ?<  (~(has by dos) dom)
+      =/  reg  (~(get by dos) dom)
+      ?^  reg
+        ::  A restarted verifier repeats its +on-init %anex.  The
+        ::  kick-time rewatch may have received a negative ack while
+        ::  the app was absent, so an exact duplicate is an idempotent
+        ::  request to restore the retained subscription.  A changed
+        ::  path is still a conflicting registration and must fail.
+        ::
+        ?>  =(pax.tac pax.u.reg)
+        %-  curd  =<  abet
+        (emit-peer:~(. su hen now pki etn) dom pax.u.reg)
       ::  resolve the agent's desk for %tire liveness tracking
       ::
       =/  dek=desk
@@ -358,7 +368,7 @@
     ::    [%writ dom=@tas =ship =pass]
     ::
     ::  forwarded to the domain's registered agent, which verifies it
-    ::  on-chain and answers with a %writ-response fact (handled in
+    ::  on-chain and answers with a %verdict fact (handled in
     ::  +take).  if the domain is unknown or suspended, %sybl
     ::  subscribers hear a %lost verdict immediately.
     ::
@@ -413,11 +423,7 @@
       =.  dos  (~(put by dos) dom.tac u.reg(liv |))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
-      ::  XX %snub sets the blocklist wholesale; this clobbers any
-      ::  manually-snubbed ships.  see the confidential-comets spec
-      ::  for the additive %snub variant this wants.
-      ::
-      (emit:sus hen %pass /gost %a %snub %deny ~(tap in hep.u.reg))
+      (emit:sus hen %pass /gost %a %snub %deny %add ~(tap in hep.u.reg))
     ::
     ::  recover a suspended pki domain
     ::    [%ghul dom=@tas]
@@ -434,10 +440,7 @@
       =.  dos  (~(put by dos) dom.tac u.reg(liv &))
       %-  curd  =<  abet
       =/  sus  ~(. su hen now pki etn)
-      ::  XX wholesale %snub semantics again: clearing the blocklist
-      ::  unsnubs everyone, not just this domain's peers.
-      ::
-      (emit:sus hen %pass /ghul %a %snub %deny ~)
+      (emit:sus hen %pass /ghul %a %snub %deny %del ~(tap in hep.u.reg))
     ::
     ::  destroy a pki domain
     ::    [%bane dom=@tas]
@@ -464,7 +467,7 @@
         (~(del by pos) ship)
       =/  dus  (~(uni in nel.zim.pki) ~(key by yen.zim.pki))
       =/  sus  ~(. su hen now pki etn)
-      =.  sus  (emit:sus hen %pass /bane %a %snub %deny ~(tap in hep.u.reg))
+      =.  sus  (emit:sus hen %pass /bane %a %snub %deny %add ~(tap in hep.u.reg))
       =;  core=_sus
         (curd abet:core)
       %-  ~(rep in hep.u.reg)
@@ -861,8 +864,8 @@
       %+  emit:~(. su hen now pki etn)
         hen
       ?:  lov
-        [%pass /ghul %a %snub %deny ~]
-      [%pass /gost %a %snub %deny ~(tap in hep.reg)]
+        [%pass /ghul %a %snub %deny %del ~(tap in hep.reg)]
+      [%pass /gost %a %snub %deny %add ~(tap in hep.reg)]
     ::
         [%gall %unto *]
       ?-    +>-.hin
@@ -876,10 +879,10 @@
         ::  a registered pki-domain agent restarted; resubscribe on
         ::  the same wire
         ::
-        ::  XX  a nuked agent kicks us but stays registered (its
-        ::      desk reads as down via %tire, acting as %gost); the
-        ::      resubscribe below draws a negative %watch-ack, which
-        ::      is logged and harmless
+        ::  XX  a nuked agent kicks us but stays registered while its desk
+        ::      remains live; the resubscribe below can draw a negative
+        ::      %watch-ack while the app is absent, which is logged and
+        ::      harmless.  %tire only covers desk suspension/revival.
         ::
         ?:  ?=(^ (dom-for-app app))
           %-  curd  =<  abet
@@ -901,15 +904,15 @@
           %fact
         ?>  ?=([@ *] tea)
         =*  app  i.tea
-        ::  %writ-response: a pki-domain agent answering a %jael-writ
+        ::  %verdict: a pki-domain agent answering a %jael-writ
         ::  poke.  only honored from the domain's registered agent.
         ::  on success, store the verified point (notifying
         ::  %public-keys subscribers) and remember the ship as one of
-        ::  the domain's peers; either way, report the verdict to
-        ::  %sybl subscribers.
+        ::  the domain's peers; either way, report the outcome to
+        ::  %sybl subscribers as a $writ-result.
         ::
-        ?:  ?=(%writ-response p.cage.p.+>.hin)
-          =+  ;;(res=writ-response q.q.cage.p.+>.hin)
+        ?:  ?=(%verdict p.cage.p.+>.hin)
+          =+  ;;(res=verdict q.q.cage.p.+>.hin)
           ?~  reg=(~(get by dos) dom.res)
             +>.$
           ?.  &(liv.u.reg =(dom.res app))
@@ -946,12 +949,45 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %anew dom.res pass.res]
-        ::  anything else is chain updates (udiffs) from a pki
-        ::  source; drop them if the domain is suspended
+        ::  %stale-notice: the domain agent observed a verified ship's
+        ::  attestation go out of date on-chain (its identity utxo was
+        ::  spent).  forget the point so the ship's next packet is
+        ::  re-verified from scratch, and tell %sybl subscribers
+        ::  (ames) to demote the peer to an alien.  never a snub:
+        ::  staleness is not fraud, and the replacement packet must
+        ::  be able to arrive.
+        ::
+        ?:  ?=(%stale-notice p.cage.p.+>.hin)
+          =+  ;;(res=stale-notice q.q.cage.p.+>.hin)
+          ?~  reg=(~(get by dos) dom.res)
+            +>.$
+          ?.  &(liv.u.reg =(dom.res app))
+            +>.$
+          ?.  (~(has in hep.u.reg) ship.res)
+            +>.$
+          =.  dos
+            %+  ~(put by dos)  dom.res
+            u.reg(hep (~(del in hep.u.reg) ship.res))
+          =.  pos.zim.pki  (~(del by pos.zim.pki) ship.res)
+          %-  curd  =<  abet
+          %+  exec:~(. su hen now pki etn)
+            syl.zim.pki
+          [%give %sybl %stale dom.res ship.res]
+        ::  anything else is chain updates (udiffs).  only a live
+        ::  registered pki domain or an explicitly configured legacy
+        ::  source (%listen with an agent source) may inject them;
+        ::  facts from any other agent are dropped.
         ::
         =/  dom  (dom-for-app app)
-        ?:  &(?=(^ dom) !liv:(~(got by dos) u.dom))
-          +>.$
+        ?:  ?=(^ dom)
+          ?.  liv:(~(got by dos) u.dom)
+            +>.$
+          =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
+          %-  curd  =<  abet
+          (~(new-event su hen now pki etn) udiffs)
+        ?.  (~(has by sources-reverse.etn) [%| ;;(term app)])
+          %.  +>.$
+          (slog leaf+"jael: dropped udiffs from unregistered {<app>}" ~)
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
@@ -1652,7 +1688,7 @@
       ?=  $?  %lyfe  %life  %rift  %ryft
               %deed  %sein  %saxo  %turf
               %fief  %pont  %pynt  %sponsors
-              %lamp
+              %lamp  %dome
           ==
           syd
       ==
@@ -1767,6 +1803,47 @@
     ?:  fak.own.pki.lex  [~ ~]
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ``[%noun !>(pos)]
+  ::
+      %dome                                             ::  pki domain of ship
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  who  (slaw %p i.tyl)
+    ?~  who  [~ ~]
+    ?:  fak.own.pki.lex  ``[%noun !>(~)]
+    =/  pos  (~(get by pos.zim.pki.lex) u.who)
+    ?~  pos  ``[%noun !>(~)]
+    =/  key  (~(get by keys.u.pos) life.u.pos)
+    ?~  key  ``[%noun !>(~)]
+    ::  mirror of +pass-pki-dom:ames: a suite-%c pass commits its
+    ::  pki domain as the +mat-encoded head of its tweak data.
+    ::  ~ for anything else; keep in sync with the ames arm.
+    ::
+    =/  cek  +<:(com:nu:cric:crypto pass.u.key)
+    ?.  ?=([%c *] cek)
+      ``[%noun !>(~)]
+    ::  bound the +mat before +rub reads it; the +mole does NOT contain
+    ::  a jetted +rub's %fail on a hostile length-of-length.  See the
+    ::  long note on +pass-pki-dom:ames -- keep the two in sync.
+    ::
+    ::  Reached with a stored pass rather than a packet, so this arm is
+    ::  not itself pre-auth; it is the same defect because the pass got
+    ::  stored by the path that IS.
+    ::
+    =/  dat=@  dat.tw.pub.cek
+    =/  short=?
+      =/  c=@ud  0
+      |-  ^-  ?
+      ?:  (gth c 20)  |
+      ?:  =(0 (cut 0 [c 1] dat))
+        $(c +(c))
+      &
+    ?.  short
+      ``[%noun !>(~)]
+    =/  mat  (mole |.((rub 0 dat)))
+    ?~  mat
+      ``[%noun !>(~)]
+    ``[%noun !>((some `@tas`q.u.mat))]
   ::
       %vein
     ?.  ?=([@ ~] tyl)  [~ ~]

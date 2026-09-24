@@ -86,6 +86,7 @@
           rift=bud.rift
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~bud]
     [%known peer-state]
@@ -100,6 +101,7 @@
           rift=nec.rift
           [public-keys=pub.saf pass=pass]:ames-state.nec
           sponsor=~nec
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~nec]
     [%known peer-state]

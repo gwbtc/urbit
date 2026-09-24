@@ -88,6 +88,7 @@
           rift=bud.rift
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  lane.fren-state  `[0 *lane:pact:ames]
     [%known fren-state]
@@ -102,6 +103,7 @@
           rift=nec.rift
           [public-keys=pub.saf pass=pass]:ames-state.nec
           sponsor=~nec
+          fief=~
       ==
     =.  lane.fren-state  `[0 *lane:pact:ames]
     [%known fren-state]
@@ -227,6 +229,7 @@
               rif.b
               [public-keys=pub.saf pass=pass]:ames-state.g.b
               sponsor=~bud
+              fief=~
           ==
         =.  lane.fren-state  `[0 *lane:pact:ames]
         [%known fren-state]

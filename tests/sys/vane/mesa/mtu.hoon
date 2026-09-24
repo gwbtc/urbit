@@ -17,6 +17,11 @@
       ^-  roof
       |=  [lyc=gang pov=path vis=view bem=beam]
       ^-  (unit (unit cage))
+      ::  The fork asks Jael for the peer's sponsor when updating its lane.
+      ::  Match the sponsor installed by +connect-all:test-mesa-gall.
+      ::
+      ?:  &(=(vis %j) =(%sein q.bem))
+        ``noun+!>(`ship`~bud)
       ?.  ?&(=(s.bem pax) |(=(vis %x) =(vis [%g %x]) =(vis [%a %x]) =(vis %gx) =(vis %ax)))
         [~ ~]
       ``val

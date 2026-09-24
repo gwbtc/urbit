@@ -350,6 +350,15 @@
     abet:init:(apex:(sync %base sop %kids) `%kids)
   ::  install other desks and make them public
   ::
+  ::    Every desk baked into the pill is zested %live here, unconditionally.
+  ::    A desk.ship does NOT gate that: it only adds a second, remote channel
+  ::    on top, below.  So a desk published by a ship this one cannot reach
+  ::    still runs its agents from the local copy, and the "cannot reach the
+  ::    sync source" slog in +init names that remote channel, not this one.
+  ::    Worth spelling out: that slog used to say "activation failed", and
+  ::    on a fresh comet whose publisher was unreachable it was read as the
+  ::    desks refusing to come up when in fact all of them were live.
+  ::
   =/  dez=(list desk)  ~(tap in desks)
   |-  ^+  ..on-init
   ?~  dez  ..on-init
@@ -1314,6 +1323,12 @@
   ::  (re)Start a sync from scratch by finding what version the source
   ::  desk is at
   ::
+  ::    This reaches the source ship over the network, so it is also the
+  ::    stage that fails when the source is unreachable -- and, because it
+  ::    runs as a strand, the stage that dies whenever anything else crashes
+  ::    %spider and takes every strand with it.  Neither says anything about
+  ::    the local desk, which +on-init already zested %live.
+  ::
   ++  init
     ^+  ..abet
     =.  let  0
@@ -1321,7 +1336,7 @@
     =/  m  (strand:rand ,vase)
     ;<  =riot:clay  bind:m  (warp:strandio her sud ~ %sing %y ud+1 /)
     ?>  ?=(^ riot)
-    ~>  %slog.(fmt "activated install into {here}")
+    ~>  %slog.(fmt "started the sync for {here}")
     ;<  now=@da     bind:m  get-time:strandio
     ;<  =riot:clay  bind:m  (warp:strandio her sud ~ %sing %w da+now /)
     ?>  ?=(^ riot)
@@ -1371,7 +1386,11 @@
         ..abet
       ?>  ?=(%arow +<.sign-arvo)
       ?:  ?=(%| -.p.sign-arvo)
-        ~>  %slog.(fmt "activation failed into {here}; retrying sync")
+        ::  NB: this is the sync failing, not the desk.  It used to read
+        ::  "activation failed into {here}", which was read as the desk
+        ::  refusing to come up and cost an afternoon.
+        ::
+        ~>  %slog.(fmt "cannot reach the sync source for {here}; retrying")
         %-  (slog p.p.sign-arvo)
         init
       ::  Now that we know the revision, start main download loop

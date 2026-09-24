@@ -1,12 +1,11 @@
-/+  gw-io=ph-gw-io
+/+  cc-io=ph-cc-io
 |=  arg=vase
 =/  m  (strand:rand ,vase)
 =/  core=?(%ames %mesa)  (fall !<((unit ?(%ames %mesa)) arg) %ames)
 ::
 =/  loud  %.y
-=/  tag  %az-star-hi
-=/  io  ~(. gw-io loud tag)
-
+=/  tag  %cc-hi-sponsor
+=/  io  ~(. cc-io loud tag)
 ::
 =/  comet-1  ~fasteg-dinhet-malrum-ransub--hocduc-digtev-radsut-marbud
 =/  comet-2  ~daldyl-nildem-dispec-tilryx--dondus-dirmet-tintyl-marbud
@@ -18,26 +17,14 @@
       [peer=comet-3 life=1 rift=0 spon=~ fef=%if]
   ==
 ::
-;<  ~  bind:m  start-azimuth:io
+;<  ~  bind:m  start-simple:io
 ::
-;<  ~  bind:m  (spawn:io ~bud)
-;<  ~  bind:m  (init-ship-core:io ~bud | core)
-;<  ~  bind:m  (spawn:io ~marbud)
-;<  ~  bind:m  (init-ship-core:io ~marbud | core)
-::
-;<  ~  bind:m  (start-gw-comet:io comet-1 core onchain)
-;<  ~  bind:m  (start-gw-comet:io comet-2 core onchain)
-;<  ~  bind:m  (start-gw-comet:io comet-3 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-1 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-2 core onchain)
+;<  ~  bind:m  (start-cc-comet:io comet-3 core onchain)
 ::
 ;<  ~  bind:m  (send-hi:io comet-1 comet-2)
 ;<  ~  bind:m  (send-hi:io comet-3 comet-1)
-::
-;<  ~  bind:m  (send-hi:io comet-1 ~bud)
-;<  ~  bind:m  (send-hi:io comet-2 ~bud)
-;<  ~  bind:m  (send-hi:io comet-3 ~bud)
-::
-;<  ~  bind:m  (send-hi:io ~marbud comet-1)
-;<  ~  bind:m  (send-hi:io comet-3 ~marbud)
 ::
 ;<  ~  bind:m  end:io
 (pure:m *vase)
