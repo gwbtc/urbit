@@ -19,11 +19,17 @@
 ::
 ;<  ~              bind:m  (start-cc-comet:io comet-1 core oc)
 ;<  ~              bind:m  (start-cc-comet:io comet-2 core oc)
+;<  ~              bind:m  (assert-jael-point:io comet-1 comet-1 1 0)
+;<  ~              bind:m  (assert-jael-active-life:io comet-1 1)
+;<  ~              bind:m  (assert-jael-point:io comet-2 comet-1 1 0)
 ::
 ;<  ~              bind:m  (send-hi:io comet-1 comet-2)
 ;<  ~              bind:m  (send-hi:io comet-2 comet-1)
 ::
 ;<  oc=onchain:io  bind:m  (cc-breach:io comet-1 new-life=2 new-rift=1 core oc)
+;<  ~              bind:m  (assert-jael-point:io comet-1 comet-1 2 1)
+;<  ~              bind:m  (assert-jael-active-life:io comet-1 2)
+;<  ~              bind:m  (assert-jael-point:io comet-2 comet-1 2 1)
 ::
 ;<  ~              bind:m  (send-hi:io comet-2 comet-1)
 ;<  ~              bind:m  (send-hi:io comet-1 comet-2)
