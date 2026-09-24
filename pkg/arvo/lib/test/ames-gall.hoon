@@ -1,4 +1,4 @@
-/+  *test, test-pub, test-sub
+/+  *test, test-pub, test-sub, *test-jael-roof
 /=  ames-raw  /sys/vane/ames
 /=  gall-raw  /sys/vane/gall
 ::
@@ -86,6 +86,7 @@
           rift=bud.rift
           [public-keys=pub.saf pass=pass]:ames-state.bud
           sponsor=~bud
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~bud]
     [%known peer-state]
@@ -100,6 +101,7 @@
           rift=nec.rift
           [public-keys=pub.saf pass=pass]:ames-state.nec
           sponsor=~nec
+          fief=~
       ==
     =.  route.peer-state  `[direct=%.y %& ~nec]
     [%known peer-state]
@@ -177,7 +179,7 @@
     :: ~&  i.pac
     $(pac t.pac)
   :: ~&  q.p.card.i.pac
-  =/  ames-core  (ames-gate now=~1111.1.1 eny=`@`0xdead.beef roof)
+  =/  ames-core  (ames-gate now=~1111.1.1 eny=`@`0xdead.beef (with-jael roof))
   %-  call:ames-core
   [duct dud=~ %soft `task:ames`[%heer *lane:pact:ames q.p.card.i.pac]]
 ::
@@ -197,7 +199,7 @@
 ++  ames-make-pact
   |=  [=ames-gate =spar:ames =path =per=rift =space:ames-bunt]
   ^-  @
-  =/  sample     [now=~1111.1.1 eny=`@`0xdead.beef *roof]
+  =/  sample     [now=~1111.1.1 eny=`@`0xdead.beef (with-jael *roof)]
   =/  ames-core  (ames-gate sample)
   ?~  pact=(ma-pact:ma:mesa:ames-core spar `path per-rift)
     !!
@@ -207,9 +209,9 @@
 ++  ames-scry-payload
   |=  [=ames-gate =ship =path]
   ^-  cage
-  =/  ames-core  (ames-gate now=~1111.1.1 eny=`@`0xdead.beef *roof)
+  =/  ames-core  (ames-gate now=~1111.1.1 eny=`@`0xdead.beef (with-jael *roof))
   %-  need   %-  need
-  %-  scry:(ames-gate ~1111.1.10 `@`0xdead.beef *roof)
+  %-  scry:(ames-gate ~1111.1.10 `@`0xdead.beef (with-jael *roof))
   =;  [care=@tas =beam]
     [[~ ~] / care beam]
   =<  [?>(?=(^ vew) car.vew) bem]
@@ -223,7 +225,7 @@
           expected-moves=(list move:ames-bunt)
       ==
   ^-  [tang ^ames-gate]
-  =/  ames-core  (ames-gate now eny roof)
+  =/  ames-core  (ames-gate now eny (with-jael roof))
   =^  moves  ames-gate  (call:ames-core duct dud=~ task)
   [(expect-eq !>(expected-moves) !>(moves)) ames-gate]
 ::
@@ -234,19 +236,19 @@
           expected-moves=(list move:ames-bunt)
       ==
   ^-  [tang ^ames-gate]
-  =/  ames-core  (ames-gate now eny roof)
+  =/  ames-core  (ames-gate now eny (with-jael roof))
   =^  moves  ames-gate  (call:ames-core duct dud=`goof task)
   [(expect-eq !>(expected-moves) !>(moves)) ames-gate]
 ::
 ++  ames-call
   |=  [=ames-gate =duct task=(hobo task:ames) =roof]
   %.  [duct dud=~ task]
-  call:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef roof)
+  call:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef (with-jael roof))
 ::
 ++  ames-call-with-dude
   |=  [=ames-gate =goof =duct task=(hobo task:ames) =roof]
   %.  [duct `goof task]
-  call:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef roof)
+  call:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef (with-jael roof))
 ::  +ames: run ames sign, assert produces expected-moves
 ::
 ++  ames-check-take
@@ -256,14 +258,14 @@
           expected-moves=(list move:ames-bunt)
       ==
   ^-  [tang ^ames-gate]
-  =/  ames-core  (ames-gate now eny roof)
+  =/  ames-core  (ames-gate now eny (with-jael roof))
   =^  moves  ames-gate  (take:ames-core wire duct dud=~ sign)
   [(expect-eq !>(expected-moves) !>(moves)) ames-gate]
 ::
 ++  ames-take
   |=  [=ames-gate =wire =duct sign=sign:ames-bunt =roof]
   %.  [wire duct dud=~ sign]
-  take:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef roof)
+  take:(ames-gate now=~1111.1.1 eny=`@`0xdead.beef (with-jael roof))
 ::
 ++  ames-scry-hunk
   |=  $:  =ames-gate
@@ -282,7 +284,7 @@
     !<  (list @ux)
     =<  q
     %-  need  %-  need
-    (scry:(ames-gate now eny roof) ~ / %x beam)
+    (scry:(ames-gate now eny (with-jael roof)) ~ / %x beam)
   ::
   =/  paz=(list have:ames)
     %+  spun  meows
@@ -308,12 +310,12 @@
   !<  ship-state:ames
   =<  q
   %-  need  %-  need
-  %-  scry:(ames-gate now eny roof)
+  %-  scry:(ames-gate now eny (with-jael roof))
   [[~ ~] / %x [[our %$ da+now] /peers/(scot %p her)]]
 ::
 ++  ames-scry-gate
   |=  [[now=@da eny=@ =roof] =ames-gate]
-  scry:(ames-gate now eny roof)
+  scry:(ames-gate now eny (with-jael roof))
 ::
 ++  gall-scry-nonce
   |=  $:  =gall-gate

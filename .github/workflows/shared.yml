@@ -76,24 +76,56 @@ jobs:
           name: ares
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      #  build groundwire's vere; kelvin branches pair with the matching
+      #  gwbtc/vere branch, all else uses its default branch
+      #
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        name: pick vere branch
+        id: vere
+        run: |
+          ref=""
+          for b in "${{ inputs.next }}" "${{ github.head_ref }}" "${{ github.ref_name }}"; do
+            if [[ "$b" == *next/kelvin/* ]]; then
+              ref="gw/next/kelvin/${b##*/}"
+              break
+            fi
+          done
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/vere
+          ref: ${{ steps.vere.outputs.ref }}
+          path: .vere/vere
+
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/urcrypt
+          ref: gw/cmp-pub
+          path: .vere/urcrypt
+
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        name: build vere
+        run: |
+          #  vere's ext/urcrypt builds these sources itself
+          rm -f .vere/urcrypt/build.zig .vere/urcrypt/build.zig.zon
+          cd .vere/vere
+          zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-musl
+          cp zig-out/x86_64-linux-musl/urbit ../../urbit
+          cd ../..
+          chmod +x urbit
+          ./urbit --version
+
       - if: ${{ matrix.os == 'ubuntu-latest' }}
         name: run urbit-tests
         run: |
-          if [[ "${{ inputs.next }}" == "next/kelvin/"* ]]; then
-            next=$(echo ${{ inputs.next }} | sed 's/[^0-9]//g')
-            base="https://bootstrap.urbit.org/vere/next/kelvin/${next}"
-          elif [[ "${{ github.head_ref }}" == "next/kelvin"* ]]; then
-            next=$(echo ${{ github.head_ref }} | sed 's/[^0-9]//g')
-            base="https://bootstrap.urbit.org/vere/next/kelvin/${next}"
-          else
-            base="https://bootstrap.urbit.org/vere/${{ inputs.pace }}"
-          fi
-          vere=$(curl ${base}/last)
-          url="$(echo ${base}/v${vere}/vere-v${vere}-linux-x86_64)"
-          echo $vere
-          echo $url
-          curl -Lo urbit "$url"
-          chmod +x urbit
           git add urbit
 
           nix flake check --keep-build-log -L
