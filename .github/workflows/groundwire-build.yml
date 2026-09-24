@@ -54,6 +54,16 @@ env:
   # 2026-09-16: gwbtc/tcp-sidecar hd/read-256k (on main c362083): 256 KB
   # reads, so a 2 MB block is ~8 %receive events instead of ~250.
   TCP_SIDECAR_REF: a85248d42c498294bf2525836d3a6e1146c4fc34
+  # gwbtc/urbit-dns: the %dns desk, the client of the sponsor's naming
+  # service (a groundwire.me name + an %acme certificate per comet). In the
+  # pill so boot.sh can run its dns-address thread on every comet with no
+  # install step. Public repo, pinned by full SHA like the two above
+  # (`git ls-remote https://github.com/gwbtc/urbit-dns main`). The desk is
+  # assembled by the repo's own `zig build`, which vendors the base-dev,
+  # dns and mnemonyms imports it pins; its kelvin is 408.
+  # 3248b57 (2026-09-19, PR #1): the thread no longer fetches itself
+  # through iris (that hung forever on any ship running Landscape).
+  URBIT_DNS_REF: 3248b57b70529ed8993d4df2827427819e4fa67e
   # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
   # a README, so this is pinned to a full SHA rather than a branch name, same
   # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
@@ -258,6 +268,13 @@ jobs:
           ref: ${{ env.TCP_SIDECAR_REF }}
           path: gwbtc-tcp-sidecar
 
+      - name: Checkout gwbtc/urbit-dns (desk)
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/urbit-dns
+          ref: ${{ env.URBIT_DNS_REF }}
+          path: gwbtc-urbit-dns
+
       # -- Boot fake ~zod --
 
       - name: Download pill builder pill
@@ -413,6 +430,39 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/tcp-sidecar/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/tcp-sidecar/desk.ship
           ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
+
+      - name: Install zig (assembles the %dns desk)
+        run: |
+          # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
+          # fetches the pinned base-dev/dns/mnemonyms imports and lays the
+          # desk out under zig-out/. Same zig the laptop builds it with.
+          curl -fsSL -o "$RUNNER_TEMP/zig.tar.xz" \
+            https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-x86_64-linux-0.15.2" >> "$GITHUB_PATH"
+
+      - name: Populate %dns desk
+        run: |
+          # The naming service's client desk: the dns-address thread that
+          # asks the sponsor for a groundwire.me name and installs the turf
+          # (eyre then orders the certificate through %acme). In the pill so
+          # boot.sh can run it on every comet without an install step. The
+          # desk carries its own kelvin ([%zuse 408]) and one agent, %gw-dns,
+          # which is inert on a comet (its on-init is the default).
+          (cd gwbtc-urbit-dns && zig build)
+          test -f gwbtc-urbit-dns/zig-out/ted/dns/address.hoon
+          grep -q '%zuse 408' gwbtc-urbit-dns/zig-out/sys.kelvin
+          # The self-check that hung the thread must stay gone (PR #1).
+          test "$(grep -c 'self-check-http' gwbtc-urbit-dns/zig-out/ted/dns/address.hoon || true)" = 0
+          ./automation/desk-create.sh dns "$CONN_SOCK"
+          ./automation/desk-mount.sh dns ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh dns ./zod
+          cp -rL gwbtc-urbit-dns/zig-out/* ./zod/dns/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p ./zod/dns/mar
+          cp gwbtc-urbit/pkg/base-dev/mar/ship.hoon ./zod/dns/mar/ship.hoon
+          echo "$DESK_DISTER" > ./zod/dns/desk.ship
+          ./automation/desk-commit.sh dns ./zod "$CONN_SOCK"
 
       # The filesystem commits above are the primary path and do land both
       # files -- but only as long as Clay's mount sync behaves, and the "Key
@@ -632,6 +682,7 @@ jobs:
                     [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
+                    [%dns /(scot %p our)/dns/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
@@ -651,7 +702,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol"
+          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
