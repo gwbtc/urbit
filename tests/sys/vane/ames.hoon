@@ -1,4 +1,4 @@
-/+  *test
+/+  *test, *test-jael-roof
 /=  ames  /sys/vane/ames
 /=  jael  /sys/vane/jael
 /*  dojo  %hoon  /app/dojo/hoon
@@ -13,16 +13,11 @@
 =/  comet   ^$:(%*($ ames ahoy-on %.n, +< our-comet))
 =/  comet2  ^$:(%*($ ames ahoy-on %.n, +< our-comet2))
 ::
-::  answer jael %sein scries with the default sponsor, as jael does
-::  for ships it has no point for; everything else gets an empty turf list
+::  answer jael scries from a real jael; everything else gets an empty
+::  turf list
 ::
 =/  test-roof=roof
-  |=  [lyc=gang pov=path vis=view bem=beam]
-  ^-  (unit (unit cage))
-  ?.  &(=(%j vis) =(%sein q.bem))
-    ``[%noun !>(*(list turf))]
-  ?>  ?=([@ ~] s.bem)
-  ``[%atom !>(`ship`(^sein:title (slav %p i.s.bem)))]
+  (with-jael |=(* ``[%noun !>(*(list turf))]))
 ::
 :: =.  ahoy-on.nec    %.n
 =.  now.nec        ~1111.1.1
@@ -349,7 +344,7 @@
               ?&  =(vis %j)
                   =(%saxo q.bem)
       ==  ==  ==
-    [~ ~]
+    ((with-jael |=(* [~ ~])) lyc pov vis bem)
   ``val
 ::
 ++  n-frags
