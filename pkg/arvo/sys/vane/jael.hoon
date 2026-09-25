@@ -337,7 +337,17 @@
       =/  dom
         ?>  ?=([[%gall %use @ @ *] *] hen)
         ;;(term i.t.t.i.hen)
-      ?<  (~(has by dos) dom)
+      =/  reg  (~(get by dos) dom)
+      ?^  reg
+        ::  A restarted verifier repeats its +on-init %anex.  The
+        ::  kick-time rewatch may have received a negative ack while
+        ::  the app was absent, so an exact duplicate is an idempotent
+        ::  request to restore the retained subscription.  A changed
+        ::  path is still a conflicting registration and must fail.
+        ::
+        ?>  =(pax.tac pax.u.reg)
+        %-  curd  =<  abet
+        (emit-peer:~(. su hen now pki etn) dom pax.u.reg)
       ::  resolve the agent's desk for %tire liveness tracking
       ::
       =/  dek=desk
@@ -876,10 +886,10 @@
         ::  a registered pki-domain agent restarted; resubscribe on
         ::  the same wire
         ::
-        ::  XX  a nuked agent kicks us but stays registered (its
-        ::      desk reads as down via %tire, acting as %gost); the
-        ::      resubscribe below draws a negative %watch-ack, which
-        ::      is logged and harmless
+        ::  XX  a nuked agent kicks us but stays registered while its desk
+        ::      remains live; the resubscribe below can draw a negative
+        ::      %watch-ack while the app is absent, which is logged and
+        ::      harmless.  %tire only covers desk suspension/revival.
         ::
         ?:  ?=(^ (dom-for-app app))
           %-  curd  =<  abet
