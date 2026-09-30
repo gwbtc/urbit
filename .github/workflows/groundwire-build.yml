@@ -64,6 +64,11 @@ env:
   # 3248b57 (2026-09-19, PR #1): the thread no longer fetches itself
   # through iris (that hung forever on any ship running Landscape).
   URBIT_DNS_REF: 3248b57b70529ed8993d4df2827427819e4fa67e
+  # tloncorp/tlon-apps: Tlon Messenger, the %groups desk (v12.2.0, the tag's
+  # commit; desk/sys.kelvin is [%zuse 408]).  The sponsor serves the same
+  # version (installed 2026-09-22), so a pill comet's OTA sync to it is a
+  # no-op until the sponsor moves.  Bump the two together.
+  TLON_APPS_REF: 938f0c44d693f6f7391cca8107c7b3a40b834a01
   # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
   # a README, so this is pinned to a full SHA rather than a branch name, same
   # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
@@ -233,6 +238,17 @@ jobs:
           ref: ${{ env.LANDSCAPE_BRANCH }}
           path: gwbtc-landscape
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
+
+      - name: Checkout tloncorp/tlon-apps (the %groups desk)
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/tlon-apps
+          ref: ${{ env.TLON_APPS_REF }}
+          path: tlon-apps
+          # a JS monorepo; the desk needs only these
+          sparse-checkout: |
+            desk
+            peru.yaml
 
       - name: Checkout gwbtc/drive
         uses: actions/checkout@v4
@@ -656,6 +672,55 @@ jobs:
           echo "$DESK_DISTER" > ./zod/drive/desk.ship
           ./automation/desk-commit.sh drive ./zod "$CONN_SOCK"
 
+      - name: Populate %groups desk
+        run: |
+          # Tlon Messenger.  tlon-apps vendors its desk's dependencies with
+          # peru (peru.yaml: which files, from which repo, at which rev); we
+          # follow the same pick lists without peru.  %base picks come from
+          # OUR kernel's base-dev, since the desk runs on it; every other
+          # module is fetched at the rev peru.yaml pins.  Then desk-deps +
+          # desk/ on top, exactly as the repo's scripts/assemble-desk.sh
+          # layers them.
+          grep -q '%zuse 408' tlon-apps/desk/sys.kelvin
+          python3 -c 'import yaml' 2>/dev/null || sudo apt-get install -y -q python3-yaml
+          rm -rf groups-deps && mkdir groups-deps
+          python3 - tlon-apps/peru.yaml groups-deps <<'PY'
+          import os, shutil, subprocess, sys, yaml
+          spec, out = yaml.safe_load(open(sys.argv[1])), sys.argv[2]
+          for key, mod in spec.items():
+              if not key.startswith('git module '):
+                  continue
+              name = key.split()[-1]
+              export = mod.get('export', '').rstrip('/') + '/'
+              if name == 'base':
+                  root = 'gwbtc-urbit'
+              else:
+                  root = f'dep-{name}'
+                  subprocess.run(['git', 'clone', '-q', '--filter=blob:none',
+                                  '--no-checkout', mod['url'], root], check=True)
+                  subprocess.run(['git', '-C', root, 'checkout', '-q', str(mod['rev']),
+                                  '--', *mod['pick']], check=True)
+              for pick in mod['pick']:
+                  assert pick.startswith(export), (pick, export)
+                  dst = os.path.join(out, pick[len(export):])
+                  os.makedirs(os.path.dirname(dst), exist_ok=True)
+                  shutil.copyfile(os.path.join(root, pick), dst)
+                  print(f'{name}: {pick}')
+          PY
+          ./automation/desk-create.sh groups "$CONN_SOCK"
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh groups ./zod
+          rsync -aL --exclude=.DS_Store groups-deps/ ./zod/groups/
+          rsync -aL --exclude=.DS_Store tlon-apps/desk/ ./zod/groups/
+          git -C tlon-apps rev-parse --short HEAD > ./zod/groups/commit.txt
+          test -f ./zod/groups/app/groups.hoon
+          test -f ./zod/groups/lib/docket.hoon
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p ./zod/groups/mar
+          cp gwbtc-urbit/pkg/base-dev/mar/ship.hoon ./zod/groups/mar/ship.hoon
+          echo "$DESK_DISTER" > ./zod/groups/desk.ship
+          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -683,6 +748,7 @@ jobs:
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
                     [%dns /(scot %p our)/dns/(scot %da now)]
+                    [%groups /(scot %p our)/groups/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
@@ -702,7 +768,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns"
+          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns groups"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
