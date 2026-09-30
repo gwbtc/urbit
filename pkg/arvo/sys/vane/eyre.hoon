@@ -1032,6 +1032,11 @@
     :: ~&  ws-conn=conn
     ?~  conn  `state
     ?.  ?=(%app -.action.u.conn)  `state
+    ::  the client's gone: the socket too, not just the connection. (before
+    ::  parsing the path: a %disconnect mustn't be lost to a bad one)
+    ?:  ?=(%disconnect -.event)
+      (ws-drop wid u.conn)
+    ?.  ?=(%message -.event)  `state
     =/  url  url.request.inbound-request.u.conn
     =/  pat=(unit (list @t))
       (rush url ;~(pfix fas (more fas smeg:de-purl:html)))
@@ -1039,26 +1044,12 @@
     =/  app  app.action.u.conn
     =/  identity  identity.u.conn
     =/  wsid  (scot %ud wid)
-    :: ~&  >>  ws-event=[identity app pat wsid]
-    :: TODO damn how
-    :: ~&  eyre-ws-event=-.event
-    ?+    -.event  `state
-        %message
-      :_  state
-      :~  %+  deal-as
-          /run-ws-app-request/[wsid]
-          :^  identity  our  app
-          :+  %poke  %websocket-server-message
-          !>([wid u.pat message.event])
-      ==
-    ::
-        %disconnect
-      =.  connections.state  (~(del by connections.state) duct)
-      :_  state
-      :~  %+  deal-as
-          /ws-watch-response/[wsid]
-          [identity our app %leave ~]
-      ==
+    :_  state
+    :~  %+  deal-as
+        /run-ws-app-request/[wsid]
+        :^  identity  our  app
+        :+  %poke  %websocket-server-message
+        !>([wid u.pat message.event])
     ==
   ::
   ++  ws-handshake
@@ -1068,7 +1059,10 @@
     =/  [=action suburl=@t]
       (get-action-for-binding host url.request)
     :: TODO enable other actions
-    ?.  ?=(%app -.action)  `state
+    ::  only an app can take a websocket: refuse the rest, or the client
+    ::  waits on the runtime's timeout
+    ?.  ?=(%app -.action)
+      [[duct %give %websocket-response wid %reject ~]~ state]
     :: TODO!!  get clear what all the identity thing has to be
     =/  app  app.action
     =^  $@(invalid=@uv [@uv identity (list move)])  state
@@ -1081,19 +1075,50 @@
       [action [authenticated secure address request] [session-id identity] ~ 0]
     =.  connections.state
       (~(put by connections.state) duct connection)
+    ::  the socket, from now: +ws-wid finds it by its request (which the
+    ::  client's random sec-websocket-key makes unique) when all we have
+    ::  is the connection, as in +cancel-request
+    ::
+    =.  sockets.state
+      (~(put by sockets.state) wid [app inbound-request.connection])
     ::  eyre-id is assigned way up in this arm
     =/  wsid  (scot %ud wid)
-    :_  state  
-    ~&  som=som
+    :_  state
     %+  weld  som
     :~  %+  deal-as  /ws-watch-response/[wsid]
         [identity our app %watch /websocket-server/[wsid]]
       ::
-        %+  deal-as  /run-ws-app-request/[wsid]
+        ::  its own wire: an app that crashes on this refuses the socket
+        ::  (see +run-ws-app-request), on a message it doesn't
+        %+  deal-as  /run-ws-app-request/[wsid]/handshake
         :^  identity  our  app
         :+  %poke  %websocket-handshake
         !>(`[@ inbound-request:eyre]`[wid inbound-request.connection])
-    ==    
+    ==
+  ::  +ws-wid: the websocket a connection is, if it's one
+  ::
+  ++  ws-wid
+    |=  conn=outstanding-connection
+    ^-  (unit @ud)
+    =/  socks  ~(tap by sockets.state)
+    |-
+    ?~  socks  ~
+    ?:  =(inbound-request.q.i.socks inbound-request.conn)  `p.i.socks
+    $(socks t.socks)
+  ::  +ws-drop: forget the websocket on this duct, and have its app leave
+  ::  its subscription (the app's +on-leave: the client's gone). on the
+  ::  duct and wire we watched it on, or gall matches nothing
+  ::
+  ++  ws-drop
+    |=  [wid=@ud conn=outstanding-connection]
+    ^-  [(list move) server-state]
+    =.  connections.state  (~(del by connections.state) duct)
+    =.  sockets.state  (~(del by sockets.state) wid)
+    ?.  ?=(%app -.action.conn)  `state
+    :_  state
+    :~  %+  deal-as  /ws-watch-response/(scot %ud wid)
+        [identity.conn our app.action.conn %leave ~]
+    ==
   ::  +handle-ip: respond with the requester's ip
   ::
   ++  handle-ip
@@ -1389,6 +1414,12 @@
       ::  nothing has handled this connection
       ::
       [~ state]
+    ::  a websocket: its app watches on the websocket wire, not the http
+    ::  one. (%born cancels every connection this way, and the runtime
+    ::  cancels a handshake whose client left)
+    ::
+    =/  wid  (ws-wid u.connection)
+    ?^  wid  (ws-drop u.wid u.connection)
     ::
     =.   connections.state  (~(del by connections.state) duct)
     ::
@@ -1618,13 +1649,10 @@
     ++  session-id-from-request
       |=  =request:http
       ^-  (unit @uv)
-      ::  is there an authorization header with a legible session token?
+      ::  is there an authorization header?
       ::
-      =/  from-header=(unit @uv)
-        ?~  auth=(get-header:http 'authorization' header-list.request)
-          ~
+      ?^  auth=(get-header:http 'authorization' header-list.request)
         (rush u.auth ;~(pfix (jest 'Bearer 0v') viz:ag))
-      ?^  from-header  from-header
       ::  are there cookies passed with this request?
       ::
       =/  cookie-header=@t
@@ -2000,7 +2028,7 @@
           ::
           =/  =wire       /eauth/keen/(scot %p ship)/(scot %uv nonce)
           =.   time       (sub time (mod time eauth-cache-rounding))
-          =/  =spar:ames  [ship /e/x/(scot:h136 %da time)//eauth/url]
+          =/  =spar:ames  [ship /e/x/(scot %da time)//eauth/url]
           [duct %pass wire %a ?-(kind %keen keen+[~ spar], %yawn yawn+spar)]
         ::
         ++  send-boon
@@ -3185,26 +3213,25 @@
   ::
   ++  handle-ws-response
     |=  [wid=@ event=websocket-event]
-    ^-  [(list move) server-state]    
-    =.  connections.state
-      ?+  -.event  connections.state
-        ?(%reject %disconnect)  (~(del by connections.state) duct)
-      ==
-    =.  sockets.state
-      ?+    -.event  sockets.state
-          ?(%reject %disconnect)
-        (~(del by sockets.state) wid)
-      ::
-          %accept
-        =/  outstanding  (~(get by connections.state) duct)
-        ?~  outstanding
-          ~&  >>>  eyre-ws-error=[wid event]  sockets.state
-        =/  req=inbound-request  inbound-request.u.outstanding
-        ::  TODO this is bad
-        ?>  ?=(%app -.action.u.outstanding)
-        (~(put by sockets.state) wid +.action.u.outstanding req)
-      ==
-    [[duct %give %websocket-response [wid event]]~ state]
+    ^-  [(list move) server-state]
+    =/  give=move  [duct %give %websocket-response [wid event]]
+    ::  the app's done with the socket (or kicked us): forget it, and drop
+    ::  the app's subscription, so nothing stale is left on its path
+    ::
+    ?:  ?=(?(%reject %disconnect) -.event)
+      =/  conn  (~(get by connections.state) duct)
+      =^  moves  state
+        ?~  conn  `state(sockets (~(del by sockets.state) wid))
+        (ws-drop wid u.conn)
+      [[give moves] state]
+    =?  sockets.state  ?=(%accept -.event)
+      =/  outstanding  (~(get by connections.state) duct)
+      ?~  outstanding
+        ~&  >>>  eyre-ws-error=[wid event]  sockets.state
+      ?.  ?=(%app -.action.u.outstanding)  sockets.state
+      %+  ~(put by sockets.state)  wid
+      [app.action.u.outstanding inbound-request.u.outstanding]
+    [~[give] state]
   ::
   ::  +handle-response: check a response for correctness and send to earth
   ::
@@ -3793,6 +3820,11 @@
       =^  moves  server-state.ax  cancel-request
       ::
       $(closed-connections (weld moves closed-connections), connections t.connections)
+    ::  websockets: +cancel-request dropped each with its connection (and
+    ::  had its app leave). the runtime's ids start again this boot: clear
+    ::  whatever's left, so none is taken for a new socket
+    ::
+    =.  sockets.server-state.ax  ~
     ::  save duct for future %give to unix
     ::
     =.  outgoing-duct.server-state.ax  duct
@@ -3998,48 +4030,67 @@
         %ws-watch-response    watch-ws-response
       ==
   ::
+  ::  +watch-ws-response: what an app says on /websocket-server/<wid>. the
+  ::  socket is the wire's: the one we watched the app for
+  ::
   ++  watch-ws-response
     =/  event-args  [[eny duct now rof] server-state.ax]
-    ?>  ?=([@ *] t.wire)
+    ?>  ?=([@ ~] t.wire)
+    =/  wid  (slav %ud i.t.wire)
+    =/  handle-ws-response  handle-ws-response:(per-server-event event-args)
     ?+    sign  `http-server-gate
         [%gall %unto %watch-ack *]
       ?~  p.p.sign
         ::  received a positive acknowledgment: take no action
         ::
         [~ http-server-gate]
-      ::  we have an error; propagate it to the client
+      ::  the app refused the socket (its +on-watch crashed): refuse it
+      ::  to the client too. (a 500 through +handle-gall-error would
+      ::  answer an http request, and leave on the wrong wire)
       ::
-      ~&  gall-error=u.p.p.sign
-      =/  handle-gall-error
-        handle-gall-error:(per-server-event event-args)
-      =^  moves  server-state.ax  (handle-gall-error u.p.p.sign)
-      [moves http-server-gate]
-    :: 
-        [%gall %unto %kick ~]
-      =/  handle-ws-response  handle-ws-response:(per-server-event event-args)
+      ::  (%disconnect: the runtime rejects a pending socket, and closes
+      ::  one that's somehow open)
+      %-  (slog [leaf+"eyre: {<wid>} websocket watch failed" u.p.p.sign])
       =^  moves  server-state.ax
-        :: TODO not great
-        =/  wids  (head (flop wire))
-        =/  wid  (slav %ud wids)
+        (handle-ws-response wid [%disconnect ~])
+      [moves http-server-gate]
+    ::
+        [%gall %unto %kick ~]
+      =^  moves  server-state.ax
         (handle-ws-response wid [%disconnect ~])
       [moves http-server-gate]
     ::
         [%gall %unto %fact *]
       =/  mark  p.cage.p.sign
       ?.  ?=(%websocket-response mark)
-        =/  handle-gall-error
-          handle-gall-error:(per-server-event event-args)
-        =^  moves  server-state.ax
-          (handle-gall-error leaf+"eyre bad mark {(trip mark)}" ~)
-        [moves http-server-gate]
-      =/  event  !<([@ websocket-event] q.cage.p.sign)
-      =/  handle-ws-response  handle-ws-response:(per-server-event event-args)
+        ~&  [%eyre-ws-bad-mark wid mark]
+        `http-server-gate
+      =/  [fid=@ event=websocket-event]
+        !<([@ websocket-event] q.cage.p.sign)
+      ::  the fact names a socket too: it must be this path's, or an app
+      ::  could act on another socket through this one's connection
+      ::
+      ?.  =(wid fid)
+        ~&  [%eyre-ws-wrong-socket path=wid fact=fid]
+        `http-server-gate
       =^  moves  server-state.ax
-        (handle-ws-response event)
+        (handle-ws-response wid event)
       [moves http-server-gate]
     ==
+  ::  +run-ws-app-request: our pokes of an app. one that crashed on the
+  ::  handshake refused the socket; one that crashed on a message just
+  ::  drops it
   ::
-  ++  run-ws-app-request  `http-server-gate
+  ++  run-ws-app-request
+    ?.  ?=([%gall %unto %poke-ack ^] sign)  `http-server-gate
+    ?.  ?=([@ %handshake ~] t.wire)  `http-server-gate
+    =/  wid  (slav %ud i.t.wire)
+    %-  (slog [leaf+"eyre: {<wid>} websocket handshake failed" u.p.p.sign])
+    =/  event-args  [[eny duct now rof] server-state.ax]
+    =/  handle-ws-response  handle-ws-response:(per-server-event event-args)
+    =^  moves  server-state.ax
+      (handle-ws-response wid [%disconnect ~])
+    [moves http-server-gate]
   ::
   ++  run-app-request
     ::
@@ -4610,8 +4661,7 @@
     =/  end=(unit @ud)  (slaw %ud i.t.t.tyl)
     =*  vew   i.t.t.t.tyl
     =*  rest  t.t.t.t.tyl
-    =/  =pork  (deft:de-purl:html rest)
-    =/  mym  (scry-mime now rof lyc p.pork [%$ vew (en-beam -.bem q.pork)])
+    =/  mym  (scry-mime now rof lyc ~ [%$ vew (en-beam -.bem rest)])
     ?:  ?=(%| -.mym)  ~
     =*  mime  p.mym
     ?~  range=(get-range [beg end] p.q.mime)
