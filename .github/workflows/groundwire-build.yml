@@ -274,6 +274,7 @@ jobs:
           repository: gwbtc/urbit-dns
           ref: ${{ env.URBIT_DNS_REF }}
           path: gwbtc-urbit-dns
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       # -- Boot fake ~zod --
 
