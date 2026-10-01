@@ -986,8 +986,8 @@
           %-  curd  =<  abet
           (~(new-event su hen now pki etn) udiffs)
         ?.  (~(has by sources-reverse.etn) [%| ;;(term app)])
-          %.  +>.$
-          (slog leaf+"jael: dropped udiffs from unregistered {<app>}" ~)
+          ~>  %slog.[2 leaf+"jael: dropped chain updates from {<app>}, which is neither a registered pki domain nor a %listen source; register it, or stop it feeding jael"]
+          +>.$
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
         %-  curd  =<  abet
         (~(new-event su hen now pki etn) udiffs)
