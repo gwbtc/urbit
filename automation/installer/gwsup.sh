@@ -14,17 +14,16 @@
 # tools that expect the gwharness package importable from /opt/gw, which is
 # not in any release artifact. The ALGORITHM is reused unchanged, trap for
 # trap -- singleton, data.mdb liveness, exact process matching, and the
-# kill-peer-connections-plus-reseed that makes a sidecar restart actually
-# recover. CHANGE BOTH: keep this and groundwire's ops/gwsup.sh in sync when
+# reseed after a sidecar restart. CHANGE BOTH: keep this and groundwire's ops/gwsup.sh in sync when
 # either changes.
 #
 # Filed against gwbtc/node#1: the tcp-sidecar SIGSEGVs, %bitcoin-client goes
 # on believing its peers are live, every send returns "no such connection"
 # forever, and the ship stops following the chain while looking healthy. It
-# does not self-heal, and restarting the sidecar alone does NOT fix it -- the
-# agent's peer table has to be cleared with &kill-peer-connections and
-# re-seeded. A plain Restart=always unit gets the process back and leaves the
-# ship wedged.
+# did not self-heal: the agent's peer table had to be cleared by hand
+# (&kill-peer-connections) and re-seeded.  Since node develop 4ed51e8 the
+# agent times out a stranded connect itself, so recovery is a restart plus a
+# reseed.
 set -u
 
 GW_NAME="${1:?usage: gwsup.sh <name>}"
@@ -88,18 +87,11 @@ recover() {
   N_WEDGE=$(( N_WEDGE + 1 ))
   log "INTERVENTION #$(( N_WEDGE + N_VERE + N_SIDE )) WEDGE (recover #$N_WEDGE): $1"
   [ -n "$(gwl_sidecar_pids)" ] || gwl_start_sidecar
-  sleep 3
-  # gwl_poke's exit status is the pipeline's (it ends in `|| true`), so it
-  # cannot say whether the poke landed; the thread's own %ok reply can.
-  # Before node@hd/lc-peers the agent had no %kill-peer-connections arm at
-  # all, this poke nacked every time, and the log said "ok" regardless.
-  out="$(gwl_poke bitcoin-client kill-peer-connections '!>(~)' 150 2>/dev/null)"
-  if printf '%s' "$out" | grep -q '%ok'; then
-    log "  kill-peer-connections ok"
-  else
-    log "  kill-peer-connections FAILED: $(printf '%s' "$out" | tail -c 120 | tr '\n' ' ')"
-  fi
-  sleep 5
+  # No peer reset here any more.  The &kill-peer-connections poke that used
+  # to clear the agent's dead peers is gone from %bitcoin-client (node
+  # develop 4ed51e8): it now arms the handshake timeout as it connects, so
+  # a peer stranded by a sidecar restart is dropped on its own.
+  sleep 8
   left="$(gwl_pool_left)"
   [ "${left:-0}" -lt 20 ] && log "  pool refill: +$(gwl_pool_fill 4)"
   # A handful of peers, not one: a single unreachable seed used to waste the

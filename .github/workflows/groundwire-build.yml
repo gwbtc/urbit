@@ -84,14 +84,14 @@ env:
   # without the repair is broken on reorgs. Check GROUNDWIRE_BRANCH has
   # the matching desk before bumping.
   #
-  # fa10f581 (2026-09-16, gwbtc/node branch hd/lc-peers, based on 063720b9):
-  # the peer set heals itself (stale connects reaped, a sweep timer
-  # reconnects, no bans for local faults), the block deserialiser keeps a
-  # cursor instead of copying the block per field, and the four patches
-  # this workflow used to apply with sed are in the desk. NOT the develop
-  # tip: develop renamed /sur/bitcoin/light-client and the marks after
-  # 063720b9, and %gw-btc still consumes the old names.
-  NODE_REF: fa10f581ff556ec6b0757c592fa805b5a8762e62
+  # 39648ac3 (2026-10-02, gwbtc/node develop): Robin's light client.  Its
+  # state migrates from fa10f581's (the hd/lc-peers build every earlier RC
+  # shipped), it gives every fact as one %bitcoin-client-update mark and
+  # takes pokes as %bitcoin-client-action -- %gw-btc reads that form from
+  # groundwire daad90c on, and gwlib.sh's peer seeding sends it -- and it
+  # still accepts the old %bitcoin-client-connect-peer poke, so a comet on
+  # an older release's gwlib.sh can still seed peers.
+  NODE_REF: 39648ac355b3fbcbb7af7c6b3e2ae38bc8cbc26a
   # desks
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
@@ -407,7 +407,7 @@ jobs:
           # The four in-CI patches this step used to apply (sys.kelvin 408,
           # [%block-filter ~], connect-peer mark cases, best-block mark
           # .last-common reads) are in the desk itself as of NODE_REF
-          # (gwbtc/node hd/lc-peers). Guard against a NODE_REF that has
+          # (gwbtc/node develop). Guard against a NODE_REF that has
           # lost them rather than silently re-patching: fail the build.
           grep -q '%zuse 408' ./zod/node/sys.kelvin
           test "$(grep -c '\[%block-filter\])' ./zod/node/app/bitcoin-client.hoon || true)" = 0
