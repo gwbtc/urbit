@@ -1,8 +1,6 @@
 name: Deploy base to sponsor ship
 on:
   push:
-    branches:
-      - gw/next/kelvin/408
     paths:
       - 'pkg/arvo/**'
       - 'pkg/base-dev/**'
@@ -19,6 +17,8 @@ env:
 
 jobs:
   deploy:
+    # `on.push.branches` can't read variables, so filter by branch here
+    if: github.ref_name == vars.RELEASE_BRANCH
     runs-on: ubuntu-latest
     name: deploy (sponsor)
     steps:
