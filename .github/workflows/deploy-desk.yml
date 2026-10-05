@@ -1,0 +1,50 @@
+name: Deploy base to sponsor ship
+on:
+  push:
+    branches:
+      - gw/next/kelvin/408
+    paths:
+      - 'pkg/arvo/**'
+      - 'pkg/base-dev/**'
+      - '.github/workflows/deploy-desk.yml'
+
+env:
+  DESK:      base
+  DIST_PIER: ${{ vars.SPONSOR_URBIT_ID_NO_TILDE }}
+  SCREEN:    sponsor
+  SHIP_IP:   ${{ vars.SPONSOR_IP }}
+  SHIP_HOST: root@${{ vars.SPONSOR_IP }}
+  PIER_PATH: /root
+  PIER:      sponsor
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: deploy (sponsor)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create desk.ship
+        run: |
+          printf '%s\n' "~${DIST_PIER}" > pkg/arvo/desk.ship
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SPONSOR_VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${SHIP_IP} >> ~/.ssh/known_hosts
+
+      - name: Clear deployed desk
+        run: ssh ${SHIP_HOST} "find ${PIER_PATH}/${PIER}/${DESK} -mindepth 1 -maxdepth 1 -exec rm -rf {} +"
+
+      # pkg/arvo symlinks into pkg/base-dev, so copy the link targets
+      - name: Deploy desk
+        run: |
+          rsync -azL --delete --exclude='.git*' \
+            pkg/arvo/ ${SHIP_HOST}:${PIER_PATH}/${PIER}/${DESK}/
+
+      - name: Commit desk on ship
+        run: |
+          ssh ${SHIP_HOST} "screen -S ${SCREEN} -p 0 -X stuff $'|commit %${DESK}\r'"
