@@ -350,6 +350,11 @@
       `state
     :: TODO ... the wid comes from vere tho...?
     =^  id  next-id.state  [next-id.state +(next-id.state)]
+    ::  no runtime to ask yet (before %born): refuse, as it would
+    ::
+    ?~  outbound-duct.state
+      :_  state
+      [duct %give %websocket-response id %reject ~]~
     =/  wc=websocket-connection  [desk duct id url %pending]
     =.  sockets.state  (~(put by sockets.state) id wc)
     ::  keep track of the duct for cancellation
@@ -370,11 +375,11 @@
   ::
   ++  ws-event
     |=  [wid=@ud event=websocket-event:eyre]
-    ~&  iris-ws-event=[wid -.event duct]
     =/  wc  (~(get by sockets.state) wid)
     ?~  wc  `state
     =/  wc  u.wc
-    ~&  wc=wc
+    ::  opens and closes only: messages would print on every one
+    ~?  !?=(%message -.event)  iris-ws-event=[wid -.event app.wc url.wc]
     =^  moves  state
       ?-    -.event
           %reject      (cleanup-ws wid)
@@ -398,7 +403,6 @@
   ++  ws-response
     |=  [wc=websocket-connection event=websocket-event:eyre]
     ^-  (list move)
-    ~&  ws-response=wc
     :~  :*  duct.wc
             %give
             %websocket-response
@@ -406,27 +410,52 @@
             event
     ==  ==
   ::    
+  ::  +ws-cancel: an app closes a socket. the runtime knows a connecting
+  ::  one as a request (%cancel-request) and an open one as a websocket
+  ::  (%disconnect: it closes it properly). either way it answers with an
+  ::  event for a socket we've forgotten: ignored
+  ::
   ++  ws-cancel
     |=  wid=@ud
-    =.  sockets.state  (~(del by sockets.state) wid)
-    :_  state
-    :: TODO this goes to vere
+    ^-  [(list move) ^state]
+    ?~  con=(~(get by sockets.state) wid)  `state
+    ?.  ?=(%pending status.u.con)  (ws-close wid)
+    :_  state(sockets (~(del by sockets.state) wid))
+    ?~  outbound-duct.state  ~
     [outbound-duct.state %give %cancel-request wid]~
+  ::  +ws-close: the app's done with an open socket (it cancelled, kicked
+  ::  us, refused our watch or gave %disconnect): forget it, and have the
+  ::  runtime close it
+  ::
+  ++  ws-close
+    |=  wid=@ud
+    ^-  [(list move) ^state]
+    ?.  (~(has by sockets.state) wid)  `state
+    =^  moves  state  (cleanup-ws wid)
+    :_  state
+    %+  weld  moves
+    ^-  (list move)
+    ?~  outbound-duct.state  ~
+    [outbound-duct.state %give %websocket-response wid %disconnect ~]~
+  ::
+  ::  +watch-agent, +leave-agent: on the runtime's duct, outbound-duct,
+  ::  whatever event we're in: gall knows a subscription by its duct, so
+  ::  a %leave must come on the %watch's. (the runtime's websocket events
+  ::  come on that duct too: same wire as its %born)
   ::
   ++  watch-agent
     |=  [wid=@ud app=term]
     ^-  move
     =/  wids  (scot %ud wid)
     =/  =note  [%g %deal [our our /iris] app %watch /websocket-client/[wids]]
-    [duct %pass /ws-watch/[wids] note]
+    [outbound-duct.state %pass /ws-watch/[wids] note]
   ::
   ++  leave-agent
     |=  [wid=@ud app=term]
     ^-  move
-    ~&  iris-leave-agent=[wid app]
     =/  wids  (scot %ud wid)
     =/  =note  [%g %deal [our our /iris] app %leave ~]
-    [duct %pass /ws-watch/[wids] note]
+    [outbound-duct.state %pass /ws-watch/[wids] note]
   ::
   ++  poke-agent
     |=  [msg=[@ud websocket-message:eyre] app=term]
@@ -487,15 +516,33 @@
       |=  [=^duct @ud]
       ^-  move
       [duct %give %http-response %cancel ~]
-    ::  reset all connection state on born
+    ::  websockets: the runtime closed them all as it went down, without a
+    ::  %disconnect (_cttp_io_exit can't send one). give each app the
+    ::  %disconnect it missed, on the duct it connected on, as +ws-event
+    ::  would have; else they stay %accepted here for good. and %leave
+    ::  their subscriptions, on the last boot's runtime duct (still in
+    ::  state here) where we made them
     ::
-    =:  next-id.state.ax             0
+    =/  ws-moves=(list move)
+      %-  zing
+      %+  turn  ~(tap by sockets.state.ax)
+      |=  [wid=@ud wc=websocket-connection]
+      ^-  (list move)
+      :-  [duct.wc %give %websocket-response wid %disconnect ~]
+      ?.  ?=(%accepted status.wc)  ~
+      ~[(leave-agent:client wid app.wc)]
+    ::  reset all connection state on born, but for next-id: ids stay
+    ::  unique across boots, so nothing stale (an app's subscription or
+    ::  timer, say) is taken for a new socket's. the runtime keeps no ids
+    ::  of its own to agree with
+    ::
+    =:  sockets.state.ax             ~
         connection-by-id.state.ax    ~
         connection-by-duct.state.ax  ~
         outbound-duct.state.ax       duct
     ==
     ::
-    [moves iris-gate]
+    [(weld moves ws-moves) iris-gate]
   ::
       %request
     =^  moves  state.ax  (request:client +.task)
@@ -529,46 +576,57 @@
   ^-  [(list move) _iris-gate]
   ~>  %spin.['take/iris']
   ?<  ?=(^ dud)
-  :_  iris-gate
-  ?+    wire  ~
-      [%ws-watch wids=@t ~]
-    =/  wid  (slav %ud wids.wire)
-    ~&  iris-ws-take=-.hin
-    ?+    -.hin  ~
-        %gall
-      ?>  ?=([%unto *] +.hin)
-      ~&  hin=-.p.hin
-      ?+    -.p.hin  ~
-          ?(%poke-ack %watch-ack)
-        ?~  p.p.hin  ~
-        ~
-      ::
-          %kick  
-        =/  event-args  [[eny duct now rof] state.ax]
-        =/  client  (per-client-event event-args)
-        =^  movs  state.ax  (cleanup-ws:client wid)
-        movs
-      ::
-          %fact
-        =*  cag  cage.p.hin
-        :: This comes from agent, goes to vere
-        ~&  >  iris-take-ws-fact=p.cag
-        ?+    p.cag  ~&(bad-fact+p.cag !!)
-            %message
-          =/  msg  !<(websocket-message:eyre q.cag)
-          [outbound-duct.state.ax %give %websocket-response wid %message msg]~
+  ::  the moves and the new state first, then the gate: in a cell like
+  ::  [moves iris-gate] both halves see the same subject, so state
+  ::  changed while making the moves would be lost from the gate
+  ::
+  =^  moves  state.ax
+    ^-  [(list move) _state.ax]
+    ?+    wire  [~ state.ax]
+        [%ws-watch wids=@t ~]
+      =/  wid  (slav %ud wids.wire)
+      =/  client  (per-client-event [[eny duct now rof] state.ax])
+      ?+    -.hin  [~ state.ax]
+          %gall
+        ?>  ?=([%unto *] +.hin)
+        ?+    -.p.hin  [~ state.ax]
+            %poke-ack  [~ state.ax]
         ::
-            %disconnect
-          ~&  iris-take-ws-disconnect=wid
-          =/  event-args  [[eny duct now rof] state.ax]
-          =/  client  (per-client-event event-args)
-          =^  movs  state.ax  (cleanup-ws:client wid)
-          %+  welp  movs
-          [outbound-duct.state.ax %give %websocket-response wid %disconnect ~]~
+            %watch-ack
+          ?~  p.p.hin  [~ state.ax]
+          ::  the app refused the socket: close it, and say so on the
+          ::  duct it connected on
+          ~&  iris-ws-watch-nack=wid
+          =/  con  (~(get by sockets.state.ax) wid)
+          =^  movs  state.ax  (ws-close:client wid)
+          :_  state.ax
+          ?~  con  movs
+          [[duct.u.con %give %websocket-response wid %disconnect ~] movs]
+        ::
+            %kick
+          ::  gall's done with our subscription (the app kicked it, or
+          ::  was nuked or suspended): the socket goes too
+          (ws-close:client wid)
+        ::
+            %fact
+          =*  cag  cage.p.hin
+          :: This comes from agent, goes to vere
+          ?+    p.cag  ~&(bad-fact+p.cag !!)
+              %message
+            ::  only for a socket we have: not from a stale subscription
+            ?.  (~(has by sockets.state.ax) wid)  [~ state.ax]
+            =/  msg  !<(websocket-message:eyre q.cag)
+            :_  state.ax
+            [outbound-duct.state.ax %give %websocket-response wid %message msg]~
+          ::
+              %disconnect
+            ~&  iris-take-ws-disconnect=wid
+            (ws-close:client wid)
+          ==
         ==
       ==
     ==
-  ==
+  [moves iris-gate]
 ::
 ++  iris-gate  ..$
 ::  +load: migrate old state to new state (called on vane reload)
