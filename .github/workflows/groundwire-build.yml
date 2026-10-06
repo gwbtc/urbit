@@ -17,6 +17,12 @@ env:
   GROUNDWIRE_BRANCH: main
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
+  # gwbtc/chorus: the %chorus desk, pinned by full SHA so a release is
+  # reproducible (`git ls-remote https://github.com/gwbtc/chorus main`).
+  # the desk is assembled by the repo's own `zig build`, which vendors the
+  # mcp, urbit-markdown, mnemonyms, kademlia and base-dev imports it pins;
+  # its kelvin is 408. fbe7e0a (2026-10-05): update kademlia import.
+  CHORUS_REF: fbe7e0adf785df66a88618919ae3e92a7276cb8a
 
 jobs:
   # =============================================================
@@ -102,6 +108,14 @@ jobs:
           repository: gwbtc/vitriol
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
+          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
+
+      - name: Checkout gwbtc/chorus
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/chorus
+          ref: ${{ env.CHORUS_REF }}
+          path: gwbtc-chorus
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       # -- Boot fake ~zod --
@@ -194,6 +208,22 @@ jobs:
           popd
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
+      - name: Populate %chorus desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          # gwbtc/chorus has no checked-in vendored deps; its build.zig
+          # fetches the pinned imports and lays the desk out under zig-out/.
+          pushd "${ROOT}/gwbtc-chorus"
+          zig build
+          test -f zig-out/desk.bill
+          grep -q '%zuse 408' zig-out/sys.kelvin
+          popd
+          "${ROOT}/automation/desk-create.sh" chorus "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" chorus "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" chorus "${ROOT}/zod"
+          cp -rL "${ROOT}/gwbtc-chorus/zig-out/"* "${ROOT}/zod/chorus/"
+          "${ROOT}/automation/desk-commit.sh" chorus "${ROOT}/zod" "$CONN_SOCK"
+
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
 
@@ -214,6 +244,7 @@ jobs:
                 :~  [%groundwire /(scot %p our)/groundwire/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
+                    [%chorus /(scot %p our)/chorus/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
