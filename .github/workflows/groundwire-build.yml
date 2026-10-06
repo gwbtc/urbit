@@ -114,6 +114,12 @@ env:
   # this is the sponsor's, on the port its runtime currently listens on.
   # The durable fix is gwbtc/vere#23 (no gateway at boot).
   GW_GATEWAY: http://146.190.199.0:80
+  # gwbtc/chorus: the %chorus desk, pinned by full SHA so a release is
+  # reproducible (`git ls-remote https://github.com/gwbtc/chorus main`).
+  # the desk is assembled by the repo's own `zig build`, which vendors the
+  # mcp, urbit-markdown, mnemonyms, kademlia and base-dev imports it pins;
+  # its kelvin is 408. fbe7e0a (2026-10-05): update kademlia import.
+  CHORUS_REF: fbe7e0adf785df66a88618919ae3e92a7276cb8a
 
 jobs:
   # =============================================================
@@ -274,6 +280,12 @@ jobs:
           repository: gwbtc/urbit-dns
           ref: ${{ env.URBIT_DNS_REF }}
           path: gwbtc-urbit-dns
+      - name: Checkout gwbtc/chorus
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/chorus
+          ref: ${{ env.CHORUS_REF }}
+          path: gwbtc-chorus
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       # -- Boot fake ~zod --
@@ -656,6 +668,25 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/drive/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/drive/desk.ship
           ./automation/desk-commit.sh drive ./zod "$CONN_SOCK"
+      - name: Populate %chorus desk
+        run: |
+          ROOT="${GITHUB_WORKSPACE:-$PWD}"
+          # gwbtc/chorus has no checked-in vendored deps; its build.zig
+          # fetches the pinned imports and lays the desk out under zig-out/.
+          pushd "${ROOT}/gwbtc-chorus"
+          zig build
+          test -f zig-out/desk.bill
+          grep -q '%zuse 408' zig-out/sys.kelvin
+          popd
+          "${ROOT}/automation/desk-create.sh" chorus "$CONN_SOCK"
+          "${ROOT}/automation/desk-mount.sh" chorus "${ROOT}/zod" "$CONN_SOCK"
+          "${ROOT}/automation/desk-populate.sh" chorus "${ROOT}/zod"
+          cp -rL "${ROOT}/gwbtc-chorus/zig-out/"* "${ROOT}/zod/chorus/"
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "${ROOT}/zod/chorus/mar"
+          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/chorus/mar/ship.hoon"
+          echo "$DESK_DISTER" > "${ROOT}/zod/chorus/desk.ship"
+          "${ROOT}/automation/desk-commit.sh" chorus "${ROOT}/zod" "$CONN_SOCK"
 
       - name: Wait for Clay to settle
         run: ./automation/wait-idle.sh "$CONN_SOCK"
@@ -684,6 +715,7 @@ jobs:
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
                     [%dns /(scot %p our)/dns/(scot %da now)]
+                    [%chorus /(scot %p our)/chorus/(scot %da now)]
                 ==
               =/  =pill:pill  (brass:pill sys dez & & | ~)
               ;<  ~  bind:m
@@ -703,7 +735,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns"
+          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
