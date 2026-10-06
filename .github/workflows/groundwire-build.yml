@@ -29,7 +29,7 @@ on:
         description: 'gwbtc/urbit ref for the kernel + vere'
         required: false
         default: 'hd/cc-kernel'
-    groundwire_ref:
+      groundwire_ref:
         description: 'gwbtc/groundwire ref for the desk (default: hd/cc-landing)'
         required: false
         default: 'hd/cc-landing'
