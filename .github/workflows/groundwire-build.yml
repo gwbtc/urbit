@@ -29,10 +29,10 @@ on:
         description: 'gwbtc/urbit ref for the kernel + vere'
         required: false
         default: ''
-      groundwire_ref:
-        description: 'gwbtc/groundwire ref for the desk (default: main)'
+    groundwire_ref:
+        description: 'gwbtc/groundwire ref for the desk (default: hd/cc-landing)'
         required: false
-        default: ''
+        default: 'hd/cc-landing'
       vere_ref:
         description: 'gwbtc/vere ref for the runtime (default: gw/next/kelvin/408)'
         required: false
