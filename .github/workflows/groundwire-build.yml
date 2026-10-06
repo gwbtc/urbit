@@ -28,7 +28,7 @@ on:
       urbit_ref:
         description: 'gwbtc/urbit ref for the kernel + vere'
         required: false
-        default: ''
+        default: 'hd/cc-kernel'
     groundwire_ref:
         description: 'gwbtc/groundwire ref for the desk (default: hd/cc-landing)'
         required: false
@@ -36,7 +36,7 @@ on:
       vere_ref:
         description: 'gwbtc/vere ref for the runtime (default: gw/next/kelvin/408)'
         required: false
-        default: ''
+        default: 'gw/next/kelvin/408'
       tag_prefix:
         description: 'release tag prefix (default: groundwire-alpha)'
         required: false
