@@ -93,7 +93,7 @@ env:
   # an older release's gwlib.sh can still seed peers.
   NODE_REF: 39648ac355b3fbcbb7af7c6b3e2ae38bc8cbc26a
   # desks
-  GROUNDWIRE_BRANCH: main
+  GROUNDWIRE_BRANCH: hd/cc-landing
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
   NOSTRILL_BRANCH: bm/zig
@@ -119,7 +119,7 @@ env:
   # the desk is assembled by the repo's own `zig build`, which vendors the
   # mcp, urbit-markdown, mnemonyms, kademlia and base-dev imports it pins;
   # its kelvin is 408. fbe7e0a (2026-10-05): update kademlia import.
-  CHORUS_REF: fbe7e0adf785df66a88618919ae3e92a7276cb8a
+  CHORUS_REF: main
 
 jobs:
   # =============================================================
