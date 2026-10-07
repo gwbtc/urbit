@@ -96,7 +96,6 @@ env:
   GROUNDWIRE_BRANCH: hd/cc-landing
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
-  NOSTRILL_BRANCH: bm/zig
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: main
   # The distribution ship every baked desk's desk.ship points at: a
@@ -104,7 +103,7 @@ env:
   # sur/hood.hoon; the sync is a second channel, not a gate).  This is
   # our OWN sponsor, which we install all of these desks onto, so it
   # can actually serve every one of them -- unlike production's dister,
-  # which did not publish node/tcp-sidecar/nostrill.
+  # which did not publish node/tcp-sidecar.
   DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
   # The PKI gateway a comet's first boot fetches the galaxy table and
   # network domains from (gw-vere --gateway; dawn.c =lamp= / =turf=).  gw-vere's
@@ -222,14 +221,6 @@ jobs:
           repository: gwbtc/vitriol
           ref: ${{ env.VITRIOL_BRANCH }}
           path: gwbtc-vitriol
-          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
-
-      - name: Checkout Nostrill (gwbtc/ursockets)
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/ursockets
-          ref: ${{ env.NOSTRILL_BRANCH }}
-          path: gwbtc-ursockets
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Checkout tloncorp/landscape
@@ -366,11 +357,6 @@ jobs:
             echo "GW_DESK=groundwire"                       >> "$GITHUB_ENV"
             echo "GW_DIST=gwbtc-groundwire/dist-groundwire" >> "$GITHUB_ENV"
           fi
-          # spv-wallet's dist is a BUILD artifact (not committed); its make
-          # target copies from the gw-btc source built just above.  The daily
-          # lane runs `make gw-btc spv` together; the RC lane must too, or the
-          # %spv-wallet rsync below has no dist-spv to copy.
-          make spv
 
       - name: Populate the gw-btc desk
         run: |
@@ -386,19 +372,6 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/$GW_DESK/mar/ship.hoon"
           echo "$DESK_DISTER" > "./zod/$GW_DESK/desk.ship"
           ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
-
-      - name: Populate %spv-wallet desk
-        run: |
-          ./automation/desk-create.sh spv-wallet "$CONN_SOCK"
-          ./automation/desk-mount.sh spv-wallet ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh spv-wallet ./zod
-          rsync -a --no-links --checksum --exclude='.git*' --exclude='.ignore' \
-            gwbtc-groundwire/dist-spv/ ./zod/spv-wallet/
-          # desk.ship needs a %ship mark, or clay drops the commit silently.
-          mkdir -p "./zod/spv-wallet/mar"
-          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/spv-wallet/mar/ship.hoon"
-          echo "$DESK_DISTER" > ./zod/spv-wallet/desk.ship
-          ./automation/desk-commit.sh spv-wallet ./zod "$CONN_SOCK"
 
       # -- The light-client stack: %node and %tcp-sidecar --
       #
@@ -611,21 +584,6 @@ jobs:
           echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
-      - name: Populate %nostrill desk
-        run: |
-          ROOT="${GITHUB_WORKSPACE:-$PWD}"
-          "${ROOT}/automation/desk-create.sh" nostrill "$CONN_SOCK"
-          "${ROOT}/automation/desk-mount.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
-          "${ROOT}/automation/desk-populate.sh" nostrill "${ROOT}/zod"
-          pushd "${ROOT}/gwbtc-ursockets"
-          zig build -Ddesk="${ROOT}/zod/nostrill/"
-          popd
-          # desk.ship needs a %ship mark, or clay drops the commit silently.
-          mkdir -p "${ROOT}/zod/nostrill/mar"
-          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/nostrill/mar/ship.hoon"
-          echo "$DESK_DISTER" > "${ROOT}/zod/nostrill/desk.ship"
-          "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
-
       - name: Populate %landscape desk
         run: |
           ./automation/desk-create.sh landscape "$CONN_SOCK"
@@ -706,12 +664,10 @@ jobs:
               =/  sys=path    /(scot %p our)/gw-base/(scot %da now)/sys
               =/  dez=(list [desk path])
                 :~  [%GWDESK /(scot %p our)/GWDESK/(scot %da now)]
-                    [%spv-wallet /(scot %p our)/spv-wallet/(scot %da now)]
                     [%node /(scot %p our)/node/(scot %da now)]
                     [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
-                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
                     [%dns /(scot %p our)/dns/(scot %da now)]
@@ -735,7 +691,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK spv-wallet node tcp-sidecar mcp vitriol nostrill landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
