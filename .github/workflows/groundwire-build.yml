@@ -53,7 +53,7 @@ env:
   # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
   # 2026-09-16: gwbtc/tcp-sidecar hd/read-256k (on main c362083): 256 KB
   # reads, so a 2 MB block is ~8 %receive events instead of ~250.
-  TCP_SIDECAR_REF: a85248d42c498294bf2525836d3a6e1146c4fc34
+  TCP_SIDECAR_REF: ceecf36d9810b73ca78bc0b9d117976a9cc24018
   # gwbtc/urbit-dns: the %dns desk, the client of the sponsor's naming
   # service (a groundwire.me name + an %acme certificate per comet). In the
   # pill so boot.sh can run its dns-address thread on every comet with no
