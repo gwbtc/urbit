@@ -326,11 +326,12 @@
     ::
     ::  the sending agent's name is the domain (1:1 by construction;
     ::  tasks from agents arrive on a [%gall %use dap ...] duct).  we
-    ::  watch .pax on that agent for %verdict / %anew-response
-    ::  facts (attestation outcomes, fresh self-attestations) and
-    ::  %azimuth-udiffs facts (ongoing chain updates); and we watch
-    ::  the agent's liveness through clay %tire (subscribed on first
-    ::  registration), reacting to its desk going down as %gost and
+    ::  watch .pax on that agent for %verdict, %anew-response, and
+    ::  %stale-notice domain facts.  A fact on the same subscription is
+    ::  allowed to carry %azimuth-udiffs only when ordinary %listen source
+    ::  selection separately authorizes that agent; %anex alone does not.
+    ::  We also watch the agent's liveness through clay %tire (subscribed on
+    ::  first registration), reacting to its desk going down as %gost and
     ::  coming back up as %ghul.
     ::
         %anex
@@ -384,9 +385,8 @@
     ::  request a fresh self-attestation from the domain agent
     ::    [%anew dom=@tas]
     ::
-    ::  sent by ames on the /sybl wire when our own attestation needs
-    ::  a newer off-chain reveal log (our sat moved, or a peer
-    ::  rejected a stale packet).  the agent answers with an
+    ::  sent when our own attestation needs a newer off-chain reveal
+    ::  log.  the agent answers with an
     ::  %anew-response fact; the fresh pass flows back to %sybl
     ::  subscribers as a [%sybl %anew dom pass] gift.
     ::
@@ -794,8 +794,12 @@
     ::
         [%ames %boon *]
       =+  ;;  [%public-keys-result =public-keys-result]  payload.hin
+      =/  sus  ~(. su hen now pki etn)
+      =/  safe  (filter-generic-result:sus public-keys-result)
+      ?~  safe
+        +>.$
       %-  curd  =<  abet
-      (public-keys:~(feel su hen now pki etn) [pos fes]:zim.pki public-keys-result)
+      (public-keys:feel:sus [pos fes]:zim.pki u.safe)
     ::
         [%ames %lost *]
       ::  TODO: better error handling
@@ -922,11 +926,14 @@
             %+  exec:~(. su hen now pki etn)
               syl.zim.pki
             [%give %sybl %fail dom.res ship.res]
+          =/  sus  ~(. su hen now pki etn)
+          ?.  (valid-verdict:sus dom.res ship.res u.res.res)
+            %.  +>.$
+            (slog leaf+"jael: dropped invalid verdict for {<ship.res>} from {<dom.res>}" ~)
           =.  dos
             %+  ~(put by dos)  dom.res
             u.reg(hep (~(put in hep.u.reg) ship.res))
           %-  curd  =<  abet
-          =/  sus  ~(. su hen now pki etn)
           =/  sus
             %+  public-keys:feel:sus
               [pos fes]:zim.pki
@@ -973,24 +980,29 @@
           %+  exec:~(. su hen now pki etn)
             syl.zim.pki
           [%give %sybl %stale dom.res ship.res]
-        ::  anything else is chain updates (udiffs).  only a live
-        ::  registered pki domain or an explicitly configured legacy
-        ::  source (%listen with an agent source) may inject them;
-        ::  facts from any other agent are dropped.
+        ::  anything else is chain updates (udiffs).  Domain registration
+        ::  authorizes verdicts for that domain; it does not confer a second,
+        ::  unscoped way to rewrite Jael points.  Generic udiffs require the
+        ::  ordinary source selected by %listen (or the default source), and
+        ::  comet points are never updated through this channel.
         ::
         =/  dom  (dom-for-app app)
-        ?:  ?=(^ dom)
-          ?.  liv:(~(got by dos) u.dom)
-            +>.$
-          =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
-          %-  curd  =<  abet
-          (~(new-event su hen now pki etn) udiffs)
-        ?.  (~(has by sources-reverse.etn) [%| ;;(term app)])
+        ?:  ?&  ?=(^ dom)
+                !liv:(~(got by dos) u.dom)
+            ==
+          +>.$
+        =/  sid  (~(get by sources-reverse.etn) [%| ;;(term app)])
+        ?~  sid
           %.  +>.$
           (slog leaf+"jael: dropped udiffs from unregistered {<app>}" ~)
         =+  ;;(=udiffs:point q.q.cage.p.+>.hin)
+        =/  sus  ~(. su hen now pki etn)
+        =/  udiffs
+          %+  skim  udiffs
+          |=  [=ship =udiff:point]
+          (udiff-authorized:sus u.sid ship)
         %-  curd  =<  abet
-        (~(new-event su hen now pki etn) udiffs)
+        (new-event:sus udiffs)
       ==
     ==
   ::                                                    ::  ++curd:of
@@ -1137,6 +1149,146 @@
       sources-reverse.etn  (~(put by sources-reverse) source top-source-id.etn)
     ==
   ::
+  ::  Decode a +mat without calling the jetted +rub on an unbounded
+  ::  length-of-length.  This is deliberately small and allocation-free
+  ::  until the claimed value is known to fit in the input atom.
+  ::
+  ++  mat-value-at
+    |=  [a=@ pos=@ud]
+    ^-  (unit @)
+    =/  m=@ud  (met 0 a)
+    =/  c=@ud  0
+    |-  ^-  (unit @)
+    ?:  (gth c 20)  ~
+    ?:  (gte (add pos c) m)  ~
+    ?:  =(0 (cut 0 [(add pos c) 1] a))
+      $(c +(c))
+    ?:  =(0 c)  `0
+    =/  d=@ud  (add pos +(c))
+    =/  e=@ud  (add (bex (dec c)) (cut 0 [d (dec c)] a))
+    =/  end=@ud  (add pos (add (add c c) e))
+    ?.  (lte end m)  ~
+    `(cut 0 [(add pos (add c c)) e] a)
+  ::
+  ::  A positive domain verdict is input from userspace, not authority to
+  ::  rewrite arbitrary Jael state.  Require a well-formed suite-C current
+  ::  key which commits both the claimed ship and the answering domain, and
+  ::  never accept a point that rolls either monotonic counter backward.
+  ::
+  ++  valid-verdict
+    |=  [dom=@tas who=ship =point]
+    ^-  ?
+    =/  sponsor-ok=?
+      ?~  sponsor.point
+        &
+      ?=(?(%king %pawn) (clan:title u.sponsor.point))
+    ?.  sponsor-ok  |
+    ?:  =(0 life.point)  |
+    =/  key  (~(get by keys.point) life.point)
+    ?~  key  |
+    ?.  =('c' (end 3 pass.u.key))  |
+    =/  new-cry  (cut 8 [1 1] (rsh 3 pass.u.key))
+    =/  old  (~(get by pos.zim) who)
+    =/  old-ok=?
+      ?~  old  &
+      =/  old-key  (~(get by keys.u.old) life.u.old)
+      ?&  (gte life.point life.u.old)
+          (gte rift.point rift.u.old)
+          ?:  =(life.point life.u.old)
+            ?&  ?=(^ old-key)
+                =('c' (end 3 pass.u.old-key))
+                =(new-cry (cut 8 [1 1] (rsh 3 pass.u.old-key)))
+            ==
+          &
+      ==
+    ?.  old-ok
+      |
+    ::  A suite-C pass contains [ugn cry (mat dat) xtr] after its tag;
+    ::  validate both nested mats before the crypto parser calls +rub.
+    ::
+    =/  dat  (mat-value-at pass.u.key 520)
+    ?~  dat  |
+    =/  tag  (mat-value-at u.dat 0)
+    ?~  tag  |
+    ?.  =(dom u.tag)  |
+    =/  vok=(unit ?)
+      %-  mole
+      |.
+      =/  cic  (com:nu:cric:crypto pass.u.key)
+      ?&  ?=([%c *] +<.cic)
+          =(crypto-suite.u.key num:ex:cic)
+          =(who fig:ex:cic)
+      ==
+    ?~(vok | u.vok)
+  ::
+  ::  Does a private ring reproduce exactly the public key Jael was told
+  ::  to authorize?  The pass equality includes suite-C ugn/dat/xtr, not
+  ::  merely the live signing key.  Numeric Azimuth identities are not key
+  ::  fingerprints, while every comet name remains bound to its pass.
+  ::
+  ++  ring-matches
+    |=  [who=ship crypto-suite=@ud =pass =ring]
+    ^-  ?
+    =/  mag  (end 3 ring)
+    ?.  ?|  =('B' mag)
+            ?&  =('C' mag)
+                ?=(^ (mat-value-at ring 520))
+            ==
+        ==
+      |
+    =/  vok=(unit ?)
+      %-  mole
+      |.
+      =/  cic  (nol:nu:cric:crypto ring)
+      ?&  =(crypto-suite num:ex:cic)
+          =(pass pub:ex:cic)
+          ?|  !=(%pawn (clan:title who))
+              =(who fig:ex:cic)
+          ==
+      ==
+    ?~(vok | u.vok)
+  ::
+  ::  Is .sid the selected local Gall udiff source for .who?  Explicit
+  ::  per-ship selections override the default.  Comets are deliberately
+  ::  excluded: suite-C authority flows through a domain verdict, while a
+  ::  vanilla comet has no on-chain point stream at all.
+  ::
+  ++  udiff-authorized
+    |=  [sid=source-id who=ship]
+    ^-  ?
+    ?:  =(%pawn (clan:title who))  |
+    =/  got  (~(get by ship-sources.etn) who)
+    ?~(got =(sid default-source.etn) =(sid u.got))
+  ::
+  ::  Generic local and remote point feeds cannot update comets.  Boot tasks
+  ::  install our initial point, and migration retains stored points; later
+  ::  suite-C comet updates require a validated domain verdict.  Filter all
+  ::  three result shapes at the common Ames ingress so a generic %full cannot
+  ::  bypass +valid-verdict.  Numeric remote results retain their existing
+  ::  source handling; this arm does not recheck per-ship source selection.
+  ::
+  ++  filter-generic-result
+    |=  res=public-keys-result
+    ^-  (unit public-keys-result)
+    ?-  -.res
+      %full
+        =/  safe-points=(map ship point)
+          %-  malt
+          %+  skim  ~(tap by points.res)
+          |=  [who=ship =point]
+          !=(%pawn (clan:title who))
+        ?~  safe-points  ~
+        `res(points safe-points)
+      %diff
+        ?:  =(%pawn (clan:title who.res))
+          ~
+        `res
+      %breach
+        ?:  =(%pawn (clan:title who.res))
+          ~
+        `res
+    ==
+  ::
   ++  new-event
     |=  =udiffs:point
     ^+  this-su
@@ -1147,18 +1299,6 @@
     =/  a-point=point  (~(gut by pos.zim.pki) ship.i.udiffs *point)
     =/  a-diff=(unit diff:point)  (udiff-to-diff:point udiff.i.udiffs a-point)
     =?  this-su  ?=(^ a-diff)
-      =?    this-su
-          ?&  =(our ship.i.udiffs)
-              ?=(%keys -.u.a-diff)
-              (~(has by jaw.own) life.to.u.a-diff)
-          ==
-        ::  if this about our keys, and we already know these, start using them
-        ::
-        =.  lyf.own  life.to.u.a-diff
-        ::  notify subscribers (ames) to start using our new private keys
-        ::
-        (exec yen.own [%give %private-keys [lyf jaw]:own])
-      ::
       (public-keys:feel orig %diff ship.i.udiffs u.a-diff)
     $(udiffs t.udiffs)
   ::
@@ -1325,7 +1465,8 @@
           ~(tap by points.public-keys-result)
         |-  ^+  ..feel
         ?~  pointl
-          ..feel(pos.zim (~(uni by pos.zim) points.public-keys-result))
+          =.  pos.zim  (~(uni by pos.zim) points.public-keys-result)
+          (reconcile-own ~)
         =?  ..feel
             ?&  ?!  .=  (~(get by fes.orig) who.i.pointl)
                 fief.point.i.pointl
@@ -1430,11 +1571,35 @@
         ==
       ::
       =.  pos.zim  (~(put by pos.zim) who point)
-      %+  public-keys-give
-        (subscribers-ship who)
-      ?~  maybe-point
-        [%full (my [who point]~)]
-      [%diff who a-diff]
+      =.  ..feel
+        %+  public-keys-give
+          (subscribers-ship who)
+        ?~  maybe-point
+          [%full (my [who point]~)]
+        [%diff who a-diff]
+      (reconcile-own ~)
+    ::
+    ::  Reconcile the public point and cached private rings for our ship.
+    ::  Public-key callers invoke this only after queuing their notification,
+    ::  so Ames always learns the authorized point before it is asked to use
+    ::  the private key.  A life identifies one live key: only a strictly
+    ::  newer authorized point can activate a ring.
+    ::
+    ++  reconcile-own
+      |=  ~
+      ^+  ..feel
+      =/  pon  (~(get by pos.zim) our)
+      ?~  pon  ..feel
+      ?.  (gth life.u.pon lyf.own)
+        ..feel
+      =/  key  (~(get by keys.u.pon) life.u.pon)
+      ?~  key  ..feel
+      =/  sec  (~(get by jaw.own) life.u.pon)
+      ?~  sec  ..feel
+      ?.  (ring-matches our crypto-suite.u.key pass.u.key u.sec)
+        ..feel
+      =.  lyf.own  life.u.pon
+      (exec yen.own [%give %private-keys [lyf jaw]:own])
     ::
     ::  Update private-keys
     ::
@@ -1443,19 +1608,20 @@
       ^+  ..feel
       ?:  &(=(lyf.own life) =((~(get by jaw.own) life) `ring))
         ..feel
-      ::  only eagerly update lyf if we were behind the chain life
+      ::  Moon keys are not governed by an Azimuth/public point.  Preserve
+      ::  their historical immediate-rekey behavior.
       ::
-      =?  lyf.own
-          ?|  ?=(%earl (clan:title our))
-              ?&  (gth life lyf.own)
-                ::
-                  =+  pon=(~(get by pos.zim) our)
-                  ?~  pon  |
-                  (lth lyf.own life.u.pon)
-          ==  ==
-        life
+      ?:  ?=(%earl (clan:title our))
+        =.  lyf.own  life
+        =.  jaw.own  (~(put by jaw.own) life ring)
+        (exec yen.own [%give %private-keys [lyf jaw]:own])
+      ::  A life identifies one live key.  Never replace or replay the
+      ::  already-active (or an older) ring; future rings can wait harmlessly
+      ::  in .jaw until their exact matching point arrives.
+      ::
+      ?:  (lte life lyf.own)  ..feel
       =.  jaw.own  (~(put by jaw.own) life ring)
-      (exec yen.own [%give %private-keys lyf.own jaw.own])
+      (reconcile-own ~)
     ::
     ::  Change sources for ships
     ::
@@ -1535,7 +1701,7 @@
   =>  |%
       ::
       +$  any-state  $%(state-1 state-2 state-3 state-4 state-5)
-      ::  $state-4: pre-groundwire; no pki-domain registry (dos)
+      ::  $state-4: before the pki-domain registry (dos)
       ::  and no writ-result subscriber set (syl in zim)
       ::
       +$  state-4
@@ -1688,7 +1854,7 @@
       ?=  $?  %lyfe  %life  %rift  %ryft
               %deed  %sein  %saxo  %turf
               %fief  %pont  %pynt  %sponsors
-              %lamp  %dome
+              %lamp  %dome  %dose
           ==
           syd
       ==
@@ -1804,6 +1970,20 @@
     =/  pos  (~(get by pos.zim.pki.lex) u.who)
     ``[%noun !>(pos)]
   ::
+      %dose                                             ::  pki domain served?
+    ::  (unit ?): ~ if no agent has registered .dom, else whether the
+    ::  registration is live.  the same test %writ applies before it
+    ::  forwards an attestation; ames reads it once while routing a
+    ::  structurally and cryptographically valid suite-%c attestation.
+    ::
+    ?.  ?=([@ ~] tyl)  [~ ~]
+    ?.  =([%& our] why)
+      [~ ~]
+    =/  dom  (slaw %tas i.tyl)
+    ?~  dom  [~ ~]
+    =/  reg  (~(get by dos.lex) u.dom)
+    ``[%noun !>(`(unit ?)`?~(reg ~ `liv.u.reg))]
+  ::
       %dome                                             ::  pki domain of ship
     ?.  ?=([@ ~] tyl)  [~ ~]
     ?.  =([%& our] why)
@@ -1815,35 +1995,22 @@
     ?~  pos  ``[%noun !>(~)]
     =/  key  (~(get by keys.u.pos) life.u.pos)
     ?~  key  ``[%noun !>(~)]
-    ::  mirror of +pass-pki-dom:ames: a suite-%c pass commits its
-    ::  pki domain as the +mat-encoded head of its tweak data.
-    ::  ~ for anything else; keep in sync with the ames arm.
+    ::  A suite-%c pass commits its pki domain as the +mat-encoded
+    ::  head of its tweak data.  Decode both mats before any crypto
+    ::  parser can call jetted +rub on stored, possibly migrated input.
     ::
-    =/  cek  +<:(com:nu:cric:crypto pass.u.key)
-    ?.  ?=([%c *] cek)
+    ?.  =('c' (end 3 pass.u.key))
       ``[%noun !>(~)]
-    ::  bound the +mat before +rub reads it; the +mole does NOT contain
-    ::  a jetted +rub's %fail on a hostile length-of-length.  See the
-    ::  long note on +pass-pki-dom:ames -- keep the two in sync.
-    ::
-    ::  Reached with a stored pass rather than a packet, so this arm is
-    ::  not itself pre-auth; it is the same defect because the pass got
-    ::  stored by the path that IS.
-    ::
-    =/  dat=@  dat.tw.pub.cek
-    =/  short=?
-      =/  c=@ud  0
-      |-  ^-  ?
-      ?:  (gth c 20)  |
-      ?:  =(0 (cut 0 [c 1] dat))
-        $(c +(c))
-      &
-    ?.  short
+    =/  sus  ~(. su *duct now pki.lex etn.lex)
+    =/  dat  (mat-value-at:sus pass.u.key 520)
+    ?~  dat
       ``[%noun !>(~)]
-    =/  mat  (mole |.((rub 0 dat)))
-    ?~  mat
+    =/  dom  (mat-value-at:sus u.dat 0)
+    ?~  dom
       ``[%noun !>(~)]
-    ``[%noun !>((some `@tas`q.u.mat))]
+    ?.  ((sane %tas) u.dom)
+      ``[%noun !>(~)]
+    ``[%noun !>((some `@tas`u.dom))]
   ::
       %vein
     ?.  ?=([@ ~] tyl)  [~ ~]

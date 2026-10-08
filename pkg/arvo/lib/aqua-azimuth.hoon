@@ -217,7 +217,7 @@
     ==
   --
 ::
-::  Confidential-comet fixtures for the Aqua simulation.
+::  Domain-backed comet fixtures for the Aqua simulation.
 ::
 ::    Base arvo implements GENERIC pluggable comet PKI: a suite-%c pass
 ::    carries a +mat-tagged domain plus opaque domain data, jael routes
@@ -227,7 +227,7 @@
 ::
 ::    So the arms below are CHECKED-IN DATA, not a computation.  The
 ::    opaque halves of .dat and .xtr are byte-for-byte output of a real
-::    confidential-comet PKI implementation, which lives in its own desk
+::    pluggable-PKI implementation, which lives in its own desk
 ::    and not here.  Arvo treats them as the atoms they are: it hands
 ::    them to +cc-crub and never looks inside.
 ::
@@ -235,8 +235,7 @@
 ::    desk's fixture generator against +cc-domain below and paste the
 ::    printed literals back here.  The generator is the only place the
 ::    fixture inputs are written down; this file records only what the
-::    kernel itself can check.  (For the Groundwire desk that generator
-::    is +groundwire!aqua-fixtures, in gen/aqua-fixtures.hoon.)
+::    kernel itself can check.
 ::
 ::  +cc-domain: the pki domain the fixture comets commit to
 ::
@@ -250,8 +249,8 @@
 ::  +cc-comet-ok, +cc-comet-fail: the two fixture comets
 ::
 ::    Both names are DERIVED from the fixture data by the kernel's own
-::    generic cric, never chosen.  A confidential comet's @p is
-::    (shaf %cfig) of its tweaked signing key and the tweak hashes
+::    generic cric, never chosen.  A suite-%c comet's @p is
+::    (shaf %cfig) of its tweaked genesis name key and the tweak hashes
 ::    .dat, so any change to a fixture renames it.  Everything that
 ::    lists these comets (+comets below, +comets/+turfs in
 ::    lib/ph/cc/util.hoon and ted/aqua/ames.hoon) refers to these arms
@@ -260,8 +259,9 @@
 ::    before any attestation logic runs.
 ::
 ::    Current values, for grepping:
-::      ok    ~tirdyn-hocpes-ribtyl-fitfyr--winrus-dabdyl-nardev-dapryc
-::      fail  ~hodwyn-topmul-sogfun-hatfeb--riblug-nomnep-fidben-macfun
+::      ok    ~savsem-tadteb-moswyl-rivmun--loswer-nisser-dinlep-lavdeb
+::      fail  ~socres-nodhec-mogpec-nacleb--tobhec-pichec-rapdut-bisrut
+::    (kelvin 8; regenerated with +gw-btc!aqua-fixtures on 2026-08-31)
 ::
 ++  cc-comet-ok    ^~(`@p`(cc-fig %ok))
 ++  cc-comet-fail  ^~(`@p`(cc-fig %fail))
@@ -296,10 +296,8 @@
   |=  which=?(%ok %fail)
   ^-  @
   ?:  ?=(%ok which)
-    0x7.3eb7.25af.2e7b.3683.2a1b.d0cd.2e18.31df.5519.7823.7daf.23bc.
-    8bf0.a173.bcc7.4648
-  0x390.e9b6.5e2b.cb96.6345.3bbb.e508.3813.adcf.63a8.96a7.afb2.d4bf.
-  21b5.cd22.c28b.9a48
+    0x2.9888.d81e.8208
+  0x58.c445.a043.0208
 ::  +cc-xtr: the mutable pass tail at .lyfe, as an opaque fixture atom
 ::
 ::    Excluded from the key tweak, so it may grow without renaming the
@@ -323,22 +321,18 @@
   ?:  ?=(%ok which)
     ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
         %1
-      0x17.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
-      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
-      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
-      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
-      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
-      8000.ec05
+    0xaea.3b1c.ccf4.0b3a.437a.b6fb.bc10.0e66.9f03.3377.b7a2.71b6.655e.
+    f944.a9f5.6671.9588.d426.797d.cbdb.48be.78c6.0e8d.28ee.5a31.7601.
+    0019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.c1c0.a6ff.36cb.738a.
+    3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.8000.ec05
     ::
         %2
-      0x1.5402.8720.3a94.943e.bb94.44be.8d19.5cdc.ecc3.0cb4.17c9.7010.
-      95a7.f00c.ffbd.42f7.8027.de01.0019.90b4.f8d9.bdf1.1480.c444.000b.
-      602f.b5d5.692f.aa4f.562b.d3ca.424e.0493.0fbe.ee6c.3948.9920.ed4c.
-      ca3e.c66c.bcc0.b460.0400.ba8d.a622.3605.9c21.bd5b.7dde.0807.334f.
-      8199.d0fc.b01e.f398.66b5.6bd3.246b.7e9c.2655.5583.8439.3621.9895.
-      6882.7bbf.0b5e.40f9.8019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.
-      c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
-      8000.ec05
+    0x5.512a.1d47.9ded.62d6.773a.4664.4514.1448.4ea2.66c2.783a.2fd2.
+    b3ee.07d4.5cb7.72c0.4df3.bec0.0cc8.5a7c.6cde.f88a.4062.2200.05b0.
+    16ea.3b1c.ccf4.0b3a.437a.b6fb.bc10.0e66.9f03.3377.b7a2.71b6.655e.
+    f944.a9f5.6671.9588.d426.797d.cbdb.48be.78c6.0e8d.28ee.5a31.7601.
+    0019.c59e.6f99.9fbe.772e.eb15.6818.a573.a1c2.c1c0.a6ff.36cb.738a.
+    3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.8000.ec05
     ==
   ?+  lyfe  ~|([%no-cc-fixture-for-life which lyfe] !!)
       %1
@@ -359,29 +353,36 @@
     c1c0.a6ff.36cb.738a.3656.7ca0.56c5.be05.e600.a003.37be.2090.1888.
     8000.ec05
   ==
-::  +cc-sed: the 64-byte cric seed of a fixture comet at .lyfe
+::  +cc-sed: the 64-byte cric ring body of a fixture comet at .lyfe
 ::
-::    Suite C splits the seed into a signing half (bytes 0-31, which
-::    fixes the @p through the tweak) and a messaging half (bytes
-::    32-63).  Rekeying a confidential comet rotates ONLY the messaging
-::    half: life rides in the on-chain snapshot, never in the seed.
-::    Deriving both halves from a life-dependent seed -- as this fixture
-::    used to -- gives every life a different signing key and therefore
-::    a different @p, so the life-2 self-attestation fingerprints to a
-::    ship that is not the sender and the receiver correctly refuses it.
+::    Suite C carries the current life seed in bytes 0-31 and the
+::    immutable genesis PUBLIC key in bytes 32-63.  The current seed
+::    supplies both the signing and channel-agreement key.  Rekeying
+::    rotates that seed while retaining the public genesis key, so the
+::    live networking key changes without changing the @p derived from
+::    the tweaked genesis key and .dat.
 ::
 ++  cc-sed
   |=  [which=?(%ok %fail) lyfe=life]
   ^-  @
   =/  base  (shal 64 (cc-seed which))
-  =/  sgn   (end 8 base)
-  =/  cry   (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
-  (can 3 ~[[32 sgn] [32 cry]])
-::  +cc-crub: activate a suite-%c core from an explicit 64-byte seed
+  ::  kelvin 8 ring: [kes ugn].  kes is THIS life's 32-byte seed --
+  ::  the genesis seed at life 1, a life-salted derivative after --
+  ::  and ugn is the genesis key's PUBLIC half, which the name
+  ::  commits and which every life carries unchanged.  see
+  ::  +cric:crypto and the pluggable-PKI kernel specification.
+  ::
+  =/  gen  (end 8 base)
+  =/  ugn  pub:(luck:ed:crypto gen)
+  =/  kes
+    ?:  =(1 lyfe)  gen
+    (shax (can 3 ~[[32 (cut 8 [1 1] base)] [8 lyfe]]))
+  (can 3 ~[[32 kes] [32 ugn]])
+::  +cc-crub: activate a suite-%c core from an explicit 64-byte ring body
 ::
-::    +pit:nu:cric derives the whole seed by hashing one number, which
-::    cannot express "same signing key, new messaging key".  This builds
-::    the same $ring +pit would, with the seed supplied outright.
+::    +pit:nu:cric creates only a genesis ring.  This builds the same
+::    $ring shape with an explicit current-life seed and immutable public
+::    genesis key, which lets the fixtures express a later-life rotation.
 ::
 ++  cc-crub
   |=  [sed=@ dat=@ xtr=@]
@@ -450,7 +451,7 @@
         ~holwyx-ramped-tognet-barsyn--navler-ronmeg-topbex-mardev
         ~hacmet-doslyr-narhut-tiptec--micbyl-motnev-worsyn-mardev
         ~ribmut-nopdul-minmet-pardeg--wisfex-rosfus-fogsyn-mardev
-        :: confidential (suite-%c) identities, derived above
+        :: domain-backed (suite-%c) identities, derived above
         cc-comet-ok
         cc-comet-fail
     ==

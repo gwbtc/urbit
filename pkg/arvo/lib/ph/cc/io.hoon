@@ -21,6 +21,17 @@
   ;<  ~  bind:m  (sleep ~s2)
   (pure:m ~)
 ::
+++  install-pki-mounted
+  |=  =ship
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ~?  >>  loud  [tag "{(cite:title ship)}: install fake %test-pki on mounted desk"]
+  ;<  ~  bind:m  (copy-file ship /app/test-pki/hoon pki-agent)
+  ;<  ~  bind:m  (dojo ship "|start %test-pki")
+  ;<  ~  bind:m  (wait-for-output ship "booted %test-pki")
+  ;<  ~  bind:m  (sleep ~s2)
+  (pure:m ~)
+::
 ++  assert-snubbed
   |=  [=ship who=@p]
   =/  m  (strand:rand ,~)
@@ -35,6 +46,126 @@
   ?>  =(%deny form.u.val)
   ?>  (lien ships.u.val |=(her=@p =(who her)))
   ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
+  (pure:m ~)
+::
+++  assert-life-key-model
+  |=  who=@p
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  =/  one  (get-keys:az who 1)
+  =/  two  (get-keys:az who 2)
+  ?>  ?=(%c suite.+<.one)
+  ?>  ?=(%c suite.+<.two)
+  =/  one-keys  ded:ex:one
+  =/  two-keys  ded:ex:two
+  ::  The immutable genesis material fixes the identity.  Life 1 uses the
+  ::  genesis key live; life 2 retains it only as .ugn and rotates .cry.
+  ?>  =(ugn.tw.pub.+<.one ugn.tw.pub.+<.two)
+  ?>  =(dat.tw.pub.+<.one dat.tw.pub.+<.two)
+  ?>  =(ugn.tw.pub.+<.one cry.pub.+<.one)
+  ?>  !=(ugn.tw.pub.+<.two cry.pub.+<.two)
+  ::  Consequently the identity is fixed, while both live keys rotate.
+  ?>  =(who `@p`fig:ex:one)
+  ?>  =(fig:ex:one fig:ex:two)
+  ?>  =(-.one-keys +.one-keys)
+  ?>  =(-.two-keys +.two-keys)
+  ?>  !=(-.one-keys -.two-keys)
+  ?>  !=(+.one-keys +.two-keys)
+  ::  Each life accepts its own signer and rejects the other life's signer.
+  =/  msg  (jam [%cc-life-key-model who])
+  =/  one-sig  (sigh:as:one msg)
+  =/  two-sig  (sigh:as:two msg)
+  ?>  (safe:as:one one-sig msg)
+  ?>  !(safe:as:two one-sig msg)
+  ?>  (safe:as:two two-sig msg)
+  ?>  !(safe:as:one two-sig msg)
+  ::  The same rotation also replaces channel-agreement material.
+  =/  peer  (get-keys:az ~bud 1)
+  =/  one-cry  cry:ex:one
+  =/  two-cry  cry:ex:two
+  =/  peer-cry  cry:ex:peer
+  =/  one-dh  (slar:ed:crypto pub.peer-cry sek.one-cry)
+  =/  one-dh-peer  (slar:ed:crypto pub.one-cry sek.peer-cry)
+  =/  two-dh  (slar:ed:crypto pub.peer-cry sek.two-cry)
+  =/  two-dh-peer  (slar:ed:crypto pub.two-cry sek.peer-cry)
+  ?>  =(one-dh one-dh-peer)
+  ?>  =(two-dh two-dh-peer)
+  ?>  !=(one-dh two-dh)
+  ~?  >>  loud  [tag "{(cite:title who)}: same name, rotated signer and DH key"]
+  (pure:m ~)
+::
+++  assert-ames-keys
+  |=  [=ship expected-life=life]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/ax/(scot %p ship)//(scot %da now.bowl)
+    /safe/noun
+  =+  ;;  val=(unit [saf=[pub=[@ @] sek=[@ @]] ring=@ pass=@])
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ val)
+  =/  expected  (get-keys:az ship expected-life)
+  ?>  =(saf.u.val saf:ex:expected)
+  ?>  =(ring.u.val sec:ex:expected)
+  ?>  =(pass.u.val pub:ex:expected)
+  ~?  >>  loud  [tag "{(cite:title ship)}: Ames has life {(scow %ud expected-life)} keys"]
+  (pure:m ~)
+::
+++  assert-jael-active-life
+  |=  [=ship expected-life=life]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p ship)/j/(scot %p ship)
+    /life/(scot %da now.bowl)/(scot %p ship)/noun
+  =+  ;;  got=(unit @)
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  =([~ expected-life] got)
+  ~?  >>  loud
+    [tag "{(cite:title ship)}: active private life is {(scow %ud expected-life)}"]
+  (pure:m ~)
+::
+++  assert-jael-point
+  |=  [observer=@p who=@p expected-life=life expected-rift=rift]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  ;<  =bowl:spider  bind:m  get-bowl
+  =/  aqua-pax
+    %+  weld  /i/(scot %p observer)/j/(scot %p observer)
+    /pynt/(scot %da now.bowl)/(scot %p who)/noun
+  ::  Aqua unitizes the child scry; /pynt itself is the unitized /pont.
+  =+  ;;  got=(unit (unit point:jael))
+      (scry-aqua:util noun our.bowl now.bowl aqua-pax)
+  ?>  ?=(^ got)
+  ?>  ?=(^ u.got)
+  =/  point  u.u.got
+  ?>  =(expected-life life.point)
+  ?>  =(expected-rift rift.point)
+  =/  key  (~(get by keys.point) expected-life)
+  ?>  ?=(^ key)
+  =/  expected  (get-keys:az who expected-life)
+  ?>  =(crypto-suite.u.key num:ex:expected)
+  ?>  =(pass.u.key pub:ex:expected)
+  ~?  >>  loud
+    :*  tag
+        "{(cite:title observer)}: public point for {(cite:title who)} is life {(scow %ud expected-life)}, rift {(scow %ud expected-rift)}"
+    ==
+  (pure:m ~)
+::
+++  poke-self-verdict
+  |=  [=ship who=@p new-life=life]
+  =/  m  (strand:rand ,~)
+  ^-  form:m
+  =/  =pass  pub:ex:(get-keys:az who new-life)
+  ~?  >>  loud
+    :*  tag
+        "{(cite:title ship)}: %test-pki publishes own life {(scow %ud new-life)} point"
+    ==
+  ;<  ~  bind:m  (poke-app ship %test-pki %noun [%self-verdict who pass])
+  ::  The fact to jael is delivered after Gall acknowledges the poke.
+  ;<  ~  bind:m  (sleep ~s1)
   (pure:m ~)
 ::
 ++  start-cc-comet
