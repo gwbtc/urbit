@@ -121,13 +121,16 @@
   =.  keu  (~(put by keu) who (flop t.queue))
   (handle-send our u.got(way /newt/0v1n.2m9vh/(scot %ud event-id)))
 ::
+::  +dbg: per-packet traces below print only when this is yes.
+++  dbg  ^-(? |)
+::
 ++  handle-send
   =,  ames
   |=  [our=ship sndr=@p way=wire %send lan=lane pac=@]
   ^-  (quip card:agent:gall _state)
   =/  rcvr=(unit @p)  (lane-to-ship sndr lan)
   ?~  rcvr
-    ~&([%aqua %ames %handle-send "can't resolve lane"] `state)
+    ~?(dbg [%aqua %ames %handle-send "can't resolve lane"] `state)
   =/  hear-lane  (ship-to-lane sndr)
   =/  =shot      (sift-shot pac)
   ?:  &(!sam.shot req.shot)  :: is fine request
