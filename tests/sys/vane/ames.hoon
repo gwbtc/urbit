@@ -1846,4 +1846,37 @@
     %+  expect-eq  !>(%.y)
     !>  (lien ms |=(=move:ames ?=([* %give %fief *] move)))
   ==
+::  A comet's self-attestation that does not verify is a packet to
+::  drop, not an event to crash: no moves, and the comet is not
+::  promoted.  Here the attestation is signed with another comet's
+::  keys.
+::
+++  test-mis-signed-open-packet-is-dropped  ^-  tang
+  =/  lane-foo=lane:ames  [%| `@ux``@`%lane-foo]
+  =/  =open-packet:ames
+    [pass.ames-state.comet our-comet 1 ~bud 3]
+  =/  =blob:ames  (attestation open-packet saf.ames-state.comet2)
+  =.  rof.bud  (sein-roof (my [our-comet ~marbud]~))
+  =^  moves  bud  (call bud ~[//unix] %hear lane-foo blob)
+  ;:  weld
+    (expect-eq !>(~) !>(moves))
+    %-  expect
+    !>  !?=([~ %known *] (~(get by peers.ames-state.bud) our-comet))
+  ==
+::  ... and so is one whose claimed sponsor is not a star or comet:
+::  a galaxy here.  +sift-open-packet asserts the sponsor class, and
+::  that assertion used to take the whole %hear event down with it.
+::
+++  test-open-packet-with-bad-sponsor-class-is-dropped  ^-  tang
+  =/  lane-foo=lane:ames  [%| `@ux``@`%lane-foo]
+  =/  =open-packet:ames
+    [pass.ames-state.comet our-comet 1 ~bud 3]
+  =/  =blob:ames  (attestation open-packet saf.ames-state.comet)
+  =.  rof.bud  (sein-roof (my [our-comet ~bud]~))
+  =^  moves  bud  (call bud ~[//unix] %hear lane-foo blob)
+  ;:  weld
+    (expect-eq !>(~) !>(moves))
+    %-  expect
+    !>  !?=([~ %known *] (~(get by peers.ames-state.bud) our-comet))
+  ==
 --

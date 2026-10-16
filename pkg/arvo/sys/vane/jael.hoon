@@ -101,38 +101,63 @@
       sponsor=(unit @p)
   ==
 ::
-++  message-result
-  =<  message-result
-  |%
-  ++  message-result
-    |=  a=*
-    ^-  message-result-1
-    ?:  ?=([~ %2] -.a)  (message-result-1 a)
-    =/  b  (message-result-0 a)
-    ?.  ?=(%full +<.b)  [~+%2 b]
-    :^  [~ %2]  %public-keys-result  %full
-    %-  ~(run by points.public-keys-result.b)
-    |=  point-1
-    ^-  point
-    [rift life keys sponsor ~]
+::  +sift-public-keys-result: decode a %public-keys-result boon
+::
+::    A ship source answers a /public-keys plea with its own idea of
+::    a $point.  Ours carries a fief; a stock jael's does not, and a
+::    comet pleas to stock ships whenever an agent contacts one
+::    (Landscape's %treaty allies with a Tlon moon at boot).  A strict
+::    cast on the stock reply crashed the event, ames reported the
+::    boon %lost, and jael crashed on the %lost too -- every ten
+::    minutes, for as long as the plea was outstanding.
+::
+::    Accept both shapes.  They agree on rift, life and keys and
+::    differ only in the tail: ours is [sponsor fief], stock is a bare
+::    sponsor.  The one noun both molds accept is [0 0] -- our
+::    [sponsor=~ fief=~], or a stock point sponsored by ~zod.  Only a
+::    galaxy has no sponsor, so a galaxy's [0 0] is ours and anyone
+::    else's is a stock point under ~zod.
+::
+++  sift-public-keys-result
+  |=  a=*
+  ^-  (unit public-keys-result)
+  ?.  ?=([%public-keys-result *] a)  ~
+  =/  b  +.a
+  ?+    b  ~
+      [%breach *]
+    =/  r  ((soft ,[%breach who=ship]) b)
+    ?~(r ~ `[%breach who.u.r])
   ::
-  +$  message-result-1
-    $:  [~ %2]
-      $%  [%public-keys-result =public-keys-result]     ::  public keys boon
-      ==
-    ==
+      [%diff *]
+    ::  a stock diff is a subset of ours (no %fief case)
+    ::
+    =/  r  ((soft ,[%diff who=ship =diff:point]) b)
+    ?~(r ~ `[%diff who.u.r diff.u.r])
   ::
-  +$  message-result-0
-    $%  [%public-keys-result public-keys-result=public-keys-result-0]
-    ==
-  ::
-  +$  public-keys-result-0
-    $%  [%full points=(map ship point-1)]
-        [%diff who=ship diff=$<(%fief diff:point)]
-        [%breach who=ship]
-    ==
-  ::
-  --
+      [%full *]
+    =/  r  ((soft ,[%full points=(map ship *)]) b)
+    ?~  r  ~
+    =/  pointl  ~(tap by points.u.r)
+    =|  acc=(map ship point)
+    |-  ^-  (unit public-keys-result)
+    ?~  pointl  `[%full acc]
+    =/  p  (sift-point p.i.pointl q.i.pointl)
+    ?~  p  ~
+    $(pointl t.pointl, acc (~(put by acc) p.i.pointl u.p))
+  ==
+::  +sift-point: one point in either shape, lifted to ours
+::
+++  sift-point
+  |=  [who=ship a=*]
+  ^-  (unit point)
+  =/  ours   ((soft point) a)
+  =/  stock  ((soft point-1) a)
+  ?:  &(?=(^ ours) ?=(^ stock))
+    ?:  ?=(%czar (clan:title who))  ours
+    `[rift.u.stock life.u.stock keys.u.stock sponsor.u.stock ~]
+  ?^  ours  ours
+  ?~  stock  ~
+  `[rift.u.stock life.u.stock keys.u.stock sponsor.u.stock ~]
 ::
 +$  resend-timer
   [=duct =wire date=@da]
@@ -793,15 +818,23 @@
       +>.$
     ::
         [%ames %boon *]
-      =+  ;;  [%public-keys-result =public-keys-result]  payload.hin
+      =/  res  (sift-public-keys-result payload.hin)
+      ?~  res
+        %-  (slog leaf+"jael: ignoring unrecognized %public-keys-result boon" ~)
+        +>.$
       %-  curd  =<  abet
-      (public-keys:~(feel su hen now pki etn) [pos fes]:zim.pki public-keys-result)
+      (public-keys:~(feel su hen now pki etn) [pos fes]:zim.pki u.res)
     ::
         [%ames %lost *]
-      ::  TODO: better error handling
+      ::  the reply crashed on the way in, or the flow was corked:
+      ::  resend the plea on the nack timer rather than crash again
       ::
-      ~|  %jael-ames-lost
-      !!
+      %-  (slog leaf+"jael: lost a %public-keys boon, resending the plea" ~)
+      =?  moz  ?=([%plea ~] tim)
+        [hen %pass /public-keys %b %wait `@da`(add now ~m10)]^moz
+      =?  tim  ?=([%plea ~] tim)
+        plea/`[hen /public-keys `@da`(add now ~m10)]
+      +>.$
     ::
         [%behn %wake *]
       ?^  error.hin
