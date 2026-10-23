@@ -4690,6 +4690,66 @@
   ::
   +$  name  path
   --  ::lick
+::                                                      ::::
+::::                    ++mach                            ::  (1k) TCP
+  ::                                                    ::::
+++  mach  ^?
+  |%
+  ::  $wye: why a connection closed, by category then cause
+  ::
+  ::    %connect: the connection never opened
+  ::      %invalid      malformed $fief; never tried
+  ::      %unresolved   no domain resolved
+  ::      %refused      every address failed
+  ::      %timeout      not open within 30s
+  ::    %tls: tls failed
+  ::      %invalid      secure=& without a %turf; never tried
+  ::      %certificate  peer's certificate failed verification
+  ::      %handshake    handshake failed for another reason
+  ::      %decode       peer sent bad tls records once open
+  ::    %peer: the peer ended an open connection
+  ::      %done         peer closed cleanly
+  ::      %reset        peer reset, or a read or write failed
+  ::      %dead         keepalive or retransmission timed out
+  ::    %close: our %close ended the connection
+  ::      %done         outgoing bytes flushed
+  ::      %timeout      outgoing bytes unsent after 30s
+  ::    %local: our ship ended the connection
+  ::      %reborn       vere restarted
+  ::      %trimmed      %mach dropped its state on %trim
+  ::      %dropped      a %received event failed, leaving a gap
+  ::      %overflowed   more than 64 MiB queued to send
+  ::
+  +$  wye
+    $%  [%connect p=?(%invalid %unresolved %refused %timeout)]
+        [%tls p=?(%invalid %certificate %handshake %decode)]
+        [%peer p=?(%done %reset %dead)]
+        [%close p=?(%done %timeout)]
+        [%local p=?(%reborn %trimmed %dropped %overflowed)]
+    ==
+  ::
+  +$  task
+    $~  [%vega ~]
+    $%  $>(%born vane-task)                             ::  new unix process
+        $>(%trim vane-task)                             ::  trim state
+        $>(%vega vane-task)                             ::  report upgrade
+        [%close ~]                                      ::  close connection
+        [%send =octs]                                   ::  send bytes
+        [%connect secure=? =fief]                       ::  connect to address
+        [%opened id=@ud p=(unit turf)]                  ::  vere opens, via turf
+        [%closed id=@ud p=wye]                          ::  vere closes
+        [%received id=@ud =octs]                        ::  vere receives bytes
+    ==
+  ::
+  +$  gift
+    $%  [%connected p=(unit turf)]                      ::  opened, via turf
+        [%received =octs]                               ::  received bytes
+        [%closed p=wye]                                 ::  connection closed
+        [%connect id=@ud secure=? =fief]                ::  vere, open connection
+        [%send id=@ud =octs]                            ::  vere, send bytes
+        [%close id=@ud]                                 ::  vere, close connection
+    ==
+  --  ::mach
 ::
 ++  rand                                                ::  computation
   |%
@@ -4912,6 +4972,7 @@
       gift:jael
       gift:khan
       gift:lick
+      gift:mach
   ==
 +$  task-arvo                                           ::  in request ->$
   $%  task:ames
@@ -4924,6 +4985,7 @@
       task:jael
       task:khan
       task:lick
+      task:mach
   ==
 +$  note-arvo                                           ::  out request $->
   $~  [%b %wake ~]
@@ -4937,6 +4999,7 @@
       [%j task:jael]
       [%k task:khan]
       [%l task:lick]
+      [%m task:mach]
       [%$ %whiz ~]
       [@tas %meta vase]
   ==
@@ -4960,6 +5023,7 @@
       [%jael gift:jael]
       [%khan gift:khan]
       [%lick gift:lick]
+      [%mach gift:mach]
   ==
 ::  $unix-task: input from unix
 ::
@@ -5018,5 +5082,8 @@
       ::  %behn: wakeup
       ::
       $>(%wake task:behn)
+      ::  %mach: connection opened, received bytes, or closed
+      ::
+      $>(?(%opened %received %closed) task:mach)
   ==
 --  ::
