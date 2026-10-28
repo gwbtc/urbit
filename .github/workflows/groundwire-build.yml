@@ -21,6 +21,9 @@ on:
   #     -f groundwire_ref=hd/cc-landing \
   #     -f tag_prefix=groundwire-rc
   #
+  # Add -f publish=false for a build that must not release: it builds,
+  # validates and uploads the run artifacts, and skips the publish step.
+  #
   # Every default reproduces the previous behaviour exactly, so scheduled and
   # push runs are unchanged.
   workflow_dispatch:
@@ -41,6 +44,11 @@ on:
         description: 'release tag prefix (default: groundwire-alpha)'
         required: false
         default: ''
+      publish:
+        description: 'publish a GitHub release from this build (false: build, validate and upload the run artifacts only)'
+        type: boolean
+        required: false
+        default: true
 
 env:
   URBIT_BRANCH: gw/next/kelvin/408
@@ -1332,7 +1340,10 @@ jobs:
           sha256sum -c SHA256SUMS
 
       - name: Publish release
-        if: ${{ github.event_name != 'pull_request' }}
+        # A dispatch with publish=false is a test build: it stops here, with
+        # everything the release would have carried left as run artifacts
+        # and nothing published.  Push and schedule runs publish as before.
+        if: ${{ github.event_name != 'pull_request' && !(github.event_name == 'workflow_dispatch' && inputs.publish == false) }}
         run: |
           PREFIX="${TAG_PREFIX:-groundwire-alpha}"
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
