@@ -116,6 +116,11 @@ env:
   # the same landscape commit as LANDSCAPE_BRANCH above.
   # 77f107f (2026-10-02): master, Merge pull request #6704.
   GROUPS_REF: 77f107fdfe810f1bc1e67bbef9dfc9efe8a5f6b3
+  # urbit/webterm: the %webterm desk, pinned by full SHA.
+  # 28f13f5 (2026-05-02): mobile-input-fix, "ui: fix mobile input and
+  # viewport, improve scroll & selection".  That commit changes ui/ only;
+  # its desk.docket-0 still names the v1.1.1 glob.
+  WEBTERM_REF: 28f13f588f90b3e40babe10493bbf71d696e03e0
   # The distribution ship every baked desk's desk.ship points at: a
   # booted ship opens a Clay OTA sync to it per desk (get-publisher in
   # sur/hood.hoon; the sync is a second channel, not a gate).  This is
@@ -275,6 +280,13 @@ jobs:
           repository: tloncorp/tlon-apps
           ref: ${{ env.GROUPS_REF }}
           path: tlon-apps
+
+      - name: Checkout urbit/webterm
+        uses: actions/checkout@v4
+        with:
+          repository: urbit/webterm
+          ref: ${{ env.WEBTERM_REF }}
+          path: urbit-webterm
 
       - name: Checkout tloncorp/landscape
         uses: actions/checkout@v4
@@ -731,6 +743,23 @@ jobs:
           echo "$DESK_DISTER" > ./zod/groups/desk.ship
           ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
+      - name: Populate %webterm desk
+        run: |
+          # %webterm is a docket glob for %base's %herm agent; its desk.bill
+          # is ~.  Upstream's desk/ symlinks lib/, mar/ and sur/ into a
+          # base-dev/ beside it, so this lays down our base-dev and the
+          # landscape docket files and copies only the desk's own top-level
+          # files.  Its sys.kelvin names [%zuse 413] and up, so keep the
+          # [%zuse 408] desk-populate.sh wrote, or it installs suspended.
+          ./automation/desk-create.sh webterm "$CONN_SOCK"
+          ./automation/desk-mount.sh webterm ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh webterm ./zod
+          cp -r gwbtc-urbit/pkg/base-dev/* ./zod/webterm/
+          cp -r gwbtc-landscape/desk-dev/* ./zod/webterm/
+          cp urbit-webterm/desk/desk.bill urbit-webterm/desk/desk.docket-0 ./zod/webterm/
+          echo "$DESK_DISTER" > ./zod/webterm/desk.ship
+          ./automation/desk-commit.sh webterm ./zod "$CONN_SOCK"
+
       - name: Set up Bun (for %drive frontend)
         uses: oven-sh/setup-bun@v2
         with:
@@ -806,6 +835,7 @@ jobs:
                     [%jars /(scot %p our)/jars/(scot %da now)]
                     [%trunk /(scot %p our)/trunk/(scot %da now)]
                     [%groups /(scot %p our)/groups/(scot %da now)]
+                    [%webterm /(scot %p our)/webterm/(scot %da now)]
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
                     [%dns /(scot %p our)/dns/(scot %da now)]
@@ -829,7 +859,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol trill grubbery jars trunk groups landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol trill grubbery jars trunk groups webterm landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
