@@ -104,15 +104,24 @@ env:
   GROUNDWIRE_BRANCH: hd/cc-landing
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
-  NOSTRILL_BRANCH: bm/zig
+  TRILL_BRANCH: develop
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: main
+  GRUBBERY_BRANCH: develop
+  JARS_BRANCH: master
+  TRUNK_BRANCH: main
+  # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
+  # moves with every Tlon release (`git ls-remote https://github.com/tloncorp/tlon-apps master`).
+  # Its desk deps are vendored by peru per the repo's peru.yaml, which pins
+  # the same landscape commit as LANDSCAPE_BRANCH above.
+  # 77f107f (2026-10-02): master, Merge pull request #6704.
+  GROUPS_REF: 77f107fdfe810f1bc1e67bbef9dfc9efe8a5f6b3
   # The distribution ship every baked desk's desk.ship points at: a
   # booted ship opens a Clay OTA sync to it per desk (get-publisher in
   # sur/hood.hoon; the sync is a second channel, not a gate).  This is
   # our OWN sponsor, which we install all of these desks onto, so it
   # can actually serve every one of them -- unlike production's dister,
-  # which did not publish node/tcp-sidecar/nostrill.
+  # which did not publish node/tcp-sidecar/trill.
   DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
   # The PKI gateway a comet's first boot fetches the galaxy table and
   # network domains from (gw-vere --gateway; dawn.c =lamp= / =turf=).  gw-vere's
@@ -232,13 +241,41 @@ jobs:
           path: gwbtc-vitriol
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
-      - name: Checkout Nostrill (gwbtc/ursockets)
+      - name: Checkout gwbtc/trill
         uses: actions/checkout@v4
         with:
-          repository: gwbtc/ursockets
-          ref: ${{ env.NOSTRILL_BRANCH }}
-          path: gwbtc-ursockets
+          repository: gwbtc/trill
+          ref: ${{ env.TRILL_BRANCH }}
+          path: gwbtc-trill
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
+
+      - name: Checkout gwbtc/grubbery
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/grubbery
+          ref: ${{ env.GRUBBERY_BRANCH }}
+          path: gwbtc-grubbery
+
+      - name: Checkout mopfel-winrux/jars
+        uses: actions/checkout@v4
+        with:
+          repository: mopfel-winrux/jars
+          ref: ${{ env.JARS_BRANCH }}
+          path: jars
+
+      - name: Checkout gwbtc/trunk
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/trunk
+          ref: ${{ env.TRUNK_BRANCH }}
+          path: gwbtc-trunk
+
+      - name: Checkout tloncorp/tlon-apps
+        uses: actions/checkout@v4
+        with:
+          repository: tloncorp/tlon-apps
+          ref: ${{ env.GROUPS_REF }}
+          path: tlon-apps
 
       - name: Checkout tloncorp/landscape
         uses: actions/checkout@v4
@@ -601,20 +638,66 @@ jobs:
           echo "$DESK_DISTER" > "${ROOT}/zod/vitriol/desk.ship"
           "${ROOT}/automation/desk-commit.sh" vitriol "${ROOT}/zod" "$CONN_SOCK"
 
-      - name: Populate %nostrill desk
+      - name: Populate %trill desk
         run: |
-          ROOT="${GITHUB_WORKSPACE:-$PWD}"
-          "${ROOT}/automation/desk-create.sh" nostrill "$CONN_SOCK"
-          "${ROOT}/automation/desk-mount.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
-          "${ROOT}/automation/desk-populate.sh" nostrill "${ROOT}/zod"
-          pushd "${ROOT}/gwbtc-ursockets"
-          zig build -Ddesk="${ROOT}/zod/nostrill/"
-          popd
+          # gwbtc/trill keeps a self-contained desk in backend/, which its own
+          # deploy workflow rsyncs to the dister as %trill.
+          ./automation/desk-create.sh trill "$CONN_SOCK"
+          ./automation/desk-mount.sh trill ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh trill ./zod
+          cp -rL gwbtc-trill/backend/* ./zod/trill/
           # desk.ship needs a %ship mark, or clay drops the commit silently.
-          mkdir -p "${ROOT}/zod/nostrill/mar"
-          cp "${ROOT}/gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "${ROOT}/zod/nostrill/mar/ship.hoon"
-          echo "$DESK_DISTER" > "${ROOT}/zod/nostrill/desk.ship"
-          "${ROOT}/automation/desk-commit.sh" nostrill "${ROOT}/zod" "$CONN_SOCK"
+          mkdir -p "./zod/trill/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/trill/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/trill/desk.ship
+          ./automation/desk-commit.sh trill ./zod "$CONN_SOCK"
+
+      - name: Populate %grubbery desk
+        run: |
+          # self-contained; its sys.kelvin already lists [%zuse 408].
+          ./automation/desk-create.sh grubbery "$CONN_SOCK"
+          ./automation/desk-mount.sh grubbery ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh grubbery ./zod
+          cp -rL gwbtc-grubbery/desk/* ./zod/grubbery/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/grubbery/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/grubbery/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/grubbery/desk.ship
+          ./automation/desk-commit.sh grubbery ./zod "$CONN_SOCK"
+
+      - name: Populate %jars desk
+        run: |
+          # self-contained; its sys.kelvin already lists [%zuse 408].
+          ./automation/desk-create.sh jars "$CONN_SOCK"
+          ./automation/desk-mount.sh jars ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh jars ./zod
+          cp -rL jars/desk/* ./zod/jars/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/jars/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/jars/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/jars/desk.ship
+          ./automation/desk-commit.sh jars ./zod "$CONN_SOCK"
+
+      - name: Populate %trunk desk
+        run: |
+          # gwbtc/trunk's repo root is the desk, but it is not self-contained:
+          # it borrows default-agent, skeleton and ten marks from %base and
+          # the docket files from %landscape.  This copies the same set as
+          # its scripts/fleet-deploy.sh, and keeps the sys.kelvin
+          # desk-populate.sh wrote, as that script takes the ship's own.
+          ./automation/desk-create.sh trunk "$CONN_SOCK"
+          ./automation/desk-mount.sh trunk ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh trunk ./zod
+          cp -rL gwbtc-trunk/{app,lib,mar,sur,gen,desk.bill,desk.docket-0} ./zod/trunk/
+          cp gwbtc-urbit/pkg/base-dev/lib/{default-agent,skeleton}.hoon ./zod/trunk/lib/
+          for m in bill css hoon html js kelvin mime noun svg txt ship; do
+            cp "gwbtc-urbit/pkg/base-dev/mar/$m.hoon" ./zod/trunk/mar/
+          done
+          cp gwbtc-landscape/desk/mar/docket-0.hoon ./zod/trunk/mar/
+          cp gwbtc-landscape/desk/lib/docket.hoon ./zod/trunk/lib/
+          cp gwbtc-landscape/desk/sur/docket.hoon ./zod/trunk/sur/
+          echo "$DESK_DISTER" > ./zod/trunk/desk.ship
+          ./automation/desk-commit.sh trunk ./zod "$CONN_SOCK"
 
       - name: Populate %landscape desk
         run: |
@@ -629,6 +712,25 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/landscape/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/landscape/desk.ship
           ./automation/desk-commit.sh landscape ./zod "$CONN_SOCK"
+
+      - name: Populate %groups desk
+        run: |
+          # tlon-apps assembles %groups from peru-vendored deps plus desk/,
+          # with its own scripts/assemble-desk.sh.  Assemble into a staging
+          # directory, since that script rsyncs with --delete.
+          pipx install peru
+          export PATH="$HOME/.local/bin:$PATH"
+          STAGE="${RUNNER_TEMP}/groups-desk"
+          ./tlon-apps/scripts/assemble-desk.sh "$STAGE"
+          ./automation/desk-create.sh groups "$CONN_SOCK"
+          ./automation/desk-mount.sh groups ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh groups ./zod
+          cp -rL "$STAGE"/* ./zod/groups/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/groups/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/groups/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/groups/desk.ship
+          ./automation/desk-commit.sh groups ./zod "$CONN_SOCK"
 
       - name: Set up Bun (for %drive frontend)
         uses: oven-sh/setup-bun@v2
@@ -700,7 +802,11 @@ jobs:
                     [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
-                    [%nostrill /(scot %p our)/nostrill/(scot %da now)]
+                    [%trill /(scot %p our)/trill/(scot %da now)]
+                    [%grubbery /(scot %p our)/grubbery/(scot %da now)]
+                    [%jars /(scot %p our)/jars/(scot %da now)]
+                    [%trunk /(scot %p our)/trunk/(scot %da now)]
+                    [%groups /(scot %p our)/groups/(scot %da now)]
                     [%landscape /(scot %p our)/landscape/(scot %da now)]
                     [%drive /(scot %p our)/drive/(scot %da now)]
                     [%dns /(scot %p our)/dns/(scot %da now)]
@@ -724,7 +830,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol nostrill landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol trill grubbery jars trunk groups landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
