@@ -247,7 +247,6 @@ jobs:
           repository: gwbtc/trill
           ref: ${{ env.TRILL_BRANCH }}
           path: gwbtc-trill
-          token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Checkout gwbtc/grubbery
         uses: actions/checkout@v4
