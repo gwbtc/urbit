@@ -1,6 +1,6 @@
 /+  *test, *vere
 |%
-::  example jael point for ~zod
+::  example point for ~zod
 ::
 ++  pot
   ^-  point:jael
@@ -9,12 +9,7 @@
     639.124.529.297.987.279.849.833.790.775.864.413.949.853.880.667.744.
     188.597.545.066.664.466.963.044.328.182.155.965.137.512.758.548.384.
     637.214.562
-  :*  rift=0
-      life=1
-      keys=(malt [1 1 pass] ~)
-      sponsor=`~zod
-      fief=~
-  ==
+  [rift=0 life=1 keys=(my [1 1 pass]~) sponsor=`~zod fief=~]
 ::  secret key for ~zod
 ::
 ++  sec

@@ -19,7 +19,8 @@
     %shut  (keen:strandio /peek spar `+.sec)
   ==
 
-;<  =out  bind:m  (take-message:strandio /peek)
+;<  =sage:mess:ames  bind:m  (take-sage:strandio /peek)
+=/  =out  [%sage sage]
 ::=/  =sage:mess:ames
 ::  ?-  -.out
 ::    %sage  sage.out

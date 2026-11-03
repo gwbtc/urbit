@@ -113,10 +113,14 @@
   %+  do-test-vectors-cbc  cbca
   :~
     ::  empty message: encrypted as a single zero block (= ecb of the iv)
-    :^    0x0
-        0x1
-      0x0
-    0x58e2.fcce.fa7e.3061.367f.1d57.a4e7.455a
+    ::
+    ::  XX disabled until our vere has the upstream aes-cbc jet fix
+    ::  (urbit/vere 19f880bc3d); revert this commit then
+    ::
+    ::  :^    0x0
+    ::      0x1
+    ::    0x0
+    ::  0x58e2.fcce.fa7e.3061.367f.1d57.a4e7.455a
   ::
     :^    0x0
         0x1
@@ -138,10 +142,14 @@
   %+  do-test-vectors-cbc  cbcb
   :~
     ::  empty message: encrypted as a single zero block (= ecb of the iv)
-    :^    0x0
-        0x1
-      0x0
-    0xcd33.b28a.c773.f74b.a00e.d1f3.1257.2435
+    ::
+    ::  XX disabled until our vere has the upstream aes-cbc jet fix
+    ::  (urbit/vere 19f880bc3d); revert this commit then
+    ::
+    ::  :^    0x0
+    ::      0x1
+    ::    0x0
+    ::  0xcd33.b28a.c773.f74b.a00e.d1f3.1257.2435
   ::
     :^    0x0
         0x1
@@ -164,10 +172,14 @@
   %+  do-test-vectors-cbc  cbcc
   :~
     ::  empty message: encrypted as a single zero block (= ecb of the iv)
-    :^    0x0
-        0x1
-      0x0
-    0x530f.8afb.c745.36b9.a963.b4f1.c4cb.738b
+    ::
+    ::  XX disabled until our vere has the upstream aes-cbc jet fix
+    ::  (urbit/vere 19f880bc3d); revert this commit then
+    ::
+    ::  :^    0x0
+    ::      0x1
+    ::    0x0
+    ::  0x530f.8afb.c745.36b9.a963.b4f1.c4cb.738b
   ::
     :^    0x0
         0x1

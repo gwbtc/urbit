@@ -1,4 +1,4 @@
-/+  *test
+/+  *test, *test-jael-roof
 /=  ames  /sys/vane/ames
 /=  jael  /sys/vane/jael
 /*  dojo  %hoon  /app/dojo/hoon
@@ -13,12 +13,18 @@
 =/  comet   ^$:(%*($ ames ahoy-on %.n, +< our-comet))
 =/  comet2  ^$:(%*($ ames ahoy-on %.n, +< our-comet2))
 ::
+::  answer jael scries from a real jael; everything else gets an empty
+::  turf list
+::
+=/  test-roof=roof
+  (with-jael |=(* ``[%noun !>(*(list turf))]))
+::
 :: =.  ahoy-on.nec    %.n
 =.  now.nec        ~1111.1.1
 =.  eny.nec        `@uvJ`0xdead.beef
 =.  life.ames-state.nec  2
 =.  rift.ames-state.nec  0
-=.  rof.nec  |=(* ``[%noun !>(*(list turf))])
+=.  rof.nec  test-roof
 =+  crypto-core=(pit:nu:cric:crypto 512 (shaz 'nec') %b ~)
 =.  saf.ames-state.nec   saf:ex:crypto-core
 =.  ring.ames-state.nec  sec:ex:crypto-core
@@ -29,7 +35,7 @@
 =.  eny.bud        `@uvJ`0xbeef.dead
 =.  life.ames-state.bud  3
 =.  rift.ames-state.bud  0
-=.  rof.bud  |=(* ``[%noun !>(*(list turf))])
+=.  rof.bud  test-roof
 =+  crypto-core=(pit:nu:cric:crypto 512 (shaz 'bud') %b ~)
 =.  saf.ames-state.bud   saf:ex:crypto-core
 =.  ring.ames-state.bud  sec:ex:crypto-core
@@ -40,7 +46,7 @@
 =.  eny.marbud        `@uvJ`0xbeef.beef
 =.  life.ames-state.marbud  4
 =.  rift.ames-state.marbud  0
-=.  rof.marbud  |=(* ``[%noun !>(*(list turf))])
+=.  rof.marbud  test-roof
 =+  crypto-core=(pit:nu:cric:crypto 512 (shaz 'marbud') %b ~)
 =.  saf.ames-state.marbud   saf:ex:crypto-core
 =.  ring.ames-state.marbud  sec:ex:crypto-core
@@ -51,7 +57,7 @@
 =.  eny.comet        `@uvJ`0xbeef.cafe
 =.  life.ames-state.comet  1
 =.  rift.ames-state.comet  0
-=.  rof.comet  |=(* ``[%noun !>(*(list turf))])
+=.  rof.comet  test-roof
 =/  crypto-core
   %-  nol:nu:cric:crypto
   0w9N.5uIvA.Jg0cx.NCD2R.o~MtZ.uEQOB.9uTbp.6LHvg.0yYTP.
@@ -65,7 +71,7 @@
 =.  eny.comet2        `@uvJ`0xcafe.cafe
 =.  life.ames-state.comet2  1
 =.  rift.ames-state.comet2  0
-=.  rof.comet2  |=(* ``[%noun !>(*(list turf))])
+=.  rof.comet2  test-roof
 =+  crypto-core=(pit:nu:cric:crypto 512 0v1eb4 %b ~)
 =.  saf.ames-state.comet2   saf:ex:crypto-core
 =.  ring.ames-state.comet2  sec:ex:crypto-core
@@ -396,7 +402,7 @@
               ?&  =(vis %j)
                   =(%saxo q.bem)
       ==  ==  ==
-    [~ ~]
+    ((with-jael |=(* [~ ~])) lyc pov vis bem)
   ``val
 ::
 ++  pki-roof
@@ -1120,7 +1126,9 @@
     :-  %peek
     :+  [her=~bosrym-podwyl-magnes-dacrys--pander-hablep-masrym-marbud rif=0]
       [boq=13 wan=~]
-    pat=/publ/1/a/x/1//pawn/proof/~bud/3
+    ::  /pawn/proof/[comet-life]/[rcvr]/[rcvr-life]
+    ::
+    pat=/publ/1/a/x/1//pawn/proof/1/~bud/3
   %+  expect-eq
     !>  pact
     !>  (parse-packet:bud blob)  :: %pass %peek for the attestation

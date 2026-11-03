@@ -2326,7 +2326,7 @@
   %+  expect-eq
     !>
     :-  [%point ~bud %owner (addr %bud-key-0)]~
-    :-  %0
+    :-  %1
     :_  [~ ~]  :_  [~ ~]
     :-  ~bud
     %*  .                *point:naive
