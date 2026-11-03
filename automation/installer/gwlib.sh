@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gwlib.sh -- shared helpers for the Groundwire installer and its supervisor.
 #
-# THIS FILE IS THE SOURCE. It ships in the release tarball beside gw-vere and
-# tcp-sidecar, and causeway/public/boot.sh installs it to $GW_DIR/lib/gwlib.sh
+# THIS FILE IS THE SOURCE. It ships in the release tarball beside gw-vere,
+# and causeway/public/boot.sh installs it to $GW_DIR/lib/gwlib.sh
 # and sources it; so does the supervisor, gwsup.sh, next to it in the tarball.
 #
 # It used to live inside boot.sh as a heredoc, for the honest reason that a
@@ -19,7 +19,7 @@
 # the tarball against, and by this file being in git.
 #
 # Expects, from the caller: GW_DIR GW_NAME GW_PIER GW_VERE GW_LOG GW_SC_LOG
-#                           GW_SIDECAR GW_AMES_PORT GW_LOOM SOCK_TOOL DNS_TOOL
+#                           GW_AMES_PORT GW_LOOM SOCK_TOOL DNS_TOOL
 
 gwl_have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -202,15 +202,6 @@ gwl_proc_cwd() {
     lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
   fi
 }
-# The sidecar has no port and no distinctive argv: its pier is its cwd.
-gwl_sidecar_pids() {
-  local pid
-  for pid in $(pgrep -f 'tcp-sidecar' 2>/dev/null || true); do
-    [ "$(gwl_proc_cwd "$pid")" = "$GW_PIER" ] && echo "$pid"
-  done
-  return 0
-}
-
 gwl_mtime() {
   if stat -c %Y "$1" >/dev/null 2>&1; then stat -c %Y "$1"
   else stat -f %m "$1" 2>/dev/null; fi
@@ -231,26 +222,6 @@ gwl_evt_age() {
   if [ -z "$newest" ]; then echo 99999; return; fi
   now="$(date +%s)"
   echo $(( now - newest ))
-}
-
-gwl_start_sidecar() {
-  [ -x "${GW_SIDECAR:-}" ] || return 1
-  local cert=""
-  for cert in /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem \
-              /etc/pki/tls/certs/ca-bundle.crt ""; do
-    [ -n "$cert" ] && [ -f "$cert" ] && break
-  done
-  # main.c:618 sets SSL_VERIFY_PEER with the default verify paths; a host that
-  # keeps its roots somewhere unusual needs SSL_CERT_FILE pointing at them.
-  ( cd "$GW_PIER" || exit 1
-    if [ -n "$cert" ]; then export SSL_CERT_FILE="$cert"; fi
-    if gwl_have setsid; then
-      setsid nohup "$GW_SIDECAR" . >> "$GW_SC_LOG" 2>&1 </dev/null &
-    else
-      nohup "$GW_SIDECAR" . >> "$GW_SC_LOG" 2>&1 </dev/null &
-    fi ) >/dev/null 2>&1
-  sleep 3
-  [ -n "$(gwl_sidecar_pids)" ]
 }
 
 gwl_start_vere_restart() {
