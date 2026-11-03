@@ -1,11 +1,14 @@
-name: Bleeding-Edge Release
+name: Legacy pill build (not the release path)
+# LEGACY LANE, kept for reference and for ad-hoc dispatches only.
+#
+# Releases are cut from gwbtc/release since 2026-11-03: that repo pins
+# every input by commit in its workflow's env block and publishes a
+# prerelease on every merge to its main. Nothing here publishes: this copy
+# builds on dispatch only, with publish=false forced, so that a push to
+# gw/release does not cut a second alpha beside the real one. To release,
+# bump a pin in gwbtc/release (`./bump KEY [REF]`) and merge.
+#
 on:
-  push:
-    branches:
-      - gw/release
-  pull_request:
-    branches:
-      - gw/release
   # Dispatch inputs exist so a release candidate can be cut from UNMERGED
   # branches.  Without them the only way to get the real artifact -- the one
   # boot.sh downloads, checksums and unpacks -- was to merge first, which made
@@ -45,10 +48,10 @@ on:
         required: false
         default: ''
       publish:
-        description: 'publish a GitHub release from this build (false: build, validate and upload the run artifacts only)'
+        description: 'ignored here: this legacy lane never publishes; releases come from gwbtc/release'
         type: boolean
         required: false
-        default: true
+        default: false
 
 env:
   URBIT_BRANCH: gw/release
@@ -1482,7 +1485,8 @@ jobs:
         # A dispatch with publish=false is a test build: it stops here, with
         # everything the release would have carried left as run artifacts
         # and nothing published.  Push and schedule runs publish as before.
-        if: ${{ github.event_name != 'pull_request' && !(github.event_name == 'workflow_dispatch' && inputs.publish == false) }}
+        # the legacy lane never publishes (releases come from gwbtc/release)
+        if: ${{ false }}
         run: |
           PREFIX="${TAG_PREFIX:-groundwire-alpha}"
           DATE_BASE=$(date -u +"%Y.%-m.%-d")
