@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gwsup.sh <name> -- supervisor for one Groundwire ship.
 #
-# THIS FILE IS THE SOURCE. It ships in the release tarball beside gw-vere and
-# tcp-sidecar; causeway/public/boot.sh installs it to $GW_DIR/bin/gwsup.sh and
+# THIS FILE IS THE SOURCE. It ships in the release tarball beside gw-vere;
+# causeway/public/boot.sh installs it to $GW_DIR/bin/gwsup.sh and
 # starts it. It used to be a heredoc inside boot.sh; see gwlib.sh's header for
 # why it is not any more.
 #
@@ -14,10 +14,11 @@
 # tools that expect the gwharness package importable from /opt/gw, which is
 # not in any release artifact. The ALGORITHM is reused unchanged, trap for
 # trap -- singleton, data.mdb liveness, exact process matching, and the
-# reseed after a sidecar restart. CHANGE BOTH: keep this and groundwire's ops/gwsup.sh in sync when
+# reseed after a stall. CHANGE BOTH: keep this and groundwire's ops/gwsup.sh in sync when
 # either changes.
 #
-# Filed against gwbtc/node#1: the tcp-sidecar SIGSEGVs, %bitcoin-client goes
+# History (the tcp-sidecar is gone since 2026-11-03; %node talks TCP through
+# the %mach vane). Filed against gwbtc/node#1: the tcp-sidecar SIGSEGVs, %bitcoin-client goes
 # on believing its peers are live, every send returns "no such connection"
 # forever, and the ship stops following the chain while looking healthy. It
 # did not self-heal: the agent's peer table had to be cleared by hand
@@ -80,13 +81,11 @@ log() { echo "$(date -u +%FT%TZ) [$GW_NAME] $*" >> "$SUPLOG"; }
 _count() { local n; n="$(grep -c "$1" "$SUPLOG" 2>/dev/null | head -1)"; echo "${n:-0}"; }
 N_WEDGE="$(_count 'WEDGE (recover')"
 N_VERE="$(_count 'VERE-DOWN')"
-N_SIDE="$(_count 'SIDECAR-DOWN')"
 LAST_RECOVER=0
 
 recover() {
   N_WEDGE=$(( N_WEDGE + 1 ))
-  log "INTERVENTION #$(( N_WEDGE + N_VERE + N_SIDE )) WEDGE (recover #$N_WEDGE): $1"
-  [ -n "$(gwl_sidecar_pids)" ] || gwl_start_sidecar
+  log "INTERVENTION #$(( N_WEDGE + N_VERE )) WEDGE (recover #$N_WEDGE): $1"
   # No peer reset here any more.  The &kill-peer-connections poke that used
   # to clear the agent's dead peers is gone from %bitcoin-client (node
   # develop 4ed51e8): it now arms the handshake timeout as it connects, so
@@ -140,31 +139,19 @@ peer_check() {
   fi
 }
 
-log "supervisor start (pier=$GW_PIER stale=${STALE}s poll=${POLL}s sidecar=${GW_SIDECAR:-none})"
+log "supervisor start (pier=$GW_PIER stale=${STALE}s poll=${POLL}s)"
 
 while true; do
   # 1. runtime alive?
   if [ -z "$(gwl_king_pid)" ] && [ -z "$(gwl_serf_pid)" ]; then
     N_VERE=$(( N_VERE + 1 ))
-    log "INTERVENTION #$(( N_WEDGE + N_VERE + N_SIDE )) VERE-DOWN (restart #$N_VERE)"
+    log "INTERVENTION #$(( N_WEDGE + N_VERE )) VERE-DOWN (restart #$N_VERE)"
     gwl_start_vere_restart
     sleep 60
     continue
   fi
 
-  # 2. sidecar alive?  A dead sidecar IS the wedge trigger, so do not wait out
-  #    the staleness window for it.
-  if [ -x "${GW_SIDECAR:-}" ] && [ -z "$(gwl_sidecar_pids)" ]; then
-    N_SIDE=$(( N_SIDE + 1 ))
-    log "INTERVENTION #$(( N_WEDGE + N_VERE + N_SIDE )) SIDECAR-DOWN (restart #$N_SIDE)"
-    gwl_start_sidecar
-    now="$(date +%s)"
-    if [ $(( now - LAST_RECOVER )) -ge $COOLDOWN ]; then recover "sidecar had died"; fi
-    sleep $POLL
-    continue
-  fi
-
-  # 3. event-log progress
+  # 2. event-log progress
   AGE="$(gwl_evt_age)"
   if [ "$AGE" -gt "$STALE" ]; then
     now="$(date +%s)"
