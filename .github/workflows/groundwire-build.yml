@@ -107,7 +107,11 @@ env:
   TRILL_BRANCH: develop
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: main
-  GRUBBERY_BRANCH: develop
+  # grubbery develop is pinned: its 18 commits of 2026-10-30..11-03 (forge as a
+  # shell nexus, the kernel registry gone, launcher tiles) crash the pill's
+  # validate boot out of memory during %grubbery's install (run 41681135700);
+  # 2944cce is what groundwire-alpha-2026.10.29_2 shipped. Bump when develop boots.
+  GRUBBERY_BRANCH: 2944cce0214be6a0e9a1becd1a8b86ecd72591de
   JARS_BRANCH: master
   TRUNK_BRANCH: main
   # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
