@@ -3,7 +3,7 @@
 ++  init-ship-core
   |=  [ship=@p fake=? core=?(%ames %mesa)]
   =/  m  (strand:rand ,~)
-  ~?  >>  loud  [tag "{(cite:title ship)}: init ship"]
+  ~?  loud  [tag "{(cite:title ship)}: init ship"]
   ;<  ~  bind:m  %*($ init-ship ship ship, fake fake, core core)
   (pure:m ~)
 ::
@@ -11,7 +11,7 @@
   |=  =ship
   =/  m  (strand:rand ,~)
   ^-  form:m
-  ~?  >>  loud  [tag "{(cite:title ship)}: install the fake %test-pki verifier"]
+  ~?  loud  [tag "{(cite:title ship)}: install the fake %test-pki verifier"]
   ;<  ~  bind:m  (mount ship %base)
   ;<  ~  bind:m  (copy-file ship /app/test-pki/hoon pki-agent)
   ;<  ~  bind:m  (dojo ship "|start %test-pki")
@@ -34,22 +34,22 @@
   ?>  ?=(^ val)
   ?>  =(%deny form.u.val)
   ?>  (lien ships.u.val |=(her=@p =(who her)))
-  ~?  >>  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
+  ~?  loud  [tag "{(cite:title ship)}: {(cite:title who)} is snubbed"]
   (pure:m ~)
 ::
 ++  start-cc-comet
   |=  [comet=@p core=?(%ames %mesa) =onchain]
   =.  onchain  (sort-onchain onchain)
   =/  m  (strand:rand ,~)
-  ~?  >>  loud  [tag "{(cite:title comet)}: init"]
+  ~?  loud  [tag "{(cite:title comet)}: init"]
   ;<  ~  bind:m  %*($ init-ship ship comet, fake |, core core)
-  ~?  >>  loud  [tag "{(cite:title comet)}: mount %base"]
+  ~?  loud  [tag "{(cite:title comet)}: mount %base"]
   ;<  ~  bind:m  (mount comet %base)
-  ~?  >>  loud  [tag "{(cite:title comet)}: copy udiff agent"]
+  ~?  loud  [tag "{(cite:title comet)}: copy udiff agent"]
   ;<  ~  bind:m  (copy-file comet /app/test-udiff/hoon udiff-agent)
-  ~?  >>  loud  [tag "{(cite:title comet)}: copy udiff mark"]
+  ~?  loud  [tag "{(cite:title comet)}: copy udiff mark"]
   ;<  ~  bind:m  (copy-file comet /mar/test-udiffs/hoon udiffs-mark)
-  ~?  >>  loud  [tag "{(cite:title comet)}: start udiff agent"]
+  ~?  loud  [tag "{(cite:title comet)}: start udiff agent"]
   ;<  ~  bind:m  (dojo comet "|start %test-udiff")
   ;<  ~  bind:m  (wait-for-output comet "booted %test-udiff")
   |-  ^-  form:m
@@ -76,7 +76,7 @@
         (rift-udiff for rift)
         (spon-udiff for ?~(spon `for spon))
     ==
-  ~?  >>  loud  [tag "{(cite:title ship)}: inject udiffs for {(cite:title for)}"]
+  ~?  loud  [tag "{(cite:title ship)}: inject udiffs for {(cite:title for)}"]
   ;<  ~  bind:m  (poke-app ship %test-udiff %test-udiffs udiffs)
   ;<  ~  bind:m  (wait-for-output ship ":test-udiff &test-udiffs")
   (pure:m ~)
@@ -86,7 +86,7 @@
   =/  m  (strand:rand ,~)
   ^-  form:m
   =/  =udiff:point:jael  udiff:(keys-udiff for new-life)
-  ~?  >>  loud  [tag "{(cite:title ship)}: inject rekey udiff for {(scow %p for)}"]
+  ~?  loud  [tag "{(cite:title ship)}: inject rekey udiff for {(scow %p for)}"]
   ;<  ~  bind:m  (poke-app ship %test-udiff %test-udiffs [for udiff]~)
   ;<  ~  bind:m  (wait-for-output ship ":test-udiff &test-udiffs")
   (pure:m ~)
@@ -95,7 +95,7 @@
   |=  [=ship for=@p =udiffs:point:jael]
   =/  m  (strand:rand ,~)
   ^-  form:m
-  ~?  >>  loud  [tag "{(cite:title ship)}: inject udiffs for {(scow %p for)}"]
+  ~?  loud  [tag "{(cite:title ship)}: inject udiffs for {(scow %p for)}"]
   ;<  ~  bind:m  (poke-app ship %test-udiff %test-udiffs udiffs)
   ;<  ~  bind:m  (wait-for-output ship ":test-udiff &test-udiffs")
   (pure:m ~)
@@ -108,7 +108,7 @@
   =/  =feed:jael
     [[%2 ~] ship *rift [new-life ring]~]
   =/  sed=@t  (scot %uw (jam feed))
-  ~?  >>  loud  [tag "{(cite:title ship)}: rekey at life {(scow %ud new-life)}"]
+  ~?  loud  [tag "{(cite:title ship)}: rekey at life {(scow %ud new-life)}"]
   ;<  ~  bind:m  (poke-app ship %hood %helm-rekey sed)
   ;<  ~  bind:m  (wait-for-output ship ":hood &helm-rekey")
   (pure:m ~)
@@ -127,30 +127,30 @@
   ?:  ?&  ?=([~ %sign [%timeout @ ~] %behn %wake *] in.tin)
           =((scot %da when) i.t.wire.u.in.tin)
       ==
-    ~?  >>  loud  [tag "timed out after {(scow %dr time)}"]
+    ~?  loud  [tag "timed out after {(scow %dr time)}"]
     `[%done ~]
   =/  c-res  (computation tin)
   ?:  ?=(%cont -.next.c-res)
     c-res(self.next ..loop(computation self.next.c-res))
   ?:  ?=(%done -.next.c-res)
-    ~?  >>  loud  [tag "finished before {(scow %dr time)} timeout"]
+    ~?  loud  [tag "finished before {(scow %dr time)} timeout"]
     :_  [%fail %no-timeout ~]
     [%pass /timeout/(scot %da when) %arvo %b %rest when]~
   c-res
 ::
 ++  send-hi
   |=  [=ship target=ship]
-  ~?  >>  loud  [tag "{(cite:title ship)}: send hi to {(cite:title target)}"]
+  ~?  loud  [tag "{(cite:title ship)}: send hi to {(cite:title target)}"]
   (^send-hi ship target)
 ::
 ++  cc-breach
   |=  [who=@p new-life=life new-rift=rift core=?(%ames %mesa) =onchain]
   =/  m  (strand:rand ,^onchain)
-  ~?  >>  loud  [tag "{(cite:title who)}: perform breach"]
+  ~?  loud  [tag "{(cite:title who)}: perform breach"]
   =/  =ring  sec:ex:(get-keys:az who new-life)
   =/  =feed:jael
     [[%2 ~] who new-rift [new-life ring]~]
-  ~&  >  "starting {<who>}"
+  ~?  loud  [tag "starting {<who>}"]
   ;<  ~  bind:m  (send-events (init:util who | `feed core))
   ;<  ~  bind:m  (check-ship-booted who)
   =/  new-onchain=^onchain
@@ -159,13 +159,13 @@
     |=  dat=[peer=@p =life =rift spon=(unit @p) fef=?(~ %turf %is %if)]
     ?.  =(who peer.dat)  dat
     dat(life new-life, rift new-rift)
-  ~?  >>  loud  [tag "{(cite:title who)}: mount %base"]
+  ~?  loud  [tag "{(cite:title who)}: mount %base"]
   ;<  ~  bind:m  (mount who %base)
-  ~?  >>  loud  [tag "{(cite:title who)}: copy udiff agent"]
+  ~?  loud  [tag "{(cite:title who)}: copy udiff agent"]
   ;<  ~  bind:m  (copy-file who /app/test-udiff/hoon udiff-agent)
-  ~?  >>  loud  [tag "{(cite:title who)}: copy udiff mark"]
+  ~?  loud  [tag "{(cite:title who)}: copy udiff mark"]
   ;<  ~  bind:m  (copy-file who /mar/test-udiffs/hoon udiffs-mark)
-  ~?  >>  loud  [tag "{(cite:title who)}: start udiff agent"]
+  ~?  loud  [tag "{(cite:title who)}: start udiff agent"]
   ;<  ~  bind:m  (dojo who "|start %test-udiff")
   ;<  ~  bind:m  (wait-for-output who "booted %test-udiff")
   =/  oc-1  new-onchain

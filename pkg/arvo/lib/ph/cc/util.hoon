@@ -110,7 +110,9 @@
     [%give %fact ~[/] %test-udiffs !>(udiffs)]~
   ++  on-watch
     |=  =path
-    ~&  [%test-udiff %on-watch path=path]
+    ::  dbg: this fixture's trace prints only when this is yes
+    =/  dbg=?  |
+    ~?  dbg  [%test-udiff %on-watch path=path]
     ^-  (quip card:agent:gall _this)
     ?>  ?=(~ path)
     `this
@@ -211,6 +213,9 @@
 ++  pki-agent-body
   '''
   =>  |%
+      ::  +dbg: this fixture's traces print only when this is yes
+      ::
+      ++  dbg  ^-(? |)
       ::  +verify: the whole oracle.  ~ means "reject".
       ::
       ++  verify
@@ -257,7 +262,7 @@
     ?:  (lien pending |=(old=[dom=@tas ship=@p pass=@] =(old req)))
       [~ this]
     =/  wen=@da  (add now.bowl ~s1)
-    ~&  [%test-pki %queued ship.task]
+    ~?  dbg  [%test-pki %queued ship.task]
     :_  this(pending (weld pending ~[req]))
     ?:  ?=(~ pending)
       [%pass /verify %arvo %b %wait wen]~
@@ -277,7 +282,7 @@
       [~ this]
     =/  req  i.pending
     =/  res=(unit point:jael)  (verify oracle ship.req pass.req)
-    ~&  [%test-pki %response ship.req ?=(^ res)]
+    ~?  dbg  [%test-pki %response ship.req ?=(^ res)]
     =/  fact=card:agent:gall
       [%give %fact ~[/writs] %verdict !>([dom.req ship.req res])]
     :_  this(pending t.pending)
