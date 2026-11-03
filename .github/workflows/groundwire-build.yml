@@ -2,23 +2,23 @@ name: Bleeding-Edge Release
 on:
   push:
     branches:
-      - gw/next/kelvin/408
+      - gw/release
   pull_request:
     branches:
-      - gw/next/kelvin/408
+      - gw/release
   # Dispatch inputs exist so a release candidate can be cut from UNMERGED
   # branches.  Without them the only way to get the real artifact -- the one
   # boot.sh downloads, checksums and unpacks -- was to merge first, which made
   # the merge a prerequisite for the testing that is supposed to gate it.
   #
   # A dispatch runs the workflow file FROM THE REF YOU PICK, so `gh workflow
-  # run groundwire-build.yml --ref hd/cc-kernel` already uses this copy.  The
+  # run groundwire-build.yml --ref gw/release` already uses this copy.  The
   # inputs below then point the two source checkouts wherever you need.
   #
   #   gh workflow run groundwire-build.yml --repo gwbtc/urbit \
-  #     --ref hd/cc-kernel \
-  #     -f urbit_ref=hd/cc-kernel \
-  #     -f groundwire_ref=hd/cc-landing \
+  #     --ref gw/release \
+  #     -f urbit_ref=gw/release \
+  #     -f groundwire_ref=gw/release \
   #     -f tag_prefix=groundwire-rc
   #
   # Add -f publish=false for a build that must not release: it builds,
@@ -31,15 +31,15 @@ on:
       urbit_ref:
         description: 'gwbtc/urbit ref for the kernel + vere'
         required: false
-        default: 'hd/cc-kernel'
+        default: 'gw/release'
       groundwire_ref:
-        description: 'gwbtc/groundwire ref for the desk (default: hd/cc-landing)'
+        description: 'gwbtc/groundwire ref for the desk (default: gw/release)'
         required: false
-        default: 'hd/cc-landing'
+        default: 'gw/release'
       vere_ref:
-        description: 'gwbtc/vere ref for the runtime (default: gw/next/kelvin/408)'
+        description: 'gwbtc/vere ref for the runtime (default: gw/release)'
         required: false
-        default: 'gw/next/kelvin/408'
+        default: 'gw/release'
       tag_prefix:
         description: 'release tag prefix (default: groundwire-alpha)'
         required: false
@@ -51,8 +51,8 @@ on:
         default: true
 
 env:
-  URBIT_BRANCH: gw/next/kelvin/408
-  VERE_BRANCH: gw/next/kelvin/408
+  URBIT_BRANCH: gw/release
+  VERE_BRANCH: gw/release
   URCRYPT_BRANCH: gw/cmp-pub
   COMET_MINER_BRANCH: tinnus-feed
   # gwbtc/tcp-sidecar is public, so it needs no token and outsiders can
@@ -101,7 +101,7 @@ env:
   # an older release's gwlib.sh can still seed peers.
   NODE_REF: 39648ac355b3fbcbb7af7c6b3e2ae38bc8cbc26a
   # desks
-  GROUNDWIRE_BRANCH: hd/cc-landing
+  GROUNDWIRE_BRANCH: gw/release
   URBIT_MCP_BRANCH: main
   VITRIOL_BRANCH: master
   TRILL_BRANCH: develop
