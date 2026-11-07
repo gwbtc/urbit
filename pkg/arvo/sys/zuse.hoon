@@ -1486,6 +1486,30 @@
   ::                                                    ::
   ::                    ++cric:crypto                   ::  (2b4) suite C, Ed
     ::                                                  ::::
+  ::  suite %c: a comet whose name is the hash of a TWEAKED key.
+  ::
+  ::    pass  ['c' ugn cry (mat dat) xtr]
+  ::    ring  ['C' kes ugn (mat dat) xtr]
+  ::
+  ::    .ugn is the genesis key's public half.  the name is
+  ::    (shaf %cfig (scap ugn (shax ugn dat))): it commits .dat --
+  ::    the +mat-encoded pki domain and whatever the domain puts
+  ::    after it -- and never changes.  nothing is ever signed with
+  ::    the tweaked key; .ugn has no live secret after life 1.
+  ::
+  ::    .cry is this life's key, from the 32-byte seed .kes in the
+  ::    ring.  it both signs (sgn is cry) and derives channel keys.
+  ::    at life 1 kes is the genesis seed, so ugn is cry; a kernel
+  ::    with no verifier for .dat's domain checks exactly that and
+  ::    treats the comet as an ordinary life-1 comet.  later lives
+  ::    carry a fresh kes and the same ugn; whether such a cry is
+  ::    the comet's current key is the domain's to establish.
+  ::
+  ::    the same life key is used in its edwards signing form and its
+  ::    montgomery agreement form.  every signature site must retain
+  ::    its structured, domain-separated message; never sign a bare
+  ::    point or peer-chosen atom with a suite-%c key.
+  ::
   ++  cric
     |_  $%  $:  suite=%b
                 pub=[cry=@ sgn=@ ~]
@@ -1550,7 +1574,14 @@
       ++  fig                                           ::  fingerprint
         ^-  @uvH
         ?:  ?=(%b suite)  (shaf %bfig pub)
-        (shaf %cfig sgn.^pub)
+        (shaf %cfig nam)
+      ::                                                ::  ++nam:ex:cric:crypto
+      ++  nam                                           ::  tweaked name key
+        ^-  @
+        ?>  ?=(%c suite)
+        =*  ugn  ugn.tw.^pub
+        =*  dat  dat.tw.^pub
+        (scap:ed ugn (shax (can 3 [32 ugn] [(met 3 dat) dat] ~)))
       ::                                                ::  ++pac:ex:cric:crypto
       ++  pac                                           ::  private fingerprint
         ^-  @uvG
@@ -1627,11 +1658,17 @@
         =+  sed=(shal wid seed)
         %-  nol  ^-  ring
         ?:  ?=(%b suite)  (can 3 1^'B' 64^sed ~)
+        ::  a fresh suite-%c ring is life 1: the genesis seed and its
+        ::  own public key, which the name will commit
+        ::
+        =/  kes  (end 8 sed)
+        =/  ugn  pub:(luck:ed kes)
         =<  p
         %-  fax:plot
         :-  0
         :*  [s+~ 3 [1 'C'] ~]
-            [s+~ 3 [64 sed] ~]
+            [s+~ 3 [32 kes] ~]
+            [s+~ 3 [32 ugn] ~]
             ?@  dat  [(mat dat) ~]
             [(mat dat.dat) (met 0 xtr.dat)^xtr.dat ~]
         ==
@@ -1641,22 +1678,29 @@
         ^+  ..nu
         =+  [mag=(end 3 a) bod=(rsh 3 a)]
         ~|  %not-cric-seckey
-        =+  [c=(luck:ed (cut 8 [1 1] bod)) s=(luck:ed (end 8 bod))]
         ?:  =('B' mag)
+          =+  [c=(luck:ed (cut 8 [1 1] bod)) s=(luck:ed (end 8 bod))]
           %=  ..nu
             +<-  %b
             pub  [cry=pub.c sgn=pub.s ~]
             sek  [sed=bod cry=sek.c sgn=sek.s]
           ==
         ?>  =('C' mag)
+        ::  ring ['C' kes ugn (mat dat) xtr]: the low 32 bytes are
+        ::  this life's seed, the next 32 the genesis PUBLIC key.
+        ::  only .kes is secret key material; .ugn must not be parsed
+        ::  as entropy merely because it occupies the old second-seed
+        ::  slot on the wire.
+        ::
+        =/  kes  (end 8 bod)
+        =/  lif  (luck:ed kes)
+        =/  ugn  (cut 8 [1 1] bod)
         =+  [cur dat]=(rub 512 bod)
         =/  xtr  (rsh [0 (add 512 cur)] bod)
-        =/  mit  (shax (can 3 [32 pub.s] [(met 3 dat) dat] ~))
-        =/  t  (scad:ed pub.s sek.s mit)
         %=  ..nu
           +<-   %c
-          pub   [cry=pub.c sgn=pub.t tw=[ugn=pub.s dat=dat xtr=xtr]]
-          sek   [sed=(cut 8 [0 2] bod) cry=sek.c sgn=sek.t]
+          pub   [cry=pub.lif sgn=pub.lif tw=[ugn=ugn dat=dat xtr=xtr]]
+          sek   [sed=(cut 8 [0 2] bod) cry=sek.lif sgn=sek.lif]
         ==
       ::                                                ::  ++com:nu:cric:crypto
       ++  com                                           ::  activate public
@@ -1668,11 +1712,14 @@
         ?:  =('b' mag)
           ..nu(+<- %b, pub [cry=cry sgn=sgn ~], sek ~)
         ?>  =('c' mag)
+        ::  pass ['c' ugn cry (mat dat) xtr]: .sgn above is the low
+        ::  32 bytes, which for suite %c is the genesis key .ugn.
+        ::  the life key .cry signs; the name is +nam:ex, computed
+        ::  from .tw on demand.
+        ::
         =+  [cur dat]=(rub 512 bod)
         =/  xtr  (rsh [0 (add 512 cur)] bod)
-        =/  mit  (shax (can 3 [32 sgn] [(met 3 dat) dat] ~))
-        =/  tgn  (scap:ed sgn mit)
-        ..nu(+<- %c, pub [cry=cry sgn=tgn tw=[sgn dat xtr=xtr]], sek ~)
+        ..nu(+<- %c, pub [cry=cry sgn=cry tw=[ugn=sgn dat=dat xtr=xtr]], sek ~)
       ::
       --  ::nu
     ++  cyf
