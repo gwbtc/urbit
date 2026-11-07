@@ -486,17 +486,41 @@
       ::
       ?>  ?=(?(%king %pawn) (clan:title (^^sein:title rof /ames our now sndr.shot)))
       =/  cic  (com:nu:cric:crypto pass.open-packet)
-      ::  the packet must be signed by the key its pass carries.
-      ::  for suite %c that is the CURRENT life key (sgn is cry):
-      ::  this proves the author holds it and nothing more.
+      ::  Prefer the current life key (sgn is cry for suite %c).
+      ::  A live domain may also verify an old life-1 comet whose
+      ::  attestation uses its tweaked genesis signer; see below.
       ::
-      ?>  (veri:ed:crypto signature signed sgn:ded:ex:cic)
+      ?>  ?|  (veri:ed:crypto signature signed sgn:ded:ex:cic)
+              =/  old  (legacy-attestation-key rof our now open-packet)
+              ?~  old  %.n
+              (veri:ed:crypto signature signed u.old)
+          ==
       ::  the pass always commits the sender's immutable name.  a
       ::  suite-%c domain vouches only that .cry is its current life
       ::  key; it cannot override this deterministic name binding.
       ::
       ?>  =(sndr.shot fig:ex:cic)
       open-packet
+    ::  +legacy-attestation-key: old suite-C life-1 signer, if served
+    ::
+    ::    Old suite-C ships sign with the tweaked genesis key and carry a
+    ::    separate DH key.  Accept that signature only at life 1, with a
+    ::    live domain verifier.  It authenticates the name holder's claim,
+    ::    not possession or currency of the DH key: the normal domain
+    ::    verdict and counter checks still govern admission.  It never
+    ::    authorizes a later-life attestation or unregistered fallback.
+    ::    Callers must first check +pass-shaped.
+    ::
+    ++  legacy-attestation-key
+      |=  [rof=roof our=ship now=@da pac=open-packet]
+      ^-  (unit @)
+      ?.  =(1 sndr-life.pac)  ~
+      =/  cic  (com:nu:cric:crypto pass.pac)
+      ?.  ?=(%c suite.cic)  ~
+      =/  dom  (pass-pki-dom pass.pac)
+      ?~  dom  ~
+      ?.  =(%live (pki-dom-state rof our now u.dom))  ~
+      `nam:ex:cic
     ::  +mat-span-at: safely read a +mat's encoded and value widths
     ::
     ::    Never call the jetted +rub until its length-of-length and its
@@ -14131,14 +14155,18 @@
           ?.  (pass-shaped pass.open-packet)
             al-core
           =/  cic  (com:nu:cric:crypto pass.open-packet)
-          ::  the proof must be signed by the key its pass carries: the
-          ::  current life key (sgn is cry for suite %c).  see
-          ::  +sift-open-packet for what that does and does not prove.
+          ::  Use the same current-key or served legacy life-1 signer
+          ::  rule as +sift-open-packet.  Only this proof endpoint gets
+          ::  the exception; ordinary page signatures remain unchanged.
           ::
           =/  =public-keys  ded:ex:cic
           ?>  =/  ful  (en-beam [[her.name %$ ud+1] pat.name])
               =/  rut  (root:lss tob.data^dat.data)
-              (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
+              ?|  (verify-sig:crypt sgn.public-keys p.p.aut.data ful rut)
+                  =/  old  (legacy-attestation-key rof our now open-packet)
+                  ?~  old  %.n
+                  (verify-sig:crypt u.old p.p.aut.data ful rut)
+              ==
           =/  cek  +<.cic
           =/  dom  (pass-pki-dom pass.open-packet)
           ::  Reject malformed suite-C tweaks before consulting Jael or

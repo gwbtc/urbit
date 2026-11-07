@@ -42,9 +42,12 @@ authorization exists, and can store a public authorization before the private
 ring is locally available. Ames changes its live key only after Jael has joined
 the two exactly.
 
-Remote peers have the same separation. An attestation proves possession of the
-`cry` claimed in its pass; the domain verdict proves that the pass is the
-authority's current `P[N]`. Neither fact substitutes for the other.
+Remote peers have the same separation. A current-key attestation proves
+possession of the `cry` claimed in its pass; the domain verdict proves that the
+pass is the authority's current `P[N]`. Neither fact substitutes for the other.
+The experimental legacy life-1 exception authenticates the name holder's claim
+with the tweaked genesis signer instead. It requires a live domain verifier,
+as described in section 13.
 
 ## 2. Invariants
 
@@ -449,3 +452,27 @@ which has accepted the new point uses the new key without a dual-key grace
 period. A stale receiver or an unregistered fallback receiver cannot learn
 external revocation solely from that old signature. The multilateral
 revocation/replay tests and verifier-freshness work remain outstanding.
+
+## 13. Experimental inbound compatibility for legacy life 1
+
+`gw/experimental` accepts an old suite-C life-1 attestation signed by the
+tweaked genesis key when the pass's committed domain has a live verifier.
+Released Groundwire ships use that signer with a separate DH key, so checking
+only the current-key interpretation rejects their attestations before userspace
+can verify them. The exception covers both Ames open packets and Mesa proof
+pages. It does not change new signatures, private-ring decoding, ordinary Mesa
+page signatures, or current-key verification at later lives.
+
+The legacy signature authenticates the name holder's claim about the pass; it
+does not prove possession of its DH key. The receiver still checks the immutable
+name, receiver coordinate, sponsor, and domain. A new peer remains pending until
+the domain authorizes its point. An absent, suspended, or malformed domain
+registration disables the exception. Existing life/rift monotonicity and
+same-life key checks remain in force, so a legacy signature cannot replace an
+accepted later-life point. The unknown-domain fallback remains limited to the
+current signature format.
+
+This is inbound wire compatibility, not a migration for old private rings.
+An old peer still cannot validate a new suite-C sender's untweaked signature.
+A fresh ordinary suite-B comet can contact an old suite-C peer through this
+exception once its domain verifier is ready.
