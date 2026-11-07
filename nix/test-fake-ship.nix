@@ -162,7 +162,9 @@ in pkgs.stdenvNoCC.mkDerivation {
   '';
 
   checkPhase = ''
-    if egrep "((FAILED|CRASHED|Failed|failed|\[0 %avow 0 %noun 1\]\[0 %avow 1\])|warn:)" $out >/dev/null; then
+    # Negative tests and optional runtime services can log "failed".
+    # Match result records, including either kind of failed Khan response.
+    if grep -E '^(FAILED|CRASHED|Failed|failed)([[:space:]]|$)|^\[0 %avow (1|0 %noun 1)(\]|[[:space:]])|warn:' "$out" >/dev/null; then
       exit 1
     fi
   '';

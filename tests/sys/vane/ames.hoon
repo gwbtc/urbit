@@ -119,6 +119,18 @@
 =.  saf.ames-state.cc-life2   saf:ex:cc-life2-core
 =.  ring.ames-state.cc-life2  sec:ex:cc-life2-core
 =.  pass.ames-state.cc-life2  pub:ex:cc-life2-core
+::  An old life-1 comet has an independent DH key and signs with its
+::  tweaked genesis key.  Keep the current parser's pass layout and
+::  reproduce the old signer explicitly; no legacy private-ring parsing.
+::
+=/  cc-legacy  cc-life2
+=.  life.ames-state.cc-legacy  1
+=/  cc-genesis  (luck:ed:crypto (cut 3 [1 32] sec:ex:cc-core))
+=/  cc-tweak
+  (shax (can 3 [32 pub.cc-genesis] [(met 3 q:(mat %gw-btc)) q:(mat %gw-btc)] ~))
+=/  cc-old-signer  (scad:ed:crypto pub.cc-genesis sek.cc-genesis cc-tweak)
+=.  sgn.pub.saf.ames-state.cc-legacy  pub.cc-old-signer
+=.  sgn.sek.saf.ames-state.cc-legacy  sek.cc-old-signer
 ::  A second suite-C identity lets the recovery test put both endpoints
 ::  through the same rotation at once, rather than using a conventional ship
 ::  whose current life is available from Azimuth.
@@ -307,6 +319,7 @@
 ::  order for %mage to construct and sign a page.
 ::
 =.  chums.ames-state.cc-misnamed  chums.ames-state.cc
+=.  chums.ames-state.cc-legacy  chums.ames-state.cc-life2
 ::
 =.  chums.ames-state.nec
   %+  ~(put by chums.ames-state.nec)  cc-comet
@@ -333,6 +346,7 @@
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %born ~))
 =>  .(cc +:(call:(cc) ~[//unix] ~ %born ~))
 =>  .(cc-life2 +:(call:(cc-life2) ~[//unix] ~ %born ~))
+=>  .(cc-legacy +:(call:(cc-legacy) ~[//unix] ~ %born ~))
 =>  .(cd-life2 +:(call:(cd-life2) ~[//unix] ~ %born ~))
 =>  .(cc-misnamed +:(call:(cc-misnamed) ~[//unix] ~ %born ~))
 ::  |ames as the default network core
@@ -343,6 +357,7 @@
 =>  .(comet2 +:(call:(comet2) ~[//unix] ~ %load %ames))
 =>  .(cc +:(call:(cc) ~[//unix] ~ %load %ames))
 =>  .(cc-life2 +:(call:(cc-life2) ~[//unix] ~ %load %ames))
+=>  .(cc-legacy +:(call:(cc-legacy) ~[//unix] ~ %load %ames))
 =>  .(cd-life2 +:(call:(cd-life2) ~[//unix] ~ %load %ames))
 =>  .(cc-misnamed +:(call:(cc-misnamed) ~[//unix] ~ %load %ames))
 ::  helper core
@@ -2314,6 +2329,101 @@
     (expect-eq !>(0) !>((lent moves)))
     (expect-eq !>(before) !>(ames-state.nec))
   ==
+::
+++  test-hear-legacy-life1-requires-domain-verdict  ^-  tang
+  =/  blob  (cc-attestation-at cc-legacy cc-comet 1)
+  =/  before  (~(get by peers.ames-state.nec) cc-comet)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect-eq !>(before) !>((~(get by peers.ames-state.nec) cc-comet)))
+  ==
+::
+++  test-hear-legacy-life1-rejects-unavailable-domains  ^-  tang
+  =/  blob  (cc-attestation-at cc-legacy cc-comet 1)
+  =/  before  ames-state.nec
+  %-  zing
+  %+  turn  `(list ?(%unregistered %suspended %malformed))`~[%unregistered %suspended %malformed]
+  |=  dose=?(%unregistered %suspended %malformed)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ dose)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-hear-legacy-signer-rejects-later-lives  ^-  tang
+  =/  blob  (cc-attestation-at cc-legacy cc-comet 2)
+  =/  before  ames-state.nec
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-hear-legacy-signer-retains-name-binding  ^-  tang
+  =/  blob  (cc-attestation-at cc-legacy our-comet 1)
+  =/  before  ames-state.nec
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-hear-legacy-signer-rejects-an-unrelated-key  ^-  tang
+  =/  blob
+    (attestation [pass.ames-state.cc-legacy cc-comet 1 ~nec 2] saf.ames-state.cc)
+  =/  before  ames-state.nec
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-hear-legacy-life1-does-not-replace-known-life2  ^-  tang
+  =.  chums.ames-state.nec  (~(del by chums.ames-state.nec) cc-comet)
+  =/  sym
+    (derive-symmetric-key:ames pub.saf.ames-state.cc-life2 sek.saf.ames-state.nec)
+  =.  peers.ames-state.nec
+    (~(put by peers.ames-state.nec) cc-comet (known-comet sym 2 cc-life2))
+  =/  before  ames-state.nec
+  =/  blob  (cc-attestation-at cc-legacy cc-comet 1)
+  =^  moves  nec
+    (call nec(rof (pki-roof `2 %live)) ~[//unix] %hear [%& ~marbud] blob)
+  ;:  weld
+    (expect-eq !>(0) !>((lent moves)))
+    (expect-eq !>(before) !>(ames-state.nec))
+  ==
+::
+++  test-heer-legacy-life1-requires-domain-verdict  ^-  tang
+  =/  packet  (cc-proof-push-at cc-legacy cc-comet 1 pass.ames-state.cc-legacy)
+  =^  moves  nec
+    (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer packet)
+  ;:  weld
+    (expect-eq !>(1) !>((count-writs moves)))
+    (expect !>(?=([~ %alien *] (~(get by chums.ames-state.nec) cc-comet))))
+  ==
+::
+++  test-heer-legacy-life1-rejects-unavailable-domains  ^-  tang
+  =/  packet  (cc-proof-push-at cc-legacy cc-comet 1 pass.ames-state.cc-legacy)
+  %-  zing
+  %+  turn  `(list ?(%unregistered %suspended %malformed))`~[%unregistered %suspended %malformed]
+  |=  dose=?(%unregistered %suspended %malformed)
+  =/  tried
+    %-  mole
+    |.  (call nec(rof (pki-roof ~ dose)) ~[//unix] %heer packet)
+  (expect !>(?=(~ tried)))
+::
+++  test-heer-legacy-signer-rejects-later-lives  ^-  tang
+  =/  packet  (cc-proof-push-at cc-legacy cc-comet 2 pass.ames-state.cc-legacy)
+  =/  tried
+    %-  mole
+    |.  (call nec(rof (pki-roof ~ %live)) ~[//unix] %heer packet)
+  (expect !>(?=(~ tried)))
 ::
 ++  test-hear-suite-c-life1-falls-back-without-agent  ^-  tang
   ::  At life 1 .ugn equals .cry, so an explicitly unregistered domain
