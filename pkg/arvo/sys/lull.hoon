@@ -4719,7 +4719,7 @@
             $=  p
             $?  %done                                   ::  peer closed cleanly
                 %reset                                  ::  reset or r/w failed
-                %dead                                   ::  keepalive timeout
+                %dead                                   ::  peer unresponsive
         ==  ==
         $:  %close                                      ::  userspace ended it
             $=  p
