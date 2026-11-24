@@ -4695,29 +4695,31 @@
   ::                                                    ::::
 ++  mach  ^?
   |%
+  ::  $addr: ip address and port
+  ::
+  +$  addr
+    $%  [%if p=@if q=@ud]                               ::  ipv4
+        [%is p=@is q=@ud]                               ::  ipv6
+    ==
+  ::  $name: connection name, unique per agent
+  ::
+  +$  name  path
   ::  $wye: why a connection closed
   ::  by category, then cause
   ::
   +$  wye
     $%  $:  %connect                                    ::  never opened
             $=  p
-            $?  %invalid                                ::  malformed $fief
-                %unresolved                             ::  no domain resolved
-                %refused                                ::  every address failed
+            $?  %invalid                                ::  malformed $addr
+                %taken                                  ::  name in use
+                %refused                                ::  connect failed
                 %timeout                                ::  not open in time
-        ==  ==
-        $:  %tls                                        ::  tls failed
-            $=  p
-            $?  %invalid                                ::  invalid domain
-                %certificate                            ::  failed verification
-                %handshake                              ::  failed handshake
-                %decode                                 ::  bad tls records
         ==  ==
         $:  %peer                                       ::  peer ended it
             $=  p
             $?  %done                                   ::  peer closed cleanly
                 %reset                                  ::  reset or r/w failed
-                %dead                                   ::  keepalive timeout
+                %dead                                   ::  peer unresponsive
         ==  ==
         $:  %close                                      ::  userspace ended it
             $=  p
@@ -4738,19 +4740,19 @@
     $%  $>(%born vane-task)                             ::  new unix process
         $>(%trim vane-task)                             ::  trim state
         $>(%vega vane-task)                             ::  report upgrade
-        [%close ~]                                      ::  close connection
-        [%send =octs]                                   ::  send bytes
-        [%connect secure=? =fief]                       ::  connect to address
-        [%opened id=@ud p=(unit turf)]                  ::  vere opens, via turf
+        [%close =name]                                  ::  close connection
+        [%send =name =octs]                             ::  send bytes
+        [%connect =name =addr]                          ::  connect to address
+        [%opened id=@ud]                                ::  vere opens
         [%closed id=@ud p=wye]                          ::  vere closes
         [%received id=@ud =octs]                        ::  vere receives bytes
     ==
   ::
   +$  gift
-    $%  [%connected p=(unit turf)]                      ::  opened, via turf
-        [%received =octs]                               ::  received bytes
-        [%closed p=wye]                                 ::  connection closed
-        [%connect id=@ud secure=? =fief]                ::  vere, open connection
+    $%  [%connected =name]                              ::  opened
+        [%received =name =octs]                         ::  received bytes
+        [%closed =name p=wye]                           ::  connection closed
+        [%connect id=@ud =addr]                         ::  vere, open connection
         [%send id=@ud =octs]                            ::  vere, send bytes
         [%close id=@ud]                                 ::  vere, close connection
     ==

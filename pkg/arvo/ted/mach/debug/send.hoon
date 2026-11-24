@@ -1,8 +1,10 @@
-::  connect to .fief, send .size bytes, close, and report how it closed
+::  connect to .addr, send .size bytes, close, and report how it closed
 ::
 ::    for the discard and silent server modes. a silent peer never reads,
 ::    so once .size outgrows the socket buffers the driver can't drain
-::    its queue, and should close with %timeout after 30 seconds
+::    its queue, and should close with [%close %timeout] after 30
+::    seconds. the driver queues 16 MiB at most, so a larger .size
+::    should close with [%local %overflowed] at once, whatever the peer
 ::
 /-  spider
 /+  io=strandio
@@ -11,10 +13,10 @@
 |=  arg=vase
 =/  m  (strand ,vase)
 ^-  form:m
-=+  !<([~ size=@ud =fief] arg)
+=+  !<([~ size=@ud addr=addr:mach] arg)
 ;<  =bowl:spider  bind:m  get-bowl:io
 =/  wir=wire  /(scot %uv (cut 5 [0 1] eny.bowl))
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %connect | fief])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %connect wir addr])
 ;<  [* first=sign-arvo]  bind:m  take-sign-arvo:io
 ?.  ?=([%mach %connected *] first)
   (strand-fail:strand %connection-failed >first< ~)
@@ -26,8 +28,8 @@
   ?:  (gte (met 3 a) size)
     (end [3 size] a)
   $(a (cat 3 a a))
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %send size data])
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %close ~])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %send wir size data])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %close wir])
 ;<  start=@da  bind:m  get-time:io
 =|  bytes=@ud
 |-  ^-  form:m

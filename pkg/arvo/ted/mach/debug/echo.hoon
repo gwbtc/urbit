@@ -4,7 +4,7 @@
 |%
 ::  +take-echo: take %received gifts on .wir until .want bytes arrive
 ::
-::    the driver caps each %received at 1 MiB, so a long echo arrives
+::    the driver caps each %received at 4 MiB, so a long echo arrives
 ::    in chunks; we join them in order and fail if the peer closes early
 ::
 ++  take-echo
@@ -46,16 +46,16 @@
 |=  arg=vase
 =/  m  (strand ,vase)
 ^-  form:m
-=+  !<([~ txt=@t =fief] arg)
+=+  !<([~ txt=@t addr=addr:mach] arg)
 ;<  =bowl:spider  bind:m  get-bowl:io
 =/  wir=wire  /(scot %uv (cut 5 [0 1] eny.bowl))
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %connect | fief])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %connect wir addr])
 ;<  [=wire =sign-arvo]  bind:m  take-sign-arvo:io
 ?.  ?=([%mach %connected *] sign-arvo)
   (strand-fail:strand %connection-failed ~)
 =/  out=octs  (as-octs:mimes:html txt)
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %send out])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %send wir out])
 ;<  echo=octs  bind:m  (take-echo wir p.out)
-;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %close ~])
+;<  ~  bind:m  (send-raw-card:io [%pass wir %arvo %m %close wir])
 ;<  why=wye:mach  bind:m  (take-closed wir)
 (pure:m !>([echo=`@t`q.echo why=why]))
